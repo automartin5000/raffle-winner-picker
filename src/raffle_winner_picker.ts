@@ -26,11 +26,9 @@ function pickWinner() {
                 selectionBag[prizeName] = [];
                 finalCounts[prizeName] = {};
             }
-
             for (let i = 0; i < quantity; i++) {
                 selectionBag[prizeName].push(nameOfPerson);
             }
-
             if (!finalCounts[prizeName][nameOfPerson]) {
                 finalCounts[prizeName][nameOfPerson] = 0;
             }
@@ -42,7 +40,6 @@ function pickWinner() {
                 for (const person in finalCounts[prize]) {
                     console.log(`${person} has purchased ${finalCounts[prize][person]} tickets`);
                 }
-
                 const winnerIndex = Math.floor(Math.random() * selectionBag[prize].length);
                 winners[prize] = selectionBag[prize][winnerIndex];
                 console.log(`The winner of the ${prize} prize is ${winners[prize]}`);
@@ -54,7 +51,7 @@ function pickWinner() {
         });
 }
 
-function exportFullAuditToCsv(finalCounts: FinalCounts) {
+const exportFullAuditToCsv = (finalCounts: FinalCounts) => {
     const writer = fs.createWriteStream('raffle_audit.csv');
     writer.write('Prize,Person,Ticket Count\n');
     for (const prize in finalCounts) {
@@ -65,7 +62,7 @@ function exportFullAuditToCsv(finalCounts: FinalCounts) {
     writer.end();
 }
 
-function exportWinnersToFile(winners: Winners) {
+const exportWinnersToFile = (winners: Winners) => {
     const writer = fs.createWriteStream('raffle_winners.csv');
     writer.write('Prize,Winner\n');
     for (const prize in winners) {

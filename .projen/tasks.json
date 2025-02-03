@@ -24,6 +24,22 @@
         }
       ]
     },
+    "check": {
+      "name": "check",
+      "steps": [
+        {
+          "exec": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+        }
+      ]
+    },
+    "check:watch": {
+      "name": "check:watch",
+      "steps": [
+        {
+          "exec": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+        }
+      ]
+    },
     "clobber": {
       "name": "clobber",
       "description": "hard resets to HEAD of origin and cleans the local repo",
@@ -61,7 +77,7 @@
       "description": "Only compile",
       "steps": [
         {
-          "exec": "tsc --build"
+          "exec": "vite build"
         }
       ]
     },
@@ -71,6 +87,14 @@
       "steps": [
         {
           "exec": "ts-node --project tsconfig.dev.json .projenrc.ts"
+        }
+      ]
+    },
+    "dev": {
+      "name": "dev",
+      "steps": [
+        {
+          "exec": "vite dev"
         }
       ]
     },
@@ -133,6 +157,22 @@
       "name": "pre-compile",
       "description": "Prepare the project for compilation"
     },
+    "prepare": {
+      "name": "prepare",
+      "steps": [
+        {
+          "exec": "svelte-kit sync || echo \"\""
+        }
+      ]
+    },
+    "preview": {
+      "name": "preview",
+      "steps": [
+        {
+          "exec": "vite preview"
+        }
+      ]
+    },
     "test": {
       "name": "test",
       "description": "Run tests",
@@ -163,13 +203,13 @@
       },
       "steps": [
         {
-          "exec": "bunx npm-check-updates@16 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@types/jest,@types/node,eslint-import-resolver-typescript,eslint-plugin-import,jest,projen,ts-jest,ts-node,typescript"
+          "exec": "bunx npm-check-updates@16 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@sveltejs/adapter-auto,@sveltejs/kit,@sveltejs/vite-plugin-svelte,@types/jest,@types/node,eslint-import-resolver-typescript,eslint-plugin-import,jest,projen,svelte,svelte-check,ts-jest,ts-node,typescript,vite,csv-parser"
         },
         {
           "exec": "bun install"
         },
         {
-          "exec": "bun update @stylistic/eslint-plugin @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser constructs eslint-import-resolver-typescript eslint-plugin-import eslint jest jest-junit projen ts-jest ts-node typescript"
+          "exec": "bun update @stylistic/eslint-plugin @sveltejs/adapter-auto @sveltejs/kit @sveltejs/vite-plugin-svelte @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser constructs eslint-import-resolver-typescript eslint-plugin-import eslint jest jest-junit projen svelte svelte-check ts-jest ts-node typescript vite csv-parser"
         },
         {
           "exec": "npx projen"

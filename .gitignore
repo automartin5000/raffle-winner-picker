@@ -5,7 +5,6 @@
 !/.projen/files.json
 !/.github/workflows/pull-request-lint.yml
 !/package.json
-!/LICENSE
 !/.npmignore
 logs
 *.log
@@ -44,4 +43,18 @@ junit.xml
 /lib
 /dist/
 !/.eslintrc.json
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+!.env.test
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
 !/.projenrc.ts
