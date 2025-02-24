@@ -2,12 +2,16 @@
   "name": "raffle-winner-picker",
   "scripts": {
     "build": "npx projen build",
+    "bundle": "npx projen bundle",
     "check": "npx projen check",
     "check:watch": "npx projen check:watch",
     "clobber": "npx projen clobber",
     "compile": "npx projen compile",
     "default": "npx projen default",
+    "deploy": "npx projen deploy",
+    "destroy": "npx projen destroy",
     "dev": "npx projen dev",
+    "diff": "npx projen diff",
     "eject": "npx projen eject",
     "eslint": "npx projen eslint",
     "package": "npx projen package",
@@ -16,6 +20,8 @@
     "pre-compile": "npx projen pre-compile",
     "prepare": "npx projen prepare",
     "preview": "npx projen preview",
+    "synth": "npx projen synth",
+    "synth:silent": "npx projen synth:silent",
     "test": "npx projen test",
     "test:watch": "npx projen test:watch",
     "upgrade": "npx projen upgrade",
@@ -25,13 +31,15 @@
   "devDependencies": {
     "@stylistic/eslint-plugin": "^2",
     "@sveltejs/adapter-auto": "^4.0.0",
+    "@sveltejs/adapter-static": "^3.0.8",
     "@sveltejs/kit": "^2.16.1",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.13.0",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",
-    "constructs": "^10.0.0",
+    "aws-cdk": "^2",
+    "esbuild": "^0.24.2",
     "eslint": "^9",
     "eslint-import-resolver-typescript": "^3.7.0",
     "eslint-plugin-import": "^2.31.0",
@@ -46,6 +54,8 @@
     "vite": "^6.0.11"
   },
   "dependencies": {
+    "aws-cdk-lib": "^2.180.0",
+    "constructs": "^10.0.5",
     "csv-parser": "^3.2.0"
   },
   "license": "UNLICENSED",
@@ -100,7 +110,7 @@
   },
   "svelte": {
     "kit": {
-      "adapter": "@sveltejs/adapter-auto",
+      "adapter": "@sveltejs/adapter-static",
       "target": "#svelte"
     }
   },

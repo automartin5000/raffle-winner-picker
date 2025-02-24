@@ -10,6 +10,10 @@
       "type": "build"
     },
     {
+      "name": "@sveltejs/adapter-static",
+      "type": "build"
+    },
+    {
       "name": "@sveltejs/kit",
       "type": "build"
     },
@@ -36,8 +40,12 @@
       "type": "build"
     },
     {
-      "name": "constructs",
-      "version": "^10.0.0",
+      "name": "aws-cdk",
+      "version": "^2",
+      "type": "build"
+    },
+    {
+      "name": "esbuild",
       "type": "build"
     },
     {
@@ -89,6 +97,16 @@
     {
       "name": "vite",
       "type": "build"
+    },
+    {
+      "name": "aws-cdk-lib",
+      "version": "^2.180.0",
+      "type": "runtime"
+    },
+    {
+      "name": "constructs",
+      "version": "^10.0.5",
+      "type": "runtime"
     },
     {
       "name": "csv-parser",
