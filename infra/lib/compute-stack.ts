@@ -8,19 +8,15 @@ import { AaaaRecord, ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-r
 import { CloudFrontTarget } from 'aws-cdk-lib/aws-route53-targets';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
+import { AppStackProps } from "../bin/interfaces";
 
 export const INDEX_FILES_CACHE_CONTROL_SECONDS = 0;
 export const IMMUATABLE_FILES_CACHE_CONTROL_DAYS = 365 * 10;
 
-export interface ComputeStackProps extends cdk.StackProps {
-    hostedZone: string;
-    envName: string;
-}
-
 export class ComputeStack extends cdk.Stack {
     envName: string;
     fullDomain: string;
-    constructor(scope: Construct, id: string, props: ComputeStackProps) {
+    constructor(scope: Construct, id: string, props: AppStackProps) {
         super(scope, id, props);
         this.envName = props.envName;
       const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
@@ -33,7 +29,9 @@ export class ComputeStack extends cdk.Stack {
       const bucket = this.createWebsiteBucket();
       const distribution = this.createCfDistribution(hostedZone, bucket);
       this.createRoute53Records(hostedZone, distribution);
-      this.uploadWebsiteAssets(bucket);
+        this.uploadWebsiteAssets(bucket);
+        cdk.Tags.of(this).add('environment', props.envName);
+        cdk.Tags.of(this).add('project', 'raffle-winner-picker');
 
   }
 
