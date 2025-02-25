@@ -1,7 +1,7 @@
-import { App, Environment } from "aws-cdk-lib";
+import { App } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { ComputeStack } from "../lib/compute-stack";
-import { AppStackProps } from "./interfaces";
+import { type AppStackProps } from "./interfaces";
 
 const awsEnvironments: AppStackProps[] = [
     {
@@ -32,7 +32,7 @@ if (process.env.AWS_CDK_ENV_NAME) {
         hostedZone: process.env.NONPROD_HOSTED_ZONE!,
     });
 }
-
+console.log(`Creating stacks for environments: ${awsEnvironments.map((env) => env.envName).join(', ')}`);
 const cdkApp = new App();
 
 class RootApp extends Construct {
@@ -43,6 +43,7 @@ class RootApp extends Construct {
 }
 
 awsEnvironments.forEach((props) => {
+    console.log(`Creating stack for ${props.envName} with props: ${JSON.stringify(props)}`);
     new RootApp(cdkApp, props.envName, props);
 });
 

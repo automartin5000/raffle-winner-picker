@@ -24,7 +24,7 @@ export class ComputeStack extends cdk.Stack {
       });
 
       const subdomainPrefix = props.envName === 'prod' ? '' : `${props.envName}.`;
-      this.fullDomain = `${subdomainPrefix}www.${hostedZone.zoneName}`;
+      this.fullDomain = `${subdomainPrefix}raffle-picker.${hostedZone.zoneName}`;
 
       const bucket = this.createWebsiteBucket();
       const distribution = this.createCfDistribution(hostedZone, bucket);
