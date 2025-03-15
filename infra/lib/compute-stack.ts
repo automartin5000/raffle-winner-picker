@@ -72,7 +72,7 @@ export class ComputeStack extends cdk.Stack {
             code: cf.FunctionCode.fromFile({
                 filePath: path.join(
                     __dirname,
-                    'cf-functions/spa-rewrite.default-index.js')
+                    'cf-functions/spa-rewrite-default-index.js')
             }),
             runtime: cf.FunctionRuntime.JS_2_0,
         });

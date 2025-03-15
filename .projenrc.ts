@@ -1,8 +1,10 @@
 import { awscdk } from 'projen';
 import { NodePackageManager, TypescriptConfigExtends, TypeScriptModuleResolution } from 'projen/lib/javascript';
+
 const project = new awscdk.AwsCdkTypeScriptApp({
   defaultReleaseBranch: 'main',
   name: 'raffle-winner-picker',
+  appEntrypoint: '../infra/bin/app.ts',
   projenrcTs: true,
   licensed: false,
   vscode: true,
@@ -40,6 +42,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     '@sveltejs/vite-plugin-svelte',
     'svelte',
     'svelte-check',
+    'tsx',
     'vite',
   ],
 });
@@ -62,6 +65,8 @@ project.gitignore.exclude(
   // Vite
   'vite.config.js.timestamp-*',
   'vite.config.ts.timestamp-*',
+  // CDK
+  'cdk.context.json', // excluded for security concerns in public rpo
 );
 project.addFields({
   svelte: {

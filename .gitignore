@@ -62,4 +62,5 @@ Thumbs.db
 !.env.test
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+cdk.context.json
 !/.projenrc.ts

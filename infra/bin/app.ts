@@ -38,7 +38,7 @@ const cdkApp = new App();
 class RootApp extends Construct {
     constructor(scope: Construct, id: string, props: AppStackProps ) {
         super(scope, id);
-        new ComputeStack(this, 'ComputeStack', props);
+        new ComputeStack(this, 'Compute', props);
     }
 }
 
