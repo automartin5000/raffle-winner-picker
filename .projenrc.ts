@@ -9,7 +9,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   licensed: false,
   vscode: true,
   packageManager: NodePackageManager.BUN,
-
+  // TODO: Extract Svelete config to separate project
   tsconfig: {
     extends: TypescriptConfigExtends.fromPaths(['./.svelte-kit/tsconfig.json']),
     compilerOptions: {
@@ -26,12 +26,6 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       module: 'esnext',
     },
   },
-  //   tsconfigDev: {
-  //     compilerOptions: {
-  //       verbatimModuleSyntax: false,
-  //       module: 'CommonJS',
-  //     },
-  //   },
   deps: [
     'csv-parser',
   ],
@@ -77,16 +71,27 @@ project.addFields({
     },
   },
 });
-
+// Svelte/Vite tasks
 project.addTask('dev', { exec: 'vite dev' });
 project.compileTask.reset('vite build');
 project.addTask('preview', { exec: 'vite preview' });
 project.addTask('prepare', { exec: 'svelte-kit sync || echo ""' });
 project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json' });
 project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch' });
-project.addDevDeps('aws-cdk@2.1007.0');
-project.defaultTask?.reset('bun .projenrc.ts');
-// HACK: Replace when PR is merged
-project.cdkConfig.json.addOverride('app', 'bun infra/bin/app.ts');
 
+// TODO: Add CDK CLI in projen
+project.addDevDeps('aws-cdk@2.1007.0');
+
+// TODO: Fix in projen
+project.defaultTask?.reset('bun .projenrc.ts');
+// TODO: Replace when PR is merged
+project.cdkConfig.json.addOverride('app', 'bun infra/bin/app.ts');
+// TODO: Extract as a default to Projen
+project.vscode?.settings.addSettings(
+  {
+    'editor.tabSize': 2,
+    'editor.insertSpaces': true,
+    'editor.detectIndentation': false,
+  }, 'typescript',
+);
 project.synth();
