@@ -9,6 +9,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   licensed: false,
   vscode: true,
   packageManager: NodePackageManager.BUN,
+
   tsconfig: {
     extends: TypescriptConfigExtends.fromPaths(['./.svelte-kit/tsconfig.json']),
     compilerOptions: {
@@ -25,16 +26,16 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       module: 'esnext',
     },
   },
-  tsconfigDev: {
-    compilerOptions: {
-      verbatimModuleSyntax: false,
-      module: 'CommonJS',
-    },
-  },
+  //   tsconfigDev: {
+  //     compilerOptions: {
+  //       verbatimModuleSyntax: false,
+  //       module: 'CommonJS',
+  //     },
+  //   },
   deps: [
     'csv-parser',
-    ],
-  cdkVersion: '2.180.0',
+  ],
+  cdkVersion: '2.188.0',
   devDeps: [
     '@sveltejs/adapter-auto',
     '@sveltejs/adapter-static',
@@ -83,5 +84,9 @@ project.addTask('preview', { exec: 'vite preview' });
 project.addTask('prepare', { exec: 'svelte-kit sync || echo ""' });
 project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json' });
 project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch' });
+project.addDevDeps('aws-cdk@2.1007.0');
+project.defaultTask?.reset('bun .projenrc.ts');
+// HACK: Replace when PR is merged
+project.cdkConfig.json.addOverride('app', 'bun infra/bin/app.ts');
 
 project.synth();

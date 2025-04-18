@@ -11,7 +11,7 @@
     "lib": [
       "es2019"
     ],
-    "module": "CommonJS",
+    "module": "esnext",
     "noEmitOnError": false,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
@@ -30,8 +30,7 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "moduleResolution": "bundler",
-    "noEmit": true,
-    "verbatimModuleSyntax": false
+    "noEmit": true
   },
   "include": [
     "src/**/*.ts",

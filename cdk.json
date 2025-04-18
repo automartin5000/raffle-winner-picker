@@ -1,5 +1,5 @@
 {
-  "app": "bunx tsx infra/bin/app.ts",
+  "app": "bun infra/bin/app.ts",
   "output": "cdk.out",
   "build": "npx projen bundle",
   "watch": {
