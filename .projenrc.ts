@@ -29,12 +29,14 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   deps: [
     'csv-parser',
   ],
-  cdkVersion: '2.188.0',
+  cdkVersion: '2.190.0',
   devDeps: [
+    '@aws-cdk/aws-amplify-alpha@2.190-alpha.0',
     '@sveltejs/adapter-auto',
     '@sveltejs/adapter-static',
     '@sveltejs/kit',
     '@sveltejs/vite-plugin-svelte',
+    'amplify-adapter',
     'svelte',
     'svelte-check',
     'tsx',

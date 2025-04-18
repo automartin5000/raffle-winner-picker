@@ -259,13 +259,13 @@
       },
       "steps": [
         {
-          "exec": "bunx npm-check-updates@16 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@sveltejs/adapter-auto,@sveltejs/adapter-static,@sveltejs/kit,@sveltejs/vite-plugin-svelte,@types/jest,@types/node,esbuild,eslint-import-resolver-typescript,eslint-plugin-import,jest,projen,svelte,svelte-check,ts-jest,ts-node,tsx,typescript,vite,csv-parser"
+          "exec": "bunx npm-check-updates@16 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@sveltejs/adapter-auto,@sveltejs/adapter-static,@sveltejs/kit,@sveltejs/vite-plugin-svelte,@types/jest,@types/node,amplify-adapter,esbuild,eslint-import-resolver-typescript,eslint-plugin-import,jest,projen,svelte,svelte-check,ts-jest,ts-node,tsx,typescript,vite,csv-parser"
         },
         {
           "exec": "bun install"
         },
         {
-          "exec": "bun update @stylistic/eslint-plugin @sveltejs/adapter-auto @sveltejs/adapter-static @sveltejs/kit @sveltejs/vite-plugin-svelte @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser aws-cdk esbuild eslint-import-resolver-typescript eslint-plugin-import eslint jest jest-junit projen svelte svelte-check ts-jest ts-node tsx typescript vite aws-cdk-lib constructs csv-parser"
+          "exec": "bun update @aws-cdk/aws-amplify-alpha @stylistic/eslint-plugin @sveltejs/adapter-auto @sveltejs/adapter-static @sveltejs/kit @sveltejs/vite-plugin-svelte @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser amplify-adapter aws-cdk esbuild eslint-import-resolver-typescript eslint-plugin-import eslint jest jest-junit projen svelte svelte-check ts-jest ts-node tsx typescript vite aws-cdk-lib constructs csv-parser"
         },
         {
           "exec": "npx projen"
