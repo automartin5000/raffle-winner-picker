@@ -29,7 +29,7 @@
     "projen": "npx projen"
   },
   "devDependencies": {
-    "@aws-cdk/aws-amplify-alpha": "2.190-alpha.0",
+    "@aws-cdk/aws-amplify-alpha": "2.187.0-alpha.0",
     "@stylistic/eslint-plugin": "^2",
     "@sveltejs/adapter-auto": "^4.0.0",
     "@sveltejs/adapter-static": "^3.0.8",

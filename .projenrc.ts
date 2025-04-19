@@ -31,7 +31,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   ],
   cdkVersion: '2.190.0',
   devDeps: [
-    '@aws-cdk/aws-amplify-alpha@2.190-alpha.0',
+    '@aws-cdk/aws-amplify-alpha@2.187.0-alpha.0',
     '@sveltejs/adapter-auto',
     '@sveltejs/adapter-static',
     '@sveltejs/kit',
