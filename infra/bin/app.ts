@@ -6,7 +6,7 @@ import { type AppStackProps } from "./interfaces";
 const awsEnvironments: AppStackProps[] = [
     {
         env: {
-            region: process.env.NONPROD_REGION!,
+            region: process.env.AWS_DEFAULT_REGION!,
             account: process.env.NONPROD_ACCOUNT_ID!,
         },
         envName: 'dev',
@@ -15,7 +15,7 @@ const awsEnvironments: AppStackProps[] = [
     {   
         env: {
             account: process.env.PROD_ACCOUNT_ID!,
-            region: process.env.PROD_REGION!,
+            region: process.env.AWS_DEFAULT_REGION!,
         },
         envName: 'prod',
         hostedZone: process.env.PROD_HOSTED_ZONE!,
@@ -26,7 +26,7 @@ if (process.env.AWS_CDK_ENV_NAME) {
     awsEnvironments.push({
         env: {
             account: process.env.NONPROD_ACCOUNT_ID!,
-            region: process.env.NONPROD_REGION!,
+            region: process.env.AWS_DEFAULT_REGION!,
         },
         envName: process.env.AWS_CDK_ENV_NAME,
         hostedZone: process.env.NONPROD_HOSTED_ZONE!,
