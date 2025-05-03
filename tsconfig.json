@@ -11,7 +11,7 @@
     "inlineSourceMap": true,
     "inlineSources": true,
     "lib": [
-      "es2019"
+      "es2020"
     ],
     "module": "esnext",
     "noEmitOnError": false,

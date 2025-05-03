@@ -100,10 +100,6 @@
       "type": "build"
     },
     {
-      "name": "tsx",
-      "type": "build"
-    },
-    {
       "name": "typescript",
       "type": "build"
     },
