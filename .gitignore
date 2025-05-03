@@ -49,8 +49,6 @@ junit.xml
 .cdk.staging/
 .parcel-cache/
 .output
-.vercel
-.netlify
 .wrangler
 /.svelte-kit
 /build

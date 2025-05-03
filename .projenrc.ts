@@ -53,8 +53,6 @@ const project = new awscdk.AwsCdkTypeScriptApp({
 project.gitignore.exclude(
   // Output
   '.output',
-  '.vercel',
-  '.netlify',
   '.wrangler',
   '/.svelte-kit',
   '/build',
@@ -70,7 +68,7 @@ project.gitignore.exclude(
   'vite.config.js.timestamp-*',
   'vite.config.ts.timestamp-*',
   // CDK
-  'cdk.context.json', // excluded for security concerns in public rpo
+  'cdk.context.json', // excluded for security concerns in public repo
 );
 project.addFields({
   svelte: {
