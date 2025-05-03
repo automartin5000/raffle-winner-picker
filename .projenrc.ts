@@ -5,6 +5,14 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   defaultReleaseBranch: 'main',
   name: 'raffle-winner-picker',
   appEntrypoint: '../infra/bin/app.ts',
+  buildWorkflowOptions: {
+    workflowTriggers: {
+      push: {
+        // All branches except main
+        branches: ['!main'],
+      }
+    }
+  },
   projenrcTs: true,
   licensed: false,
   vscode: true,
@@ -39,7 +47,6 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     'amplify-adapter',
     'svelte',
     'svelte-check',
-    'tsx',
     'vite',
   ],
 });
@@ -82,12 +89,10 @@ project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./t
 project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch' });
 
 // TODO: Add CDK CLI in projen
-project.addDevDeps('aws-cdk@2.1007.0');
+project.addDevDeps('aws-cdk@2.1013.0');
 
 // TODO: Fix in projen
 project.defaultTask?.reset('bun .projenrc.ts');
-// TODO: Replace when PR is merged
-project.cdkConfig.json.addOverride('app', 'bun infra/bin/app.ts');
 // TODO: Extract as a default to Projen
 project.vscode?.settings.addSettings(
   {
@@ -96,4 +101,5 @@ project.vscode?.settings.addSettings(
     'editor.detectIndentation': false,
   }, 'typescript',
 );
+project.buildWorkflow?.
 project.synth();

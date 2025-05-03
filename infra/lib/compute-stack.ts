@@ -32,7 +32,6 @@ export class ComputeStack extends cdk.Stack {
         this.uploadWebsiteAssets(bucket);
         cdk.Tags.of(this).add('environment', props.envName);
         cdk.Tags.of(this).add('project', 'raffle-winner-picker');
-
   }
 
     private createWebsiteBucket() {
