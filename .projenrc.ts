@@ -16,29 +16,29 @@ const project = new awscdk.AwsCdkTypeScriptApp({
         name: 'AWS Account Login',
         uses: 'aws-actions/configure-aws-credentials@v4',
         with: {
-          'aws-region': "${{ vars.AWS_REGION }}",
-          audience: 'sts.amazonaws.com',
+          'aws-region': '${{ vars.AWS_REGION }}',
+          'audience': 'sts.amazonaws.com',
           'role-to-assume': 'arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer',
         },
 
-      }
+      },
     ],
     env: {
-      NONPROD_AWS_ACCOUNT_ID: "${{ secrets.NONPROD_AWS_ACCOUNT_ID }}",
-      PROD_AWS_ACCOUNT_ID: "${{ secrets.PROD_AWS_ACCOUNT_ID }}",
-      NONPROD_HOSTED_ZONE: "${{ secrets.NONPROD_HOSTED_ZONE }}",
-      PROD_HOSTED_ZONE: "${{ secrets.PROD_HOSTED_ZONE }}",
+      NONPROD_AWS_ACCOUNT_ID: '${{ secrets.NONPROD_AWS_ACCOUNT_ID }}',
+      PROD_AWS_ACCOUNT_ID: '${{ secrets.PROD_AWS_ACCOUNT_ID }}',
+      NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
+      PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
     },
     workflowTriggers: {
       push: {
         // All branches except main
         branches: ['!main'],
       },
-      workflowDispatch: {}
-    }
+      workflowDispatch: {},
+    },
   },
   projenrcTs: true,
-  projenVersion: "^0.92.2",
+  projenVersion: '^0.92.2',
   licensed: false,
   vscode: true,
   packageManager: NodePackageManager.BUN,
