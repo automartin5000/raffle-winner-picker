@@ -27,7 +27,7 @@
         "eslint-plugin-import": "^2.31.0",
         "jest": "^29.7.0",
         "jest-junit": "^16",
-        "projen": "^0.91.29",
+        "projen": "^0.92.2",
         "svelte": "^5.28.2",
         "svelte-check": "^4.1.7",
         "ts-jest": "^29.3.2",
@@ -1116,7 +1116,7 @@
 
     "pretty-format": ["pretty-format@29.7.0", "", { "dependencies": { "@jest/schemas": "^29.6.3", "ansi-styles": "^5.0.0", "react-is": "^18.0.0" } }, "sha512-Pdlw/oPxN+aXdmM9R00JVC9WVFoCLTKJvDVLgmJ+qAffBMxsV85l/Lu7sNx4zSzPyoL2euImuEwHhOXdEgNFZQ=="],
 
-    "projen": ["projen@0.91.29", "", { "dependencies": { "@iarna/toml": "^2.2.5", "case": "^1.6.3", "chalk": "^4.1.2", "comment-json": "4.2.2", "constructs": "^10.0.0", "conventional-changelog-config-spec": "^2.1.0", "fast-json-patch": "^3.1.1", "glob": "^8", "ini": "^2.0.0", "parse-conflict-json": "^4.0.0", "semver": "^7.7.1", "shx": "^0.4.0", "xmlbuilder2": "^3.1.1", "yaml": "^2.2.2", "yargs": "^17.7.2" }, "bin": { "projen": "bin/projen" } }, "sha512-5lPKIZukWWinwPQwnQClGf1wSC9T2f8XlZF1pE+rtx5HCbZ+hDX53pFo8l+79x9dgaRgJmEqhG/PjoOM8HrFRQ=="],
+    "projen": ["projen@0.92.2", "", { "dependencies": { "@iarna/toml": "^2.2.5", "case": "^1.6.3", "chalk": "^4.1.2", "comment-json": "4.2.2", "constructs": "^10.0.0", "conventional-changelog-config-spec": "^2.1.0", "fast-json-patch": "^3.1.1", "glob": "^8", "ini": "^2.0.0", "parse-conflict-json": "^4.0.0", "semver": "^7.7.1", "shx": "^0.4.0", "xmlbuilder2": "^3.1.1", "yaml": "^2.2.2", "yargs": "^17.7.2" }, "bin": { "projen": "bin/projen" } }, "sha512-IBuITv0D6wpsMNvmSeQysl8TtGV8NGFFKwINRu/cqAud8nMHbtTZbEUruL2QydRGnIBLIfRigd+/HjxZMxQoPA=="],
 
     "prompts": ["prompts@2.4.2", "", { "dependencies": { "kleur": "^3.0.3", "sisteransi": "^1.0.5" } }, "sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q=="],
 

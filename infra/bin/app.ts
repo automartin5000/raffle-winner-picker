@@ -9,14 +9,14 @@ const awsEnvironments: AppStackProps[] = [
     {
         env: {
             region,
-            account: process.env.NONPROD_ACCOUNT_ID!,
+            account: process.env.NONPROD_AWS_ACCOUNT_ID!,
         },
         envName: 'dev',
         hostedZone: process.env.NONPROD_HOSTED_ZONE!,
     },
     {   
         env: {
-            account: process.env.PROD_ACCOUNT_ID!,
+            account: process.env.PROD_AWS_ACCOUNT_ID!,
             region,
         },
         envName: 'prod',

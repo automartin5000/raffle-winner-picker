@@ -6,6 +6,12 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   name: 'raffle-winner-picker',
   appEntrypoint: '../infra/bin/app.ts',
   buildWorkflowOptions: {
+    env: {
+      NONPROD_AWS_ACCOUNT_ID: "${{ secrets.NONPROD_AWS_ACCOUNT_ID }}",
+      PROD_AWS_ACCOUNT_ID: "${{ secrets.PROD_AWS_ACCOUNT_ID }}",
+      NONPROD_HOSTED_ZONE: "${{ secrets.NONPROD_HOSTED_ZONE }}",
+      PROD_HOSTED_ZONE: "${{ secrets.PROD_HOSTED_ZONE }}",
+    },
     workflowTriggers: {
       push: {
         // All branches except main
@@ -14,6 +20,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     }
   },
   projenrcTs: true,
+  projenVersion: "^0.92.2",
   licensed: false,
   vscode: true,
   packageManager: NodePackageManager.BUN,
