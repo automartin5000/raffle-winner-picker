@@ -1,4 +1,5 @@
 import { awscdk } from 'projen';
+import { JobPermission } from 'projen/lib/github/workflows-model';
 import { NodePackageManager, TypescriptConfigExtends, TypeScriptModuleResolution } from 'projen/lib/javascript';
 
 const project = new awscdk.AwsCdkTypeScriptApp({
@@ -6,6 +7,20 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   name: 'raffle-winner-picker',
   appEntrypoint: '../infra/bin/app.ts',
   buildWorkflowOptions: {
+    permissions: {
+      contents: JobPermission.READ,
+      idToken: JobPermission.WRITE,
+    },
+    preBuildSteps: [
+      {
+        name: 'AWS Account Login',
+        uses: 'aws-actions/configure-aws-credentials@v4',
+        with: {
+          'aws-region': "${{ env.AWS_REGION }}",
+        },
+
+      }
+    ],
     env: {
       NONPROD_AWS_ACCOUNT_ID: "${{ secrets.NONPROD_AWS_ACCOUNT_ID }}",
       PROD_AWS_ACCOUNT_ID: "${{ secrets.PROD_AWS_ACCOUNT_ID }}",
@@ -107,5 +122,4 @@ project.vscode?.settings.addSettings(
     'editor.detectIndentation': false,
   }, 'typescript',
 );
-project.buildWorkflow?.
 project.synth();

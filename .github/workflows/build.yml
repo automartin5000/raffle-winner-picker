@@ -10,7 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+      id-token: write
     outputs:
       self_mutation_happened: ${{ steps.self_mutation.outputs.self_mutation_happened }}
     env:
@@ -31,6 +32,10 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         run: bun install
+      - name: AWS Account Login
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
       - name: build
         run: npx projen build
       - name: Find mutations
