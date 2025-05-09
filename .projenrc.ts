@@ -16,7 +16,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
         name: 'AWS Account Login',
         uses: 'aws-actions/configure-aws-credentials@v4',
         with: {
-          'aws-region': "${{ env.AWS_REGION }}",
+          'aws-region': "${{ vars.AWS_REGION }}",
         },
 
       }
