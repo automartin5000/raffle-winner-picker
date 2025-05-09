@@ -17,6 +17,8 @@ const project = new awscdk.AwsCdkTypeScriptApp({
         uses: 'aws-actions/configure-aws-credentials@v4',
         with: {
           'aws-region': "${{ vars.AWS_REGION }}",
+          audience: 'sts.amazonaws.com',
+          'role-to-assume': 'arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer',
         },
 
       }
