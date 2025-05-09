@@ -16,7 +16,8 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       push: {
         // All branches except main
         branches: ['!main'],
-      }
+      },
+      workflowDispatch: {}
     }
   },
   projenrcTs: true,
