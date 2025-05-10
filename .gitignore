@@ -49,8 +49,6 @@ junit.xml
 .cdk.staging/
 .parcel-cache/
 .output
-.vercel
-.netlify
 .wrangler
 /.svelte-kit
 /build
@@ -63,4 +61,5 @@ Thumbs.db
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 cdk.context.json
+!/.vscode/settings.json
 !/.projenrc.ts

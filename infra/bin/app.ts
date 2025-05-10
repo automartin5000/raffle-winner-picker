@@ -3,19 +3,21 @@ import { Construct } from "constructs";
 import { ComputeStack } from "../lib/compute-stack";
 import { type AppStackProps } from "./interfaces";
 
+const region = 'us-east-1';
+
 const awsEnvironments: AppStackProps[] = [
     {
         env: {
-            region: process.env.NONPROD_REGION!,
-            account: process.env.NONPROD_ACCOUNT_ID!,
+            region,
+            account: process.env.NONPROD_AWS_ACCOUNT_ID!,
         },
         envName: 'dev',
         hostedZone: process.env.NONPROD_HOSTED_ZONE!,
     },
     {   
         env: {
-            account: process.env.PROD_ACCOUNT_ID!,
-            region: process.env.PROD_REGION!,
+            account: process.env.PROD_AWS_ACCOUNT_ID!,
+            region,
         },
         envName: 'prod',
         hostedZone: process.env.PROD_HOSTED_ZONE!,
@@ -26,7 +28,7 @@ if (process.env.AWS_CDK_ENV_NAME) {
     awsEnvironments.push({
         env: {
             account: process.env.NONPROD_ACCOUNT_ID!,
-            region: process.env.NONPROD_REGION!,
+            region,
         },
         envName: process.env.AWS_CDK_ENV_NAME,
         hostedZone: process.env.NONPROD_HOSTED_ZONE!,

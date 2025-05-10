@@ -15,6 +15,7 @@
 /.projen/deps.json linguist-generated
 /.projen/files.json linguist-generated
 /.projen/tasks.json linguist-generated
+/.vscode/settings.json linguist-generated
 /bun.lockb linguist-generated
 /cdk.json linguist-generated
 /package.json linguist-generated
