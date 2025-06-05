@@ -73,6 +73,8 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     'svelte',
     'svelte-check',
     'vite',
+    'svelte-preprocess',
+    'vite-plugin-svelte',
   ],
 });
 project.gitignore.exclude(

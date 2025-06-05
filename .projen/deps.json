@@ -93,6 +93,10 @@
       "type": "build"
     },
     {
+      "name": "svelte-preprocess",
+      "type": "build"
+    },
+    {
       "name": "ts-jest",
       "type": "build"
     },
@@ -106,6 +110,10 @@
     },
     {
       "name": "vite",
+      "type": "build"
+    },
+    {
+      "name": "vite-plugin-svelte",
       "type": "build"
     },
     {
