@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as readline from 'readline';
-import * as csv from 'csv-parser';
+import csv from 'csv-parser';
 
 interface FinalCounts {
   [prize: string]: { [person: string]: number };

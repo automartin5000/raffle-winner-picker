@@ -29,7 +29,6 @@
     "projen": "npx projen"
   },
   "devDependencies": {
-    "@aws-cdk/aws-amplify-alpha": "2.187.0-alpha.0",
     "@stylistic/eslint-plugin": "^2",
     "@sveltejs/adapter-auto": "^4.0.0",
     "@sveltejs/adapter-static": "^3.0.8",
@@ -40,7 +39,7 @@
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",
     "amplify-adapter": "^0.2.2",
-    "aws-cdk": "2.1013.0",
+    "aws-cdk": "2.1018.0",
     "esbuild": "^0.25.3",
     "eslint": "^9",
     "eslint-import-resolver-typescript": "^3.10.1",

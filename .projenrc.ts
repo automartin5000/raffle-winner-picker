@@ -52,6 +52,8 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       forceConsistentCasingInFileNames: true,
       resolveJsonModule: true,
       skipLibCheck: true,
+      inlineSourceMap: false,
+      sourceMap: true,
       strict: true,
       moduleResolution: TypeScriptModuleResolution.BUNDLER,
       target: 'ESNext',
@@ -64,7 +66,6 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   ],
   cdkVersion: '2.190.0',
   devDeps: [
-    '@aws-cdk/aws-amplify-alpha@2.187.0-alpha.0',
     '@sveltejs/adapter-auto',
     '@sveltejs/adapter-static',
     '@sveltejs/kit',
@@ -114,7 +115,7 @@ project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./t
 project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch' });
 
 // TODO: Add CDK CLI in projen
-project.addDevDeps('aws-cdk@2.1013.0');
+project.addDevDeps('aws-cdk@2.1018.0');
 
 // TODO: Fix in projen
 project.defaultTask?.reset('bun .projenrc.ts');

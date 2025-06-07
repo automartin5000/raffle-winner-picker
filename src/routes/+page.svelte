@@ -1,18 +1,18 @@
 <script lang="ts">
-  import { parseCSV } from './utils/csv';
-  import { downloadCSV } from './utils/download';
-  import PrizeForm from './components/PrizeForm.svelte';
-  import PrizeList from './components/PrizeList.svelte';
-  import WinnerWheel from './components/WinnerWheel.svelte';
+  import { parseCSV } from '../utils/csv';
+  import { downloadCSV } from '../utils/download';
+  import PrizeForm from '../components/PrizeForm.svelte';
+  import PrizeList from '../components/PrizeList.svelte';
+  import WinnerWheel from '../components/WinnerWheel.svelte';
 
   let entries: string[] = [];
   let prizes: string[] = [];
-  let newPrize: string = '';
-  let prizeWinners: Record<string, string[]> = {};
-  let winnerPool: string[] = [];
-  let numWinners: number = 1;
-  let displayedName: string = '';
-  let spinning: boolean = false;
+  let newPrize: string = $state('');
+  let prizeWinners: Record<string, string[]> = $state({});
+  let winnerPool: string[] = $state([]);
+  let numWinners: number = $state(1);
+  let displayedName: string = $state('');
+  let spinning: boolean = $state(false);
   let interval: ReturnType<typeof setInterval>;
 
   function handleFileUpload(event: Event) {
@@ -81,7 +81,7 @@
 
 <h1>CSV Raffle Picker</h1>
 
-<input type="file" accept=".csv" on:change={handleFileUpload} />
+<input type="file" accept=".csv" onchange={handleFileUpload} />
 <br /><br />
 
 <PrizeForm bind:newPrize add={addPrize} />
@@ -101,6 +101,6 @@
 <WinnerWheel name={displayedName} />
 
 <br />
-<button on:click={exportWinners} disabled={Object.keys(prizeWinners).length === 0}>
+<button onclick={exportWinners} disabled={Object.keys(prizeWinners).length === 0}>
   Export Winners CSV
 </button>

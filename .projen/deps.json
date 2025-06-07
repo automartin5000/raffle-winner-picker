@@ -1,11 +1,6 @@
 {
   "dependencies": [
     {
-      "name": "@aws-cdk/aws-amplify-alpha",
-      "version": "2.187.0-alpha.0",
-      "type": "build"
-    },
-    {
       "name": "@stylistic/eslint-plugin",
       "version": "^2",
       "type": "build"
@@ -50,7 +45,7 @@
     },
     {
       "name": "aws-cdk",
-      "version": "2.1013.0",
+      "version": "2.1018.0",
       "type": "build"
     },
     {
