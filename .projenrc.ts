@@ -6,6 +6,8 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   defaultReleaseBranch: 'main',
   name: 'raffle-winner-picker',
   appEntrypoint: '../infra/bin/app.ts',
+  depsUpgrade: false,
+  renovatebot: true,
   buildWorkflowOptions: {
     permissions: {
       contents: JobPermission.READ,

@@ -187,10 +187,6 @@
         }
       ]
     },
-    "post-upgrade": {
-      "name": "post-upgrade",
-      "description": "Runs after upgrading dependencies"
-    },
     "pre-compile": {
       "name": "pre-compile",
       "description": "Prepare the project for compilation"
@@ -248,30 +244,6 @@
       "steps": [
         {
           "exec": "jest --watch"
-        }
-      ]
-    },
-    "upgrade": {
-      "name": "upgrade",
-      "description": "upgrade dependencies",
-      "env": {
-        "CI": "0"
-      },
-      "steps": [
-        {
-          "exec": "bunx npm-check-updates@16 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@sveltejs/adapter-auto,@sveltejs/adapter-static,@sveltejs/kit,@sveltejs/vite-plugin-svelte,@types/jest,@types/node,@types/uuid,amplify-adapter,esbuild,eslint-import-resolver-typescript,eslint-plugin-import,jest,svelte-check,svelte-preprocess,ts-jest,ts-node,typescript,vite,vite-plugin-svelte,@auth0/auth0-spa-js,@aws-sdk/client-dynamodb,@aws-sdk/lib-dynamodb,@smui/button,@smui/card,@smui/fab,@smui/list,@smui/paper,@smui/select,@smui/textfield,@smui/top-app-bar,csv-parser,svelte,uuid"
-        },
-        {
-          "exec": "bun install"
-        },
-        {
-          "exec": "bun update @stylistic/eslint-plugin @sveltejs/adapter-auto @sveltejs/adapter-static @sveltejs/kit @sveltejs/vite-plugin-svelte @types/jest @types/node @types/uuid @typescript-eslint/eslint-plugin @typescript-eslint/parser amplify-adapter aws-cdk esbuild eslint-import-resolver-typescript eslint-plugin-import eslint jest jest-junit projen svelte-check svelte-preprocess ts-jest ts-node typescript vite vite-plugin-svelte @auth0/auth0-spa-js @aws-sdk/client-dynamodb @aws-sdk/lib-dynamodb @smui/button @smui/card @smui/fab @smui/list @smui/paper @smui/select @smui/textfield @smui/top-app-bar aws-cdk-lib constructs csv-parser svelte uuid"
-        },
-        {
-          "exec": "npx projen"
-        },
-        {
-          "spawn": "post-upgrade"
         }
       ]
     },
