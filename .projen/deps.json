@@ -30,6 +30,10 @@
       "type": "build"
     },
     {
+      "name": "@types/uuid",
+      "type": "build"
+    },
+    {
       "name": "@typescript-eslint/eslint-plugin",
       "version": "^8",
       "type": "build"
@@ -80,10 +84,6 @@
       "type": "build"
     },
     {
-      "name": "svelte",
-      "type": "build"
-    },
-    {
       "name": "svelte-check",
       "type": "build"
     },
@@ -112,6 +112,50 @@
       "type": "build"
     },
     {
+      "name": "@auth0/auth0-spa-js",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-sdk/client-dynamodb",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-sdk/lib-dynamodb",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/button",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/card",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/fab",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/list",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/paper",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/select",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/textfield",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/top-app-bar",
+      "type": "runtime"
+    },
+    {
       "name": "aws-cdk-lib",
       "version": "^2.190.0",
       "type": "runtime"
@@ -123,6 +167,14 @@
     },
     {
       "name": "csv-parser",
+      "type": "runtime"
+    },
+    {
+      "name": "svelte",
+      "type": "runtime"
+    },
+    {
+      "name": "uuid",
       "type": "runtime"
     }
   ],

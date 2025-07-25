@@ -60,9 +60,23 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       noEmit: true,
       module: 'esnext',
     },
+    include: ['src/**/*'],
   },
   deps: [
     'csv-parser',
+    '@auth0/auth0-spa-js',
+    'uuid',
+    '@aws-sdk/client-dynamodb',
+    '@aws-sdk/lib-dynamodb',
+    'svelte',
+    '@smui/button',
+    '@smui/card',
+    '@smui/textfield',
+    '@smui/select',
+    '@smui/top-app-bar',
+    '@smui/list',
+    '@smui/paper',
+    '@smui/fab',
   ],
   cdkVersion: '2.190.0',
   devDeps: [
@@ -71,11 +85,11 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     '@sveltejs/kit',
     '@sveltejs/vite-plugin-svelte',
     'amplify-adapter',
-    'svelte',
     'svelte-check',
     'vite',
     'svelte-preprocess',
     'vite-plugin-svelte',
+    '@types/uuid',
   ],
 });
 project.gitignore.exclude(
@@ -99,6 +113,7 @@ project.gitignore.exclude(
   'cdk.context.json', // excluded for security concerns in public repo
 );
 project.addFields({
+  type: 'module',
   svelte: {
     kit: {
       adapter: '@sveltejs/adapter-static',

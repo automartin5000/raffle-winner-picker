@@ -1,0 +1,52 @@
+/* SMUI Material Design Theme */
+:root {
+  --mdc-theme-primary: #1976d2;
+  --mdc-theme-secondary: #dc004e;
+  --mdc-theme-surface: #ffffff;
+  --mdc-theme-background: #fafafa;
+  --mdc-theme-error: #b00020;
+  --mdc-theme-on-primary: #ffffff;
+  --mdc-theme-on-secondary: #ffffff;
+  --mdc-theme-on-surface: #000000;
+  --mdc-theme-on-error: #ffffff;
+  --mdc-theme-text-primary-on-background: #000000;
+  --mdc-theme-text-secondary-on-background: rgba(0, 0, 0, 0.54);
+  --mdc-theme-text-hint-on-background: rgba(0, 0, 0, 0.38);
+  --mdc-theme-text-disabled-on-background: rgba(0, 0, 0, 0.38);
+  --mdc-theme-text-icon-on-background: rgba(0, 0, 0, 0.38);
+  --mdc-theme-text-primary-on-light: #000000;
+  --mdc-theme-text-secondary-on-light: rgba(0, 0, 0, 0.54);
+  --mdc-theme-text-hint-on-light: rgba(0, 0, 0, 0.38);
+  --mdc-theme-text-disabled-on-light: rgba(0, 0, 0, 0.38);
+  --mdc-theme-text-icon-on-light: rgba(0, 0, 0, 0.38);
+  --mdc-theme-text-primary-on-dark: #ffffff;
+  --mdc-theme-text-secondary-on-dark: rgba(255, 255, 255, 0.7);
+  --mdc-theme-text-hint-on-dark: rgba(255, 255, 255, 0.5);
+  --mdc-theme-text-disabled-on-dark: rgba(255, 255, 255, 0.5);
+  --mdc-theme-text-icon-on-dark: rgba(255, 255, 255, 0.5);
+}
+
+/* Basic SMUI styling */
+.mdc-button {
+  font-family: inherit;
+  text-transform: none;
+}
+
+.mdc-card {
+  background-color: var(--mdc-theme-surface);
+  border-radius: 8px;
+}
+
+.mdc-top-app-bar {
+  background-color: var(--mdc-theme-primary);
+  color: var(--mdc-theme-on-primary);
+}
+
+.mdc-text-field {
+  background-color: transparent;
+}
+
+.mdc-paper {
+  background-color: var(--mdc-theme-surface);
+  border-radius: 8px;
+}
