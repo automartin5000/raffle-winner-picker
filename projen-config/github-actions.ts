@@ -103,6 +103,8 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           uses: "actions/github-script@v7",
           with: {
             script: `
+              const core = require('@actions/core');
+
               async function waitForBuild() {
                 const maxAttempts = 60;  // 10 minutes (60 * 10 seconds)
                 const prRef = context.payload.pull_request?.head.sha;
@@ -174,8 +176,25 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
                     
                     if (build.status === 'completed') {
                       if (build.conclusion === 'success') {
-                        console.log('✅ Build completed successfully, continuing with deployment');
-                        return;
+                        // Find the artifact for this build
+                        const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          run_id: build.id,
+                        });
+                        
+                        console.log('Available artifacts:', artifacts.data.artifacts.map(a => a.name));
+                        
+                        const cdkArtifact = artifacts.data.artifacts.find(a => a.name.startsWith('cdk-out-'));
+                        if (!cdkArtifact) {
+                          console.log('No CDK artifact found yet, waiting...');
+                          await new Promise(resolve => setTimeout(resolve, 10000));
+                          continue;
+                        }
+
+                        core.exportVariable('CDK_ARTIFACT_NAME', cdkArtifact.name);
+                        console.log('✅ Build completed successfully and artifact found:', cdkArtifact.name);
+                        return cdkArtifact.name;
                       } else {
                         throw new Error(\`❌ Build failed with conclusion: \${build.conclusion}\`);
                       }
@@ -200,9 +219,8 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            name: "cdk-out-${{ github.event.pull_request.head.sha }}",
+            name: "${{ env.CDK_ARTIFACT_NAME }}",
             path: "cdk.out/",
-            searchArtifacts: true,
           },
         },
         {
