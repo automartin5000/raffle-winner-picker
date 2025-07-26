@@ -161,7 +161,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
                   console.log('- Build SHA:', buildRef);
                   console.log('- Branch:', context.payload.pull_request?.head.ref);
                   
-                  console.log(\`Found \${ourBuilds.length} workflow runs for commit \${ref}\`);
+                  console.log(\`Found \${ourBuilds.length} workflow runs for commits \${prRef} or \${buildRef}\`);
                   
                   if (ourBuilds.length > 0) {
                     const build = ourBuilds[0];
