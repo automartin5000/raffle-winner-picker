@@ -104,32 +104,63 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           with: {
             script: `
               async function waitForBuild() {
-                const workflowName = 'build';
                 const maxAttempts = 60;  // 10 minutes (60 * 10 seconds)
                 const ref = context.sha;
                 
+                console.log('Looking for build workflow runs for commit:', ref);
+                
+                // First, list all workflows to find the build workflow by name
+                const workflows = await github.rest.actions.listRepoWorkflows({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                });
+                
+                console.log('Available workflows:');
+                workflows.data.workflows.forEach(w => {
+                  console.log(\`- \${w.name} (ID: \${w.id}, Path: \${w.path})\`);
+                });
+                
+                const buildWorkflow = workflows.data.workflows.find(w => w.name === 'build');
+                
+                if (!buildWorkflow) {
+                  throw new Error('Could not find workflow named "build"');
+                }
+                
+                console.log('Found build workflow:', buildWorkflow.name, buildWorkflow.id);
+                
                 for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                  console.log(\`Checking build status (attempt \${attempt + 1}/\${maxAttempts})\`);
+                  console.log(\`\\n[Attempt \${attempt + 1}/\${maxAttempts}] Checking build status...\`);
                   
                   const builds = await github.rest.actions.listWorkflowRuns({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    workflow_id: workflowName + '.yml',
+                    workflow_id: buildWorkflow.id,
                     head_sha: ref,
                   });
                   
+                  console.log(\`Found \${builds.data.workflow_runs.length} workflow runs for this commit\`);
+                  
                   if (builds.data.workflow_runs.length > 0) {
                     const build = builds.data.workflow_runs[0];
-                    console.log(\`Build status: \${build.status}, conclusion: \${build.conclusion}\`);
+                    console.log('Latest build details:');
+                    console.log(\`- Run ID: \${build.id}\`);
+                    console.log(\`- Status: \${build.status}\`);
+                    console.log(\`- Conclusion: \${build.conclusion}\`);
+                    console.log(\`- Created: \${build.created_at}\`);
+                    console.log(\`- URL: \${build.html_url}\`);
                     
                     if (build.status === 'completed') {
                       if (build.conclusion === 'success') {
-                        console.log('Build completed successfully');
+                        console.log('✅ Build completed successfully, continuing with deployment');
                         return;
                       } else {
-                        throw new Error(\`Build failed with conclusion: \${build.conclusion}\`);
+                        throw new Error(\`❌ Build failed with conclusion: \${build.conclusion}\`);
                       }
+                    } else {
+                      console.log('⏳ Build is still in progress, waiting...');
                     }
+                  } else {
+                    console.log('No matching workflow runs found yet, waiting...');
                   }
                   
                   await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
