@@ -105,9 +105,11 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
             script: `
               async function waitForBuild() {
                 const maxAttempts = 60;  // 10 minutes (60 * 10 seconds)
-                const ref = context.sha;
+                const ref = context.payload.pull_request?.head.sha || context.sha;
                 
+                console.log('Event type:', context.eventName);
                 console.log('Looking for build workflow runs for commit:', ref);
+                console.log('PR number:', context.payload.pull_request?.number);
                 
                 // First, list all workflows to find the build workflow by name
                 const workflows = await github.rest.actions.listRepoWorkflows({
@@ -131,12 +133,22 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
                 for (let attempt = 0; attempt < maxAttempts; attempt++) {
                   console.log(\`\\n[Attempt \${attempt + 1}/\${maxAttempts}] Checking build status...\`);
                   
+                  // Get all recent runs for this workflow
                   const builds = await github.rest.actions.listWorkflowRuns({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     workflow_id: buildWorkflow.id,
                     head_sha: ref,
+                    event: 'pull_request',
+                    branch: context.payload.pull_request?.head.ref,
                   });
+                  
+                  console.log('Query parameters:');
+                  console.log('- Owner:', context.repo.owner);
+                  console.log('- Repo:', context.repo.repo);
+                  console.log('- Workflow ID:', buildWorkflow.id);
+                  console.log('- Head SHA:', ref);
+                  console.log('- Branch:', context.payload.pull_request?.head.ref);
                   
                   console.log(\`Found \${builds.data.workflow_runs.length} workflow runs for this commit\`);
                   
