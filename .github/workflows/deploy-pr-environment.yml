@@ -42,13 +42,17 @@ jobs:
 
             \                const maxAttempts = 60;  // 10 minutes (60 * 10 seconds)
 
-            \                const ref = context.payload.pull_request?.head.sha || context.sha;
+            \                const prRef = context.payload.pull_request?.head.sha;
+
+            \                const buildRef = context.sha;
 
             \               \ 
 
             \                console.log('Event type:', context.eventName);
 
-            \                console.log('Looking for build workflow runs for commit:', ref);
+            \                console.log('PR head commit:', prRef);
+
+            \                console.log('Build commit SHA:', buildRef);
 
             \                console.log('PR number:', context.payload.pull_request?.number);
 
@@ -122,9 +126,13 @@ jobs:
             \                  });
 
 
-            \                  // Filter for our specific commit
+            \                  // Filter for builds matching either the PR head commit or the build commit
 
-            \                  const ourBuilds = builds.data.workflow_runs.filter(run => run.head_sha === ref);
+            \                  const ourBuilds = builds.data.workflow_runs.filter(run =>\ 
+
+            \                    run.head_sha === prRef || run.head_sha === buildRef
+
+            \                  );
 
             \                 \ 
 
@@ -136,7 +144,9 @@ jobs:
 
             \                  console.log('- Workflow ID:', buildWorkflow.id);
 
-            \                  console.log('- Head SHA:', ref);
+            \                  console.log('- PR Head SHA:', prRef);
+
+            \                  console.log('- Build SHA:', buildRef);
 
             \                  console.log('- Branch:', context.payload.pull_request?.head.ref);
 
@@ -212,6 +222,7 @@ jobs:
         with:
           name: cdk-out-${{ github.sha }}
           path: cdk.out/
+          searchArtifacts: true
       - name: CDK Bootstrap (if needed)
         run: bunx projen cdk-bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
       - name: Generate CDK Diff

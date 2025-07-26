@@ -105,10 +105,12 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
             script: `
               async function waitForBuild() {
                 const maxAttempts = 60;  // 10 minutes (60 * 10 seconds)
-                const ref = context.payload.pull_request?.head.sha || context.sha;
+                const prRef = context.payload.pull_request?.head.sha;
+                const buildRef = context.sha;
                 
                 console.log('Event type:', context.eventName);
-                console.log('Looking for build workflow runs for commit:', ref);
+                console.log('PR head commit:', prRef);
+                console.log('Build commit SHA:', buildRef);
                 console.log('PR number:', context.payload.pull_request?.number);
                 
                 // First, list all workflows to find the build workflow by name
@@ -146,14 +148,17 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
                     console.log(\`- Run ID: \${run.id}, SHA: \${run.head_sha}, Status: \${run.status}, Branch: \${run.head_branch}\`);
                   });
 
-                  // Filter for our specific commit
-                  const ourBuilds = builds.data.workflow_runs.filter(run => run.head_sha === ref);
+                  // Filter for builds matching either the PR head commit or the build commit
+                  const ourBuilds = builds.data.workflow_runs.filter(run => 
+                    run.head_sha === prRef || run.head_sha === buildRef
+                  );
                   
                   console.log('Query parameters:');
                   console.log('- Owner:', context.repo.owner);
                   console.log('- Repo:', context.repo.repo);
                   console.log('- Workflow ID:', buildWorkflow.id);
-                  console.log('- Head SHA:', ref);
+                  console.log('- PR Head SHA:', prRef);
+                  console.log('- Build SHA:', buildRef);
                   console.log('- Branch:', context.payload.pull_request?.head.ref);
                   
                   console.log(\`Found \${ourBuilds.length} workflow runs for commit \${ref}\`);
@@ -197,6 +202,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           with: {
             name: "cdk-out-${{ github.sha }}",
             path: "cdk.out/",
+            searchArtifacts: true,
           },
         },
         {
