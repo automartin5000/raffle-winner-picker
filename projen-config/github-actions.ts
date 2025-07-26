@@ -99,14 +99,11 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           run: "bun install --frozen-lockfile",
         },
         {
-          name: "Wait for build workflow to complete",
-          uses: "lewagon/wait-on-check-action@v1.4.0",
+          name: "Wait for build workflow",
+          uses: "actions/github-script@v7",
           with: {
-            "ref": "${{ github.ref }}",
-            "check-name": "build",
-            "repo-token": "${{ secrets.GITHUB_TOKEN }}",
-            "wait-interval": "10",
-          },
+            script: "require('./projen-config/scripts/wait-for-build.js')({ github, context })"
+          }
         },
         {
           name: "Download CDK artifacts",
