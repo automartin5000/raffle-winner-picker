@@ -138,10 +138,16 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     workflow_id: buildWorkflow.id,
-                    head_sha: ref,
-                    event: 'pull_request',
-                    branch: context.payload.pull_request?.head.ref,
                   });
+
+                  // Log all runs to help debug
+                  console.log('\\nAll recent workflow runs:');
+                  builds.data.workflow_runs.forEach(run => {
+                    console.log(\`- Run ID: \${run.id}, SHA: \${run.head_sha}, Status: \${run.status}, Branch: \${run.head_branch}\`);
+                  });
+
+                  // Filter for our specific commit
+                  const ourBuilds = builds.data.workflow_runs.filter(run => run.head_sha === ref);
                   
                   console.log('Query parameters:');
                   console.log('- Owner:', context.repo.owner);
@@ -150,10 +156,10 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
                   console.log('- Head SHA:', ref);
                   console.log('- Branch:', context.payload.pull_request?.head.ref);
                   
-                  console.log(\`Found \${builds.data.workflow_runs.length} workflow runs for this commit\`);
+                  console.log(\`Found \${ourBuilds.length} workflow runs for commit \${ref}\`);
                   
-                  if (builds.data.workflow_runs.length > 0) {
-                    const build = builds.data.workflow_runs[0];
+                  if (ourBuilds.length > 0) {
+                    const build = ourBuilds[0];
                     console.log('Latest build details:');
                     console.log(\`- Run ID: \${build.id}\`);
                     console.log(\`- Status: \${build.status}\`);
