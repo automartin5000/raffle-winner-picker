@@ -78,6 +78,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
       permissions: {
         contents: JobPermission.READ,
         idToken: JobPermission.WRITE,
+        actions: JobPermission.READ,  // Needed to download artifacts
       },
       steps: [
         { name: "Checkout", uses: "actions/checkout@v4" },
@@ -219,6 +220,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           with: {
             name: "${{ env.CDK_ARTIFACT_NAME }}",
             path: "cdk.out/",
+            "github-token": "${{ secrets.GITHUB_TOKEN }}",
           },
         },
         {

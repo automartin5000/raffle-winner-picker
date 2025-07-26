@@ -20,6 +20,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -255,6 +256,7 @@ jobs:
         with:
           name: ${{ env.CDK_ARTIFACT_NAME }}
           path: cdk.out/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: CDK Bootstrap (if needed)
         run: bunx projen cdk-bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
       - name: Generate CDK Diff
