@@ -61,4 +61,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 cdk.context.json
 !/.vscode/settings.json
+!/.github/workflows/deploy-pr-environment.yml
+!/.github/workflows/prod-deploy.yml
+!/.github/workflows/cleanup-pr-environment.yml
 !/.projenrc.ts

@@ -6,6 +6,9 @@
 /.gitattributes linguist-generated
 /.github/pull_request_template.md linguist-generated
 /.github/workflows/build.yml linguist-generated
+/.github/workflows/cleanup-pr-environment.yml linguist-generated
+/.github/workflows/deploy-pr-environment.yml linguist-generated
+/.github/workflows/prod-deploy.yml linguist-generated
 /.github/workflows/pull-request-lint.yml linguist-generated
 /.gitignore linguist-generated
 /.npmignore linguist-generated

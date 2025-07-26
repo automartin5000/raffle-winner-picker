@@ -33,7 +33,7 @@
       "description": "Bootstrap the CDK environment",
       "steps": [
         {
-          "exec": "npx cdk bootstrap",
+          "exec": "cdk bootstrap",
           "receiveArgs": true
         }
       ]

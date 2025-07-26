@@ -1,6 +1,7 @@
 import { awscdk } from 'projen';
 import { JobPermission } from 'projen/lib/github/workflows-model';
 import { NodePackageManager, TypescriptConfigExtends, TypeScriptModuleResolution } from 'projen/lib/javascript';
+import { generateGitHubActions } from './projen-config/github-actions';
 
 const project = new awscdk.AwsCdkTypeScriptApp({
   defaultReleaseBranch: 'main',
@@ -26,11 +27,6 @@ const project = new awscdk.AwsCdkTypeScriptApp({
           'role-to-assume': 'arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer',
         },
       },
-      // Move to deploy workflow
-      // {
-      //   name: 'CDK Bootstrap',
-      //   run: 'cdk-bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}',
-      // },
     ],
     env: {
       NONPROD_AWS_ACCOUNT_ID: '${{ secrets.NONPROD_AWS_ACCOUNT_ID }}',
@@ -141,7 +137,7 @@ project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconf
 project.addDevDeps('aws-cdk@^2.1022.0');
 project.addTask('cdk-bootstrap', {
   description: 'Bootstrap the CDK environment',
-  exec: 'npx cdk bootstrap',
+  exec: 'cdk bootstrap',
   receiveArgs: true,
 });
 // TODO: Fix in projen
@@ -154,4 +150,6 @@ project.vscode?.settings.addSettings(
     'editor.detectIndentation': false,
   }, 'typescript',
 );
+generateGitHubActions(project);
+
 project.synth();
