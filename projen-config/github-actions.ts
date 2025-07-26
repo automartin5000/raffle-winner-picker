@@ -103,8 +103,6 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           uses: "actions/github-script@v7",
           with: {
             script: `
-              const core = require('@actions/core');
-
               async function waitForBuild() {
                 const maxAttempts = 60;  // 10 minutes (60 * 10 seconds)
                 const prRef = context.payload.pull_request?.head.sha;

@@ -38,9 +38,6 @@ jobs:
         with:
           script: "
 
-            \              const core = require('@actions/core');
-
-
             \              async function waitForBuild() {
 
             \                const maxAttempts = 60;  // 10 minutes (60 * 10 seconds)
