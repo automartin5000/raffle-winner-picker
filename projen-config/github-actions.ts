@@ -3,6 +3,8 @@ import { BuildWorkflow } from "projen/lib/build";
 import { GitHub, GithubWorkflow } from "projen/lib/github";
 import { JobPermission } from "projen/lib/github/workflows-model";
 
+const RUNNER_TYPE = ["ubuntu-latest"];
+
 export const generateGitHubActions = (project: awscdk.AwsCdkTypeScriptApp) => {
   const github = project.github!;
   updateBuildWorkflow(project.buildWorkflow!);
@@ -34,7 +36,7 @@ const addSecurityScanningJob = (github: GitHub) => {
   workflow.addJobs({
     security: {
       name: "Security Scanning",
-      runsOn: ["ubuntu-latest"],
+      runsOn: RUNNER_TYPE,
       permissions: {
         contents: JobPermission.READ,
         securityEvents: JobPermission.WRITE,
@@ -73,7 +75,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
   workflow.addJobs({
     deploy_pr: {
       name: "Deploy PR Environment",
-      runsOn: ["ubuntu-latest"],
+      runsOn: RUNNER_TYPE,
       // environment: "development",
       permissions: {
         contents: JobPermission.READ,
@@ -253,7 +255,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
     },
     comment: {
       name: "Comment PR Environment Status and diff",
-      runsOn: ["ubuntu-latest"],
+      runsOn: RUNNER_TYPE,
       needs: ["deploy_pr"],
       permissions: {
         contents: JobPermission.READ,
@@ -318,9 +320,10 @@ const addProductionDeployWorkflow = (github: GitHub) => {
   workflow.addJobs({
     find_artifact: {
       name: "Find Build Artifact",
-      runsOn: ["ubuntu-latest"],
+      runsOn: RUNNER_TYPE,
       permissions: {
         contents: JobPermission.READ,
+        actions: JobPermission.READ,
       },
       steps: [
         {
@@ -383,7 +386,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
     },
     deploy_production: {
       name: "Deploy to Production",
-      runsOn: ["ubuntu-latest"],
+      runsOn: RUNNER_TYPE,
       needs: ["find_artifact"],
       environment: "production",
       permissions: {
@@ -451,7 +454,7 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
   workflow.addJobs({
     cleanup: {
       name: "Cleanup PR Environment",
-      runsOn: ["ubuntu-latest"],
+      runsOn: RUNNER_TYPE,
       permissions: {
         contents: JobPermission.READ,
         idToken: JobPermission.WRITE,
