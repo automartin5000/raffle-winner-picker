@@ -3,44 +3,27 @@ import { Construct } from "constructs";
 import { ComputeStack } from "../lib/compute-stack";
 import { type AppStackProps } from "./interfaces";
 
-const region = 'us-east-1';
+const region = process.env.AWS_REGION || 'us-east-1';
 
-const awsEnvironments: AppStackProps[] = [];
+const awsEnvironments: AppStackProps[] = [
+  {
+    env: {
+      region,
+      account: process.env.NONPROD_AWS_ACCOUNT_ID,
+    },
+    envName: 'dev',
+    hostedZone: process.env.NONPROD_HOSTED_ZONE!,
+  },
+  {
+    env: {
+      region,
+      account: process.env.PROD_AWS_ACCOUNT_ID,
+    },
+    envName: 'prod',
+    hostedZone: process.env.PROD_HOSTED_ZONE!,
+  },
 
-// Only create stacks if environment variables are set
-if (process.env.NONPROD_AWS_ACCOUNT_ID && process.env.NONPROD_HOSTED_ZONE) {
-    awsEnvironments.push({
-        env: {
-            region,
-            account: process.env.NONPROD_AWS_ACCOUNT_ID,
-        },
-        envName: 'dev',
-        hostedZone: process.env.NONPROD_HOSTED_ZONE,
-    });
-}
-
-if (process.env.PROD_AWS_ACCOUNT_ID && process.env.PROD_HOSTED_ZONE) {
-    awsEnvironments.push({   
-        env: {
-            account: process.env.PROD_AWS_ACCOUNT_ID,
-            region,
-        },
-        envName: 'prod',
-        hostedZone: process.env.PROD_HOSTED_ZONE,
-    });
-}
-
-// For local development, create a minimal stack
-if (awsEnvironments.length === 0) {
-    awsEnvironments.push({
-        env: {
-            region,
-            account: process.env.CDK_DEFAULT_ACCOUNT || '123456789012',
-        },
-        envName: 'local',
-        hostedZone: 'example.com', // Placeholder for local development
-    });
-}
+];
 
 if (process.env.AWS_CDK_ENV_NAME) {
     awsEnvironments.push({

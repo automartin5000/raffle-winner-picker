@@ -7,6 +7,9 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   name: 'raffle-winner-picker',
   appEntrypoint: '../infra/bin/app.ts',
   depsUpgrade: false,
+  githubOptions: {
+    mergify: false,
+  },
   renovatebot: true,
   buildWorkflowOptions: {
     permissions: {
@@ -22,7 +25,10 @@ const project = new awscdk.AwsCdkTypeScriptApp({
           'audience': 'sts.amazonaws.com',
           'role-to-assume': 'arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer',
         },
-
+      },
+      {
+        name: 'CDK Bootstrap',
+        run: 'npx cdk bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}',
       },
     ],
     env: {
@@ -33,14 +39,13 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     },
     workflowTriggers: {
       push: {
-        // All branches except main
-        branches: ['!main'],
+        branches: ['**', '!main'],
       },
-      workflowDispatch: {},
+      workflowDispatch: {}, // Allows manual workflow runs
     },
   },
   projenrcTs: true,
-  projenVersion: '^0.92.2',
+  projenVersion: '^0.95.0',
   licensed: false,
   vscode: true,
   packageManager: NodePackageManager.BUN,
@@ -132,7 +137,7 @@ project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./t
 project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch' });
 
 // TODO: Add CDK CLI in projen
-project.addDevDeps('aws-cdk@2.1018.0');
+project.addDevDeps('aws-cdk@^2.1022.0');
 
 // TODO: Fix in projen
 project.defaultTask?.reset('bun .projenrc.ts');

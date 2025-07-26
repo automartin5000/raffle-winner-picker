@@ -4,6 +4,7 @@ name: build
 on:
   push:
     branches:
+      - "**"
       - "!main"
   workflow_dispatch: {}
 jobs:
@@ -38,6 +39,8 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           audience: sts.amazonaws.com
           role-to-assume: arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer
+      - name: CDK Bootstrap
+        run: npx cdk bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
       - name: build
         run: npx projen build
       - name: Find mutations
@@ -45,6 +48,7 @@ jobs:
         run: |-
           git add .
           git diff --staged --patch --exit-code > repo.patch || echo "self_mutation_happened=true" >> $GITHUB_OUTPUT
+        shell: bash
         working-directory: ./
       - name: Upload patch
         if: steps.self_mutation.outputs.self_mutation_happened
