@@ -193,12 +193,11 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
                           continue;
                         }
 
+                        // Export both values separately
                         core.exportVariable('CDK_ARTIFACT_NAME', cdkArtifact.name);
+                        core.exportVariable('CDK_RUN_ID', build.id.toString());
                         console.log('✅ Build completed successfully and artifact found:', cdkArtifact.name);
-                        return JSON.stringify({
-                          artifactName: cdkArtifact.name,
-                          runId: build.id
-                        });
+                        return cdkArtifact.name;
                       } else {
                         throw new Error(\`❌ Build failed with conclusion: \${build.conclusion}\`);
                       }
@@ -226,7 +225,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
             name: "${{ env.CDK_ARTIFACT_NAME }}",
             path: "cdk.out/",
             "github-token": "${{ github.token }}",
-            "run-id": "${{ fromJson(steps.find-artifact.outputs.result).runId }}",
+            "run-id": "${{ env.CDK_RUN_ID }}",
           },
         },
         {
@@ -383,11 +382,8 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           }
         },
         {
-          name: "Set artifact details",
-          run: [
-            'echo "artifact-name=${{ fromJson(steps.find-artifact.outputs.result).artifactName }}" >> $GITHUB_OUTPUT',
-            'echo "run-id=${{ fromJson(steps.find-artifact.outputs.result).runId }}" >> $GITHUB_OUTPUT'
-          ].join('\n'),
+          name: "Set artifact name",
+          run: 'echo "artifact-name=${{ steps.find-artifact.outputs.result }}" >> $GITHUB_OUTPUT',
         }
       ],
     },

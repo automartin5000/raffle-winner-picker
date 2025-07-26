@@ -210,17 +210,15 @@ jobs:
             \                        }
 
 
+            \                        // Export both values separately
+
             \                        core.exportVariable('CDK_ARTIFACT_NAME', cdkArtifact.name);
+
+            \                        core.exportVariable('CDK_RUN_ID', build.id.toString());
 
             \                        console.log('✅ Build completed successfully and artifact found:', cdkArtifact.name);
 
-            \                        return JSON.stringify({
-
-            \                          artifactName: cdkArtifact.name,
-
-            \                          runId: build.id
-
-            \                        });
+            \                        return cdkArtifact.name;
 
             \                      } else {
 
@@ -263,7 +261,7 @@ jobs:
           name: ${{ env.CDK_ARTIFACT_NAME }}
           path: cdk.out/
           github-token: ${{ github.token }}
-          run-id: ${{ fromJson(steps.find-artifact.outputs.result).runId }}
+          run-id: ${{ env.CDK_RUN_ID }}
       - name: CDK Bootstrap (if needed)
         run: bunx projen cdk-bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
       - name: Generate CDK Diff

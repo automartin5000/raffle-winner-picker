@@ -101,10 +101,8 @@ jobs:
             \              return cdkArtifact.name;
 
             \            "
-      - name: Set artifact details
-        run: |-
-          echo "artifact-name=${{ fromJson(steps.find-artifact.outputs.result).artifactName }}" >> $GITHUB_OUTPUT
-          echo "run-id=${{ fromJson(steps.find-artifact.outputs.result).runId }}" >> $GITHUB_OUTPUT
+      - name: Set artifact name
+        run: echo "artifact-name=${{ steps.find-artifact.outputs.result }}" >> $GITHUB_OUTPUT
   deploy_production:
     name: Deploy to Production
     needs: find_artifact
