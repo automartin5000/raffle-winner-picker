@@ -26,10 +26,11 @@ const project = new awscdk.AwsCdkTypeScriptApp({
           'role-to-assume': 'arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer',
         },
       },
-      {
-        name: 'CDK Bootstrap',
-        run: 'npx cdk bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}',
-      },
+      // Move to deploy workflow
+      // {
+      //   name: 'CDK Bootstrap',
+      //   run: 'cdk-bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}',
+      // },
     ],
     env: {
       NONPROD_AWS_ACCOUNT_ID: '${{ secrets.NONPROD_AWS_ACCOUNT_ID }}',
@@ -138,7 +139,11 @@ project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconf
 
 // TODO: Add CDK CLI in projen
 project.addDevDeps('aws-cdk@^2.1022.0');
-
+project.addTask('cdk-bootstrap', {
+  description: 'Bootstrap the CDK environment',
+  exec: 'npx cdk bootstrap',
+  receiveArgs: true,
+});
 // TODO: Fix in projen
 project.defaultTask?.reset('bun .projenrc.ts');
 // TODO: Extract as a default to Projen

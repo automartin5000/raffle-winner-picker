@@ -3,6 +3,7 @@
   "scripts": {
     "build": "npx projen build",
     "bundle": "npx projen bundle",
+    "cdk-bootstrap": "npx projen cdk-bootstrap",
     "check": "npx projen check",
     "check:watch": "npx projen check:watch",
     "clobber": "npx projen clobber",

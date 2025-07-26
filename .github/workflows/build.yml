@@ -39,8 +39,6 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           audience: sts.amazonaws.com
           role-to-assume: arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer
-      - name: CDK Bootstrap
-        run: npx cdk bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
       - name: build
         run: npx projen build
       - name: Find mutations

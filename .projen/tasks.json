@@ -28,6 +28,16 @@
       "name": "bundle",
       "description": "Prepare assets"
     },
+    "cdk-bootstrap": {
+      "name": "cdk-bootstrap",
+      "description": "Bootstrap the CDK environment",
+      "steps": [
+        {
+          "exec": "npx cdk bootstrap",
+          "receiveArgs": true
+        }
+      ]
+    },
     "check": {
       "name": "check",
       "steps": [
