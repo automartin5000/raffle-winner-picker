@@ -101,8 +101,10 @@ jobs:
             \              return cdkArtifact.name;
 
             \            "
-      - name: Set artifact name
-        run: echo "artifact-name=${{ steps.find-artifact.outputs.result }}" >> $GITHUB_OUTPUT
+      - name: Set artifact details
+        run: |-
+          echo "artifact-name=${{ fromJson(steps.find-artifact.outputs.result).artifactName }}" >> $GITHUB_OUTPUT
+          echo "run-id=${{ fromJson(steps.find-artifact.outputs.result).runId }}" >> $GITHUB_OUTPUT
   deploy_production:
     name: Deploy to Production
     needs: find_artifact
@@ -126,6 +128,7 @@ jobs:
           name: ${{ needs.find_artifact.outputs.artifact-name }}
           path: cdk.out/
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ needs.find_artifact.outputs.run-id }}
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

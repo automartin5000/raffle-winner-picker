@@ -214,7 +214,13 @@ jobs:
 
             \                        console.log('✅ Build completed successfully and artifact found:', cdkArtifact.name);
 
-            \                        return cdkArtifact.name;
+            \                        return JSON.stringify({
+
+            \                          artifactName: cdkArtifact.name,
+
+            \                          runId: build.id
+
+            \                        });
 
             \                      } else {
 
@@ -257,6 +263,7 @@ jobs:
           name: ${{ env.CDK_ARTIFACT_NAME }}
           path: cdk.out/
           github-token: ${{ github.token }}
+          run-id: ${{ fromJson(steps.find-artifact.outputs.result).runId }}
       - name: CDK Bootstrap (if needed)
         run: bunx projen cdk-bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
       - name: Generate CDK Diff
