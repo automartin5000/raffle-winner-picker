@@ -44,7 +44,7 @@ jobs:
       - name: Upload CDK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cdk-out
+          name: cdk-out-${{ github.sha }}
           path: cdk.out/
           retention-days: "30"
       - name: Find mutations

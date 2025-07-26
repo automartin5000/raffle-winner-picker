@@ -17,7 +17,7 @@ const updateBuildWorkflow = (workflow: BuildWorkflow) => {
       name: "Upload CDK artifacts",
       uses: "actions/upload-artifact@v4",
       with: {
-        name: "cdk-out",
+        name: "cdk-out-${{ github.sha }}",
         path: "cdk.out/",
         "retention-days": "30",
       },
@@ -195,7 +195,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            name: "cdk-out-pr-${{ github.event.number }}",
+            name: "cdk-out-${{ github.sha }}",
             path: "cdk.out/",
           },
         },
@@ -293,21 +293,68 @@ const addProductionDeployWorkflow = (github: GitHub) => {
 
   workflow.addJobs({
     find_artifact: {
-      name: "Find PR Artifact",
+      name: "Find Build Artifact",
       runsOn: ["ubuntu-latest"],
       permissions: {
         contents: JobPermission.READ,
       },
       steps: [
         {
-          name: "Find merged PR",
-          id: "find-pr",
-          run: [
-            'PR_NUMBER=$(gh pr list --state merged --limit 1 --json number,mergeCommit --jq \'.[] | select(.mergeCommit.oid == "${{ github.sha }}") | .number\')',
-            'echo "pr-number=$PR_NUMBER" >> $GITHUB_OUTPUT',
-            'echo "artifact-name=cdk-out-pr-$PR_NUMBER" >> $GITHUB_OUTPUT',
-          ].join("\n"),
+          name: "Find build artifact",
+          uses: "actions/github-script@v7",
+          id: "find-artifact",
+          with: {
+            script: `
+              // First, find the build workflow
+              const workflows = await github.rest.actions.listRepoWorkflows({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              });
+              
+              const buildWorkflow = workflows.data.workflows.find(w => w.name === 'build');
+              if (!buildWorkflow) {
+                throw new Error('Could not find build workflow');
+              }
+
+              // Get workflow runs for the current commit
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: buildWorkflow.id,
+                commit_sha: context.sha,
+              });
+
+              if (runs.data.workflow_runs.length === 0) {
+                throw new Error('No build workflow run found for commit ' + context.sha);
+              }
+
+              // Find the successful run
+              const successRun = runs.data.workflow_runs.find(r => r.status === 'completed' && r.conclusion === 'success');
+              if (!successRun) {
+                throw new Error('No successful build found for commit ' + context.sha);
+              }
+
+              // List artifacts for the successful run
+              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: successRun.id,
+              });
+
+              const cdkArtifact = artifacts.data.artifacts.find(a => a.name === \`cdk-out-\${context.sha}\`);
+              if (!cdkArtifact) {
+                throw new Error('No CDK artifact found for commit ' + context.sha);
+              }
+
+              console.log('Found CDK artifact:', cdkArtifact.name);
+              return cdkArtifact.name;
+            `
+          }
         },
+        {
+          name: "Set artifact name",
+          run: 'echo "artifact-name=${{ steps.find-artifact.outputs.result }}" >> $GITHUB_OUTPUT',
+        }
       ],
     },
     deploy_production: {
@@ -331,10 +378,10 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           },
         },
         {
-          name: "Download PR CDK artifacts",
+          name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            name: "cdk-out-pr-${{ needs.find_artifact.outputs.pr-number }}",
+            name: "${{ needs.find_artifact.outputs.artifact-name }}",
             path: "cdk.out/",
             "github-token": "${{ secrets.GITHUB_TOKEN }}",
           },

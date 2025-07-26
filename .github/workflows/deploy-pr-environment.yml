@@ -210,7 +210,7 @@ jobs:
       - name: Download CDK artifacts
         uses: actions/download-artifact@v4
         with:
-          name: cdk-out-pr-${{ github.event.number }}
+          name: cdk-out-${{ github.sha }}
           path: cdk.out/
       - name: CDK Bootstrap (if needed)
         run: bunx projen cdk-bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
