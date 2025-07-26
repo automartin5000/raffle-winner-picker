@@ -262,8 +262,6 @@ jobs:
           path: cdk.out/
           github-token: ${{ github.token }}
           run-id: ${{ env.CDK_RUN_ID }}
-      - name: CDK Bootstrap (if needed)
-        run: bunx projen cdk-bootstrap --app cdk.out --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
       - name: Generate CDK Diff
         id: cdk-diff
         run: |-
@@ -272,7 +270,7 @@ jobs:
           cat cdk-diff.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
       - name: Deploy ephemeral environment
-        run: bunx projen deploy --app cdk.out --require-approval never
+        run: bunx projen deploy --require-approval never
       - name: Get CloudFront URL
         id: get-url
         run: |-

@@ -229,10 +229,6 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           },
         },
         {
-          name: "CDK Bootstrap (if needed)",
-          run: "bunx projen cdk-bootstrap --app cdk.out --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}",
-        },
-        {
           name: "Generate CDK Diff",
           id: "cdk-diff",
           run: [
@@ -244,7 +240,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         },
         {
           name: "Deploy ephemeral environment",
-          run: "bunx projen deploy --app cdk.out --require-approval never",
+          run: "bunx projen deploy --require-approval never",
         },
         {
           name: "Get CloudFront URL",
