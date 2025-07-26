@@ -3,7 +3,7 @@ import { Construct } from "constructs";
 import { ComputeStack } from "../lib/compute-stack";
 import { type AppStackProps } from "./interfaces";
 
-const region = process.env.AWS_REGION || 'us-east-1';
+const region = 'us-east-1';
 
 const awsEnvironments: AppStackProps[] = [
   {
@@ -28,7 +28,7 @@ const awsEnvironments: AppStackProps[] = [
 if (process.env.AWS_CDK_ENV_NAME) {
     awsEnvironments.push({
         env: {
-            account: process.env.NONPROD_ACCOUNT_ID!,
+            account: process.env.NONPROD_AWS_ACCOUNT_ID!,
             region,
         },
         envName: process.env.AWS_CDK_ENV_NAME,
