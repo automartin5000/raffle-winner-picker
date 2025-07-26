@@ -222,7 +222,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           with: {
             name: "${{ env.CDK_ARTIFACT_NAME }}",
             path: "cdk.out/",
-            "github-token": "${{ secrets.GITHUB_TOKEN }}",
+            "github-token": "${{ github.token }}",
           },
         },
         {

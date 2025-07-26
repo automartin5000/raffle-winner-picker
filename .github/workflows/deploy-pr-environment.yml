@@ -256,7 +256,7 @@ jobs:
         with:
           name: ${{ env.CDK_ARTIFACT_NAME }}
           path: cdk.out/
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
       - name: CDK Bootstrap (if needed)
         run: bunx projen cdk-bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
       - name: Generate CDK Diff
