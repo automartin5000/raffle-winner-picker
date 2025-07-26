@@ -263,7 +263,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ env.CDK_RUN_ID }}
       - name: CDK Bootstrap (if needed)
-        run: bunx projen cdk-bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
+        run: bunx projen cdk-bootstrap --app cdk.out --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}
       - name: Generate CDK Diff
         id: cdk-diff
         run: |-
