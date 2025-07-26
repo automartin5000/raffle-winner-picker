@@ -8,7 +8,7 @@
     "declaration": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
-    "inlineSourceMap": true,
+    "inlineSourceMap": false,
     "inlineSources": true,
     "lib": [
       "es2022"
@@ -35,10 +35,12 @@
     "checkJs": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
+    "sourceMap": true,
     "noEmit": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",

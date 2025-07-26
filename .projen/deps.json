@@ -1,11 +1,6 @@
 {
   "dependencies": [
     {
-      "name": "@aws-cdk/aws-amplify-alpha",
-      "version": "2.187.0-alpha.0",
-      "type": "build"
-    },
-    {
       "name": "@stylistic/eslint-plugin",
       "version": "^2",
       "type": "build"
@@ -35,6 +30,10 @@
       "type": "build"
     },
     {
+      "name": "@types/uuid",
+      "type": "build"
+    },
+    {
       "name": "@typescript-eslint/eslint-plugin",
       "version": "^8",
       "type": "build"
@@ -50,7 +49,7 @@
     },
     {
       "name": "aws-cdk",
-      "version": "2.1013.0",
+      "version": "^2.1022.0",
       "type": "build"
     },
     {
@@ -81,15 +80,15 @@
     },
     {
       "name": "projen",
-      "version": "^0.92.2",
-      "type": "build"
-    },
-    {
-      "name": "svelte",
+      "version": "^0.95.0",
       "type": "build"
     },
     {
       "name": "svelte-check",
+      "type": "build"
+    },
+    {
+      "name": "svelte-preprocess",
       "type": "build"
     },
     {
@@ -109,6 +108,54 @@
       "type": "build"
     },
     {
+      "name": "vite-plugin-svelte",
+      "type": "build"
+    },
+    {
+      "name": "@auth0/auth0-spa-js",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-sdk/client-dynamodb",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-sdk/lib-dynamodb",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/button",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/card",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/fab",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/list",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/paper",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/select",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/textfield",
+      "type": "runtime"
+    },
+    {
+      "name": "@smui/top-app-bar",
+      "type": "runtime"
+    },
+    {
       "name": "aws-cdk-lib",
       "version": "^2.190.0",
       "type": "runtime"
@@ -120,6 +167,14 @@
     },
     {
       "name": "csv-parser",
+      "type": "runtime"
+    },
+    {
+      "name": "svelte",
+      "type": "runtime"
+    },
+    {
+      "name": "uuid",
       "type": "runtime"
     }
   ],

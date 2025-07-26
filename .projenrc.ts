@@ -6,6 +6,11 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   defaultReleaseBranch: 'main',
   name: 'raffle-winner-picker',
   appEntrypoint: '../infra/bin/app.ts',
+  depsUpgrade: false,
+  githubOptions: {
+    mergify: false,
+  },
+  renovatebot: true,
   buildWorkflowOptions: {
     permissions: {
       contents: JobPermission.READ,
@@ -16,12 +21,16 @@ const project = new awscdk.AwsCdkTypeScriptApp({
         name: 'AWS Account Login',
         uses: 'aws-actions/configure-aws-credentials@v4',
         with: {
-          'aws-region': '${{ vars.AWS_REGION }}',
+          'aws-region': 'us-east-1',
           'audience': 'sts.amazonaws.com',
           'role-to-assume': 'arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer',
         },
-
       },
+      // Move to deploy workflow
+      // {
+      //   name: 'CDK Bootstrap',
+      //   run: 'cdk-bootstrap --trust-for-lookup ${{ secrets.PROD_AWS_ACCOUNT_ID }}',
+      // },
     ],
     env: {
       NONPROD_AWS_ACCOUNT_ID: '${{ secrets.NONPROD_AWS_ACCOUNT_ID }}',
@@ -31,14 +40,13 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     },
     workflowTriggers: {
       push: {
-        // All branches except main
-        branches: ['!main'],
+        branches: ['**', '!main'],
       },
-      workflowDispatch: {},
+      workflowDispatch: {}, // Allows manual workflow runs
     },
   },
   projenrcTs: true,
-  projenVersion: '^0.92.2',
+  projenVersion: '^0.95.0',
   licensed: false,
   vscode: true,
   packageManager: NodePackageManager.BUN,
@@ -52,27 +60,44 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       forceConsistentCasingInFileNames: true,
       resolveJsonModule: true,
       skipLibCheck: true,
+      inlineSourceMap: false,
+      sourceMap: true,
       strict: true,
       moduleResolution: TypeScriptModuleResolution.BUNDLER,
       target: 'ESNext',
       noEmit: true,
       module: 'esnext',
     },
+    include: ['src/**/*'],
   },
   deps: [
     'csv-parser',
+    '@auth0/auth0-spa-js',
+    'uuid',
+    '@aws-sdk/client-dynamodb',
+    '@aws-sdk/lib-dynamodb',
+    'svelte',
+    '@smui/button',
+    '@smui/card',
+    '@smui/textfield',
+    '@smui/select',
+    '@smui/top-app-bar',
+    '@smui/list',
+    '@smui/paper',
+    '@smui/fab',
   ],
   cdkVersion: '2.190.0',
   devDeps: [
-    '@aws-cdk/aws-amplify-alpha@2.187.0-alpha.0',
     '@sveltejs/adapter-auto',
     '@sveltejs/adapter-static',
     '@sveltejs/kit',
     '@sveltejs/vite-plugin-svelte',
     'amplify-adapter',
-    'svelte',
     'svelte-check',
     'vite',
+    'svelte-preprocess',
+    'vite-plugin-svelte',
+    '@types/uuid',
   ],
 });
 project.gitignore.exclude(
@@ -96,6 +121,7 @@ project.gitignore.exclude(
   'cdk.context.json', // excluded for security concerns in public repo
 );
 project.addFields({
+  type: 'module',
   svelte: {
     kit: {
       adapter: '@sveltejs/adapter-static',
@@ -112,8 +138,12 @@ project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./t
 project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch' });
 
 // TODO: Add CDK CLI in projen
-project.addDevDeps('aws-cdk@2.1013.0');
-
+project.addDevDeps('aws-cdk@^2.1022.0');
+project.addTask('cdk-bootstrap', {
+  description: 'Bootstrap the CDK environment',
+  exec: 'npx cdk bootstrap',
+  receiveArgs: true,
+});
 // TODO: Fix in projen
 project.defaultTask?.reset('bun .projenrc.ts');
 // TODO: Extract as a default to Projen

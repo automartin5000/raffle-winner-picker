@@ -28,6 +28,16 @@
       "name": "bundle",
       "description": "Prepare assets"
     },
+    "cdk-bootstrap": {
+      "name": "cdk-bootstrap",
+      "description": "Bootstrap the CDK environment",
+      "steps": [
+        {
+          "exec": "npx cdk bootstrap",
+          "receiveArgs": true
+        }
+      ]
+    },
     "check": {
       "name": "check",
       "steps": [
@@ -187,10 +197,6 @@
         }
       ]
     },
-    "post-upgrade": {
-      "name": "post-upgrade",
-      "description": "Runs after upgrading dependencies"
-    },
     "pre-compile": {
       "name": "pre-compile",
       "description": "Prepare the project for compilation"
@@ -248,30 +254,6 @@
       "steps": [
         {
           "exec": "jest --watch"
-        }
-      ]
-    },
-    "upgrade": {
-      "name": "upgrade",
-      "description": "upgrade dependencies",
-      "env": {
-        "CI": "0"
-      },
-      "steps": [
-        {
-          "exec": "bunx npm-check-updates@16 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@sveltejs/adapter-auto,@sveltejs/adapter-static,@sveltejs/kit,@sveltejs/vite-plugin-svelte,@types/jest,@types/node,amplify-adapter,esbuild,eslint-import-resolver-typescript,eslint-plugin-import,jest,svelte,svelte-check,ts-jest,ts-node,typescript,vite,csv-parser"
-        },
-        {
-          "exec": "bun install"
-        },
-        {
-          "exec": "bun update @aws-cdk/aws-amplify-alpha @stylistic/eslint-plugin @sveltejs/adapter-auto @sveltejs/adapter-static @sveltejs/kit @sveltejs/vite-plugin-svelte @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser amplify-adapter aws-cdk esbuild eslint-import-resolver-typescript eslint-plugin-import eslint jest jest-junit projen svelte svelte-check ts-jest ts-node typescript vite aws-cdk-lib constructs csv-parser"
-        },
-        {
-          "exec": "npx projen"
-        },
-        {
-          "spawn": "post-upgrade"
         }
       ]
     },
