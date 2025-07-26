@@ -200,7 +200,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            name: "cdk-out-${{ github.head.sha }}",
+            name: "cdk-out-${{ github.head_sha }}",
             path: "cdk.out/",
             searchArtifacts: true,
           },
