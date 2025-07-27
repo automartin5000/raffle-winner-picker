@@ -7,6 +7,9 @@ on:
       - opened
       - synchronize
       - reopened
+concurrency:
+  group: pr-deploy
+  cancel-in-progress: false
 env:
   AWS_CDK_ENV_NAME: pr${{ github.event.number }}
   NONPROD_AWS_ACCOUNT_ID: ${{ secrets.NONPROD_AWS_ACCOUNT_ID }}
@@ -42,7 +45,7 @@ jobs:
           echo "CDK_DIFF<<EOF" >> $GITHUB_OUTPUT
           echo "Stack Changes:" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          bunx cdk diff --app cdk.out "$AWS_CDK_ENV_NAME/*" >> $GITHUB_OUTPUT 2>&1 || true
+          bunx cdk diff "prod/*" --app cdk.out "$AWS_CDK_ENV_NAME/*" >> $GITHUB_OUTPUT 2>&1 || true
           echo "EOF" >> $GITHUB_OUTPUT
       - name: Deploy PR environment
         run: bunx projen deploy "$AWS_CDK_ENV_NAME/*" --require-approval never

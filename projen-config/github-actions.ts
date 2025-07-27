@@ -59,6 +59,11 @@ const addSecurityScanningJob = (github: GitHub) => {
 };
 const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
   const workflow = new GithubWorkflow(github, "deploy-pr-environment", {
+    limitConcurrency: true,
+      concurrencyOptions: {
+        group: "pr-deploy",
+        cancelInProgress: false,
+    },
     env: {
       AWS_CDK_ENV_NAME: "pr${{ github.event.number }}",
       NONPROD_AWS_ACCOUNT_ID: '${{ secrets.NONPROD_AWS_ACCOUNT_ID }}',
@@ -116,7 +121,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
             'echo "CDK_DIFF<<EOF" >> $GITHUB_OUTPUT',
             'echo "Stack Changes:" >> $GITHUB_OUTPUT',
             'echo "" >> $GITHUB_OUTPUT',
-            'bunx cdk diff --app cdk.out "$AWS_CDK_ENV_NAME/*" >> $GITHUB_OUTPUT 2>&1 || true',
+            'bunx cdk diff "prod/*" --app cdk.out "$AWS_CDK_ENV_NAME/*" >> $GITHUB_OUTPUT 2>&1 || true',
             'echo "EOF" >> $GITHUB_OUTPUT',
           ].join("\n"),
         },
