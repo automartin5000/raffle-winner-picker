@@ -92,7 +92,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         { name: "Checkout", uses: "actions/checkout@v4" },
         {
           id: "build",
-          uses: ".github/actions/build/action.yml",
+          uses: "./.github/actions/build/action.yml",
           with: {
             uploadArtifacts: true,
           },
