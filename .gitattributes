@@ -8,6 +8,7 @@
 /.github/workflows/build.yml linguist-generated
 /.github/workflows/cleanup-pr-environment.yml linguist-generated
 /.github/workflows/deploy-pr-environment.yml linguist-generated
+/.github/workflows/manual-prod-deploy.yml linguist-generated
 /.github/workflows/prod-deploy.yml linguist-generated
 /.github/workflows/pull-request-lint.yml linguist-generated
 /.github/workflows/security-scanning.yml linguist-generated
