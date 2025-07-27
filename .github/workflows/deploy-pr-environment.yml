@@ -27,7 +27,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - id: build
-        uses: ./.github/actions/build.yml
+        uses: ./.github/actions/build/action.yml
         with:
           uploadArtifacts: true
       - name: Generate CDK Diff
