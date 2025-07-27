@@ -92,14 +92,10 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         {
           name: "Checkout",
           uses: "actions/checkout@v4",
-          with: {
-            ref: "${{ github.head_ref }}", // Checkout the PR branch
-            
-          }
         },
         {
           id: "build",
-          uses: "./.github/actions/build/action.yml",
+          uses: "./.github/actions/build",
           with: {
             uploadArtifacts: true,
           },
