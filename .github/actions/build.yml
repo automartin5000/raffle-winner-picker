@@ -8,11 +8,6 @@ inputs:
 outputs:
   cdk_artifact: ${{ steps.upload_cdk_artifact.outputs.artifact_id }}
 steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:

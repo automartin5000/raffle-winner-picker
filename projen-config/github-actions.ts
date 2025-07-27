@@ -89,6 +89,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         actions: JobPermission.READ,  // Needed to download artifacts
       },
       steps: [
+        { name: "Checkout", uses: "actions/checkout@v4" },
         {
           id: "build",
           uses: "./.github/actions/build.yml",
