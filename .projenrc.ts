@@ -3,6 +3,17 @@ import { JobPermission } from 'projen/lib/github/workflows-model';
 import { NodePackageManager, TypescriptConfigExtends, TypeScriptModuleResolution } from 'projen/lib/javascript';
 import { generateGitHubActions } from './projen-config/github-actions';
 
+const buildWorkflowCallConfig = {
+  inputs: {
+    upload_artifacts: {
+      description: 'Upload build artifacts',
+      required: false,
+      default: false,
+      type: 'boolean',
+    },
+  },
+};
+
 const project = new awscdk.AwsCdkTypeScriptApp({
   defaultReleaseBranch: 'main',
   name: 'raffle-winner-picker',
@@ -38,7 +49,8 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       push: {
         branches: ['**', '!main'],
       },
-      workflowDispatch: {}, // Allows manual workflow runs
+      workflowDispatch: buildWorkflowCallConfig, // Allows manual workflow runs
+      workflowCall: buildWorkflowCallConfig,
     },
   },
   projenrcTs: true,

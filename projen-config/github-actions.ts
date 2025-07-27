@@ -1,7 +1,7 @@
 import { awscdk } from "projen";
 import { BuildWorkflow } from "projen/lib/build";
 import { GitHub, GithubWorkflow } from "projen/lib/github";
-import { JobPermission } from "projen/lib/github/workflows-model";
+import { JobPermission, JobStepOutput } from "projen/lib/github/workflows-model";
 
 const RUNNER_TYPE = ["ubuntu-latest"];
 
@@ -11,7 +11,9 @@ export const generateGitHubActions = (project: awscdk.AwsCdkTypeScriptApp) => {
   addDeployPrEnvironmentWorkflow(github);
   addProductionDeployWorkflow(github);
   addCleanupPrEnvironmentWorkflow(github);
+  addSecurityScanningJob(github);
 };
+
 const updateBuildWorkflow = (workflow: BuildWorkflow) => {
   workflow?.addPostBuildSteps(
     // Upload cdk.out directory as an artifact
@@ -72,10 +74,14 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
     },
   });
 
+
   workflow.addJobs({
     deploy_pr: {
       name: "Deploy PR Environment",
       runsOn: RUNNER_TYPE,
+      outputs: {
+        "CDK_DIFF": { stepId: "cdk-diff", outputName: "CDK_DIFF" } as JobStepOutput
+      },
       // environment: "development",
       permissions: {
         contents: JobPermission.READ,
@@ -83,156 +89,18 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         actions: JobPermission.READ,  // Needed to download artifacts
       },
       steps: [
-        { name: "Checkout", uses: "actions/checkout@v4" },
         {
-          name: "Configure AWS credentials",
-          uses: "aws-actions/configure-aws-credentials@v4",
+          id: "build",
+          uses: "./.github/actions/build.yml",
           with: {
-            "aws-region": "us-east-1",
-            audience: "sts.amazonaws.com",
-            "role-to-assume": "arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer",
-          },
-        },
-        {
-          name: "Install Bun",
-          uses: "oven-sh/setup-bun@v2",
-        },
-        {
-          name: "Install dependencies",
-          run: "bun install --frozen-lockfile",
-        },
-        {
-          name: "Wait for build workflow",
-          uses: "actions/github-script@v7",
-          with: {
-            script: `
-              async function waitForBuild() {
-                const maxAttempts = 60;  // 10 minutes (60 * 10 seconds)
-                const prRef = context.payload.pull_request?.head.sha;
-                const buildRef = context.sha;
-                
-                console.log('Event type:', context.eventName);
-                console.log('PR head commit:', prRef);
-                console.log('Build commit SHA:', buildRef);
-                console.log('PR number:', context.payload.pull_request?.number);
-                
-                // First, list all workflows to find the build workflow by name
-                const workflows = await github.rest.actions.listRepoWorkflows({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                });
-                
-                console.log('Available workflows:');
-                workflows.data.workflows.forEach(w => {
-                  console.log(\`- \${w.name} (ID: \${w.id}, Path: \${w.path})\`);
-                });
-                
-                const buildWorkflow = workflows.data.workflows.find(w => w.name === 'build');
-                
-                if (!buildWorkflow) {
-                  throw new Error('Could not find workflow named "build"');
-                }
-                
-                console.log('Found build workflow:', buildWorkflow.name, buildWorkflow.id);
-                
-                for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                  console.log(\`\\n[Attempt \${attempt + 1}/\${maxAttempts}] Checking build status...\`);
-                  
-                  // Get all recent runs for this workflow
-                  const builds = await github.rest.actions.listWorkflowRuns({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    workflow_id: buildWorkflow.id,
-                  });
-
-                  // Log all runs to help debug
-                  console.log('\\nAll recent workflow runs:');
-                  builds.data.workflow_runs.forEach(run => {
-                    console.log(\`- Run ID: \${run.id}, SHA: \${run.head_sha}, Status: \${run.status}, Branch: \${run.head_branch}\`);
-                  });
-
-                  // Filter for builds matching either the PR head commit or the build commit
-                  const ourBuilds = builds.data.workflow_runs.filter(run => 
-                    run.head_sha === prRef || run.head_sha === buildRef
-                  );
-                  
-                  console.log('Query parameters:');
-                  console.log('- Owner:', context.repo.owner);
-                  console.log('- Repo:', context.repo.repo);
-                  console.log('- Workflow ID:', buildWorkflow.id);
-                  console.log('- PR Head SHA:', prRef);
-                  console.log('- Build SHA:', buildRef);
-                  console.log('- Branch:', context.payload.pull_request?.head.ref);
-                  
-                  console.log(\`Found \${ourBuilds.length} workflow runs for commits \${prRef} or \${buildRef}\`);
-                  
-                  if (ourBuilds.length > 0) {
-                    const build = ourBuilds[0];
-                    console.log('Latest build details:');
-                    console.log(\`- Run ID: \${build.id}\`);
-                    console.log(\`- Status: \${build.status}\`);
-                    console.log(\`- Conclusion: \${build.conclusion}\`);
-                    console.log(\`- Created: \${build.created_at}\`);
-                    console.log(\`- URL: \${build.html_url}\`);
-                    
-                    if (build.status === 'completed') {
-                      if (build.conclusion === 'success') {
-                        // Find the artifact for this build
-                        const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
-                          owner: context.repo.owner,
-                          repo: context.repo.repo,
-                          run_id: build.id,
-                        });
-                        
-                        console.log('Available artifacts:', artifacts.data.artifacts.map(a => a.name));
-                        
-                        const cdkArtifact = artifacts.data.artifacts.find(a => a.name.startsWith('cdk-out-'));
-                        if (!cdkArtifact) {
-                          console.log('No CDK artifact found yet, waiting...');
-                          await new Promise(resolve => setTimeout(resolve, 10000));
-                          continue;
-                        }
-
-                        // Export both values separately
-                        core.exportVariable('CDK_ARTIFACT_NAME', cdkArtifact.name);
-                        core.exportVariable('CDK_RUN_ID', build.id.toString());
-                        console.log('✅ Build completed successfully and artifact found:', cdkArtifact.name);
-                        return cdkArtifact.name;
-                      } else {
-                        throw new Error(\`❌ Build failed with conclusion: \${build.conclusion}\`);
-                      }
-                    } else {
-                      console.log('⏳ Build is still in progress, waiting...');
-                    }
-                  } else {
-                    console.log('No matching workflow runs found yet, waiting...');
-                  }
-                  
-                  await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
-                }
-                
-                throw new Error('Timed out waiting for build to complete');
-              }
-              
-              return await waitForBuild();
-            `
-          }
-        },
-        {
-          name: "Download CDK artifacts",
-          uses: "actions/download-artifact@v4",
-          with: {
-            name: "${{ env.CDK_ARTIFACT_NAME }}",
-            path: "cdk.out/",
-            "github-token": "${{ github.token }}",
-            "run-id": "${{ env.CDK_RUN_ID }}",
+            uploadArtifacts: true,
           },
         },
         {
           name: "Generate CDK Diff",
           id: "cdk-diff",
           run: [
-            "cdk diff --app cdk.out --context envName=pr${{ github.event.number }} > cdk-diff.txt 2>&1 || true",
+            "cdk diff --app cdk.out > cdk-diff.txt 2>&1 || true",
             'echo "CDK_DIFF<<EOF" >> $GITHUB_OUTPUT',
             "cat cdk-diff.txt >> $GITHUB_OUTPUT",
             'echo "EOF" >> $GITHUB_OUTPUT',
@@ -240,7 +108,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         },
         {
           name: "Deploy ephemeral environment",
-          run: "bunx projen deploy --require-approval never",
+          run: "bunx projen deploy \"$AWS_CDK_ENV_NAME/*\" --require-approval never",
         },
         {
           name: "Get CloudFront URL",
@@ -290,7 +158,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
               "<summary>Click to view infrastructure changes</summary>",
               "",
               "```diff",
-              "CDK diff will be shown here",
+              "${{ needs.deploy_pr.outputs.CDK_DIFF }}",
               "```",
               "</details>",
               "",
@@ -413,22 +281,17 @@ const addProductionDeployWorkflow = (github: GitHub) => {
             "run-id": "${{ needs.find_artifact.outputs.run-id }}",
           },
         },
-        {
-          name: "Setup Node.js",
-          uses: "actions/setup-node@v4",
-          with: { "node-version": "20" },
-        },
-        { name: "Install AWS CDK", run: "npm install -g aws-cdk@^2.1022.0" },
-        { name: "CDK Bootstrap Production", run: "cdk bootstrap" },
+        { name: "Setup Bun", uses: "oven-sh/setup-bun@v2" },
+        { name: "Install dependencies", run: "bun install --frozen-lockfile" },
         {
           name: "Deploy to Production",
-          run: "cdk deploy --app cdk.out --require-approval never --context envName=prod",
+          run: "bunx cdk deploy 'prod/*' --app cdk.out --require-approval never",
         },
         {
           name: "Get Production URL",
           id: "get-prod-url",
           run: [
-            'URL=$(cdk --app cdk.out --context envName=prod --outputs-file prod-outputs.json deploy --require-approval never 2>/dev/null && cat prod-outputs.json | jq -r \'.[] | select(.CloudFrontUrl) | .CloudFrontUrl\' || echo "Deployment completed")',
+            'URL=$(bunx cdk --app cdk.out --outputs-file prod-outputs.json deploy --require-approval never 2>/dev/null && cat prod-outputs.json | jq -r \'.[] | select(.CloudFrontUrl) | .CloudFrontUrl\' || echo "Deployment completed")',
             'echo "PROD_URL=$URL" >> $GITHUB_OUTPUT',
           ].join("\n"),
         },

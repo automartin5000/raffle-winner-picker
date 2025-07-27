@@ -64,4 +64,5 @@ cdk.context.json
 !/.github/workflows/deploy-pr-environment.yml
 !/.github/workflows/prod-deploy.yml
 !/.github/workflows/cleanup-pr-environment.yml
+!/.github/workflows/security-scanning.yml
 !/.projenrc.ts

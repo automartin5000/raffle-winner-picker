@@ -127,20 +127,16 @@ jobs:
           path: cdk.out/
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ needs.find_artifact.outputs.run-id }}
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: Install AWS CDK
-        run: npm install -g aws-cdk@^2.1022.0
-      - name: CDK Bootstrap Production
-        run: cdk bootstrap
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
       - name: Deploy to Production
-        run: cdk deploy --app cdk.out --require-approval never --context envName=prod
+        run: bunx cdk deploy 'prod/*' --app cdk.out --require-approval never
       - name: Get Production URL
         id: get-prod-url
         run: |-
-          URL=$(cdk --app cdk.out --context envName=prod --outputs-file prod-outputs.json deploy --require-approval never 2>/dev/null && cat prod-outputs.json | jq -r '.[] | select(.CloudFrontUrl) | .CloudFrontUrl' || echo "Deployment completed")
+          URL=$(bunx cdk --app cdk.out --outputs-file prod-outputs.json deploy --require-approval never 2>/dev/null && cat prod-outputs.json | jq -r '.[] | select(.CloudFrontUrl) | .CloudFrontUrl' || echo "Deployment completed")
           echo "PROD_URL=$URL" >> $GITHUB_OUTPUT
       - name: Notify deployment success
         run: |-

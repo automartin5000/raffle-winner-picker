@@ -8,6 +8,7 @@
     ".github/workflows/deploy-pr-environment.yml",
     ".github/workflows/prod-deploy.yml",
     ".github/workflows/pull-request-lint.yml",
+    ".github/workflows/security-scanning.yml",
     ".gitignore",
     ".npmignore",
     ".projen/deps.json",

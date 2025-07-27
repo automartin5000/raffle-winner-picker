@@ -6,7 +6,20 @@ on:
     branches:
       - "**"
       - "!main"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      upload_artifacts:
+        description: Upload build artifacts
+        required: false
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      upload_artifacts:
+        description: Upload build artifacts
+        required: false
+        default: false
+        type: boolean
 jobs:
   build:
     runs-on: ubuntu-latest

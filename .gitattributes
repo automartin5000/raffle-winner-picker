@@ -10,6 +10,7 @@
 /.github/workflows/deploy-pr-environment.yml linguist-generated
 /.github/workflows/prod-deploy.yml linguist-generated
 /.github/workflows/pull-request-lint.yml linguist-generated
+/.github/workflows/security-scanning.yml linguist-generated
 /.gitignore linguist-generated
 /.npmignore linguist-generated
 /.projen/** linguist-generated
