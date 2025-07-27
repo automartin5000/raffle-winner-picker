@@ -84,10 +84,6 @@ jobs:
             ${{ steps.cdk-diff.outputs.CDK_DIFF_CONTENT }}
             ```
             </details>
-
-            ### 🔒 Security Scan
-            **Status:** ${{ needs.security.result == 'success' && '✅ Passed' || '❌ Failed' }}
-
             ---
             *Last updated: ${{ github.event.head_commit.timestamp }}*
             *Commit: ${{ github.event.head_commit.id }}*
