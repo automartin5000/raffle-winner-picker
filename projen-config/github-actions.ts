@@ -601,7 +601,7 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
         },
         {
           name: "Destroy PR environment",
-          run: "bunx projen destroy --force",
+          run: "bunx projen destroy \"$AWS_CDK_ENV_NAME/*\" --force",
         },
       ],
     },
