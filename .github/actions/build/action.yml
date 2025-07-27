@@ -23,7 +23,7 @@ runs:
       with:
         aws-region: us-east-1
         audience: sts.amazonaws.com
-        role-to-assume: arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer
+        role-to-assume: arn:aws:iam::${{ env.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer
     - name: build
       run: bunx projen build
     - name: Upload CDK artifacts

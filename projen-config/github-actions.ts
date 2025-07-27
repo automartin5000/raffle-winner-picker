@@ -79,6 +79,11 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
     deploy_pr: {
       name: "Deploy PR Environment",
       runsOn: RUNNER_TYPE,
+      defaults: {
+        run: {
+          shell: "bash",
+        }
+      },
       outputs: {
         "CDK_DIFF": { stepId: "cdk-diff", outputName: "CDK_DIFF" } as JobStepOutput
       },
