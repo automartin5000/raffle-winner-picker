@@ -24,9 +24,7 @@ jobs:
       contents: read
       id-token: write
       actions: read
-    outputs:
-      CDK_DIFF: ${{ steps.cdk-diff.outputs.CDK_DIFF }}
-      CLOUDFRONT_URL: ${{ steps.get-url.outputs.CLOUDFRONT_URL }}
+      pull-requests: write
     defaults:
       run:
         shell: bash
@@ -42,26 +40,20 @@ jobs:
       - name: Generate CDK Diff
         id: cdk-diff
         run: |-
-          echo "CDK_DIFF<<EOF" >> $GITHUB_OUTPUT
-          echo "Stack Changes:" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          bunx cdk diff "prod/*" --app cdk.out "$AWS_CDK_ENV_NAME/*" >> $GITHUB_OUTPUT 2>&1 || true
+          echo "Stack Changes:" > cdk-diff.txt
+          echo "" >> cdk-diff.txt
+          bunx cdk diff "prod/*" --app cdk.out "$AWS_CDK_ENV_NAME/*" >> cdk-diff.txt 2>&1 || true
+          echo "CDK_DIFF_CONTENT<<EOF" >> $GITHUB_OUTPUT
+          cat cdk-diff.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
       - name: Deploy PR environment
+        id: deploy
         run: bunx projen deploy "$AWS_CDK_ENV_NAME/*" --require-approval never
       - name: Get CloudFront URL
         id: get-url
         run: |-
           URL=$(cdk --app cdk.out --context envName=pr${{ github.event.number }} --outputs-file outputs.json deploy --require-approval never 2>/dev/null && cat outputs.json | jq -r '.[] | select(.CloudFrontUrl) | .CloudFrontUrl' || echo "Not available yet")
           echo "CLOUDFRONT_URL=$URL" >> $GITHUB_OUTPUT
-  comment:
-    name: Comment PR Environment Status and diff
-    needs: deploy_pr
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
       - name: Find existing comment
         id: find-comment
         uses: peter-evans/find-comment@v3
@@ -79,14 +71,14 @@ jobs:
             ## 🚀 PR Environment Status
 
             **Environment:** `pr${{ github.event.number }}`
-            **Status:** ${{ needs.deploy_pr.result == 'success' && '✅ Deployed' || '❌ Failed' }}
+            **Status:** ${{ steps.deploy.outcome == 'success' && '✅ Deployed' || '❌ Failed' }}
 
             ### 📋 CDK Prod Diff
             <details>
             <summary>Click to view infrastructure changes</summary>
 
             ```diff
-            ${{ needs.deploy_pr.outputs.CDK_DIFF || 'No infrastructure changes' }}
+            ${{ steps.cdk-diff.outputs.CDK_DIFF_CONTENT }}
             ```
             </details>
 

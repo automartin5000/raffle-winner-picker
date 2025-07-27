@@ -89,15 +89,11 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           shell: "bash",
         }
       },
-      outputs: {
-        "CDK_DIFF": { stepId: "cdk-diff", outputName: "CDK_DIFF" } as JobStepOutput,
-        "CLOUDFRONT_URL": { stepId: "get-url", outputName: "CLOUDFRONT_URL" } as JobStepOutput
-      },
-      // environment: "development",
       permissions: {
         contents: JobPermission.READ,
         idToken: JobPermission.WRITE,
         actions: JobPermission.READ,  // Needed to download artifacts
+        pullRequests: JobPermission.WRITE, // Needed for commenting
       },
       steps: [
         {
@@ -118,15 +114,17 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           name: "Generate CDK Diff",
           id: "cdk-diff",
           run: [
-            'echo "CDK_DIFF<<EOF" >> $GITHUB_OUTPUT',
-            'echo "Stack Changes:" >> $GITHUB_OUTPUT',
-            'echo "" >> $GITHUB_OUTPUT',
-            'bunx cdk diff "prod/*" --app cdk.out "$AWS_CDK_ENV_NAME/*" >> $GITHUB_OUTPUT 2>&1 || true',
-            'echo "EOF" >> $GITHUB_OUTPUT',
+            'echo "Stack Changes:" > cdk-diff.txt',
+            'echo "" >> cdk-diff.txt',
+            'bunx cdk diff "prod/*" --app cdk.out "$AWS_CDK_ENV_NAME/*" >> cdk-diff.txt 2>&1 || true',
+            'echo "CDK_DIFF_CONTENT<<EOF" >> $GITHUB_OUTPUT',
+            'cat cdk-diff.txt >> $GITHUB_OUTPUT',
+            'echo "EOF" >> $GITHUB_OUTPUT'
           ].join("\n"),
         },
         {
           name: "Deploy PR environment",
+          id: "deploy",
           run: "bunx projen deploy \"$AWS_CDK_ENV_NAME/*\" --require-approval never",
         },
         {
@@ -137,17 +135,6 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
             'echo "CLOUDFRONT_URL=$URL" >> $GITHUB_OUTPUT',
           ].join("\n"),
         },
-      ],
-    },
-    comment: {
-      name: "Comment PR Environment Status and diff",
-      runsOn: RUNNER_TYPE,
-      needs: ["deploy_pr"],
-      permissions: {
-        contents: JobPermission.READ,
-        pullRequests: JobPermission.WRITE,
-      },
-      steps: [
         {
           name: "Find existing comment",
           uses: "peter-evans/find-comment@v3",
@@ -169,14 +156,14 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
               "## 🚀 PR Environment Status",
               "",
               "**Environment:** `pr${{ github.event.number }}`",
-              "**Status:** ${{ needs.deploy_pr.result == 'success' && '✅ Deployed' || '❌ Failed' }}",
+              "**Status:** ${{ steps.deploy.outcome == 'success' && '✅ Deployed' || '❌ Failed' }}",
               "",
               "### 📋 CDK Prod Diff",
               "<details>",
               "<summary>Click to view infrastructure changes</summary>",
               "",
               "```diff",
-              "${{ needs.deploy_pr.outputs.CDK_DIFF || 'No infrastructure changes' }}",
+              "${{ steps.cdk-diff.outputs.CDK_DIFF_CONTENT }}",
               "```",
               "</details>",
               "",
