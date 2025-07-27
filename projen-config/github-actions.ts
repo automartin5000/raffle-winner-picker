@@ -92,6 +92,9 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         {
           name: "Checkout",
           uses: "actions/checkout@v4",
+          with: {
+            ref: "${{ github.event.pull_request.head.sha }}",
+          }
         },
         {
           id: "build",
