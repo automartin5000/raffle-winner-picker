@@ -171,7 +171,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
               "**Environment:** `pr${{ github.event.number }}`",
               "**Status:** ${{ needs.deploy_pr.result == 'success' && '✅ Deployed' || '❌ Failed' }}",
               "",
-              "### 📋 CDK Diff",
+              "### 📋 CDK Prod Diff",
               "<details>",
               "<summary>Click to view infrastructure changes</summary>",
               "",
