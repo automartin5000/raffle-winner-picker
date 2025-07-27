@@ -7,120 +7,45 @@ import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { AaaaRecord, ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { CloudFrontTarget } from 'aws-cdk-lib/aws-route53-targets';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
-import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
-import { Architecture, Function, Runtime, Code } from 'aws-cdk-lib/aws-lambda';
-import { RestApi, LambdaIntegration, Cors, AuthorizationType } from 'aws-cdk-lib/aws-apigateway';
-import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
+import { RestApi } from 'aws-cdk-lib/aws-apigateway';
 import { Construct } from 'constructs';
 import { AppStackProps } from "../bin/interfaces";
 
 export const INDEX_FILES_CACHE_CONTROL_SECONDS = 0;
 export const IMMUATABLE_FILES_CACHE_CONTROL_DAYS = 365 * 10;
 
-export class ComputeStack extends cdk.Stack {
-    envName: string;
-    fullDomain: string;
-    apiDomain: string;
-    
-    constructor(scope: Construct, id: string, props: AppStackProps) {
-        super(scope, id, props);
+export class FrontendStack extends cdk.Stack {
+  private readonly envName: string;
+  private readonly fullDomain: string;
+  
+  constructor(scope: Construct, id: string, props: AppStackProps & { api: RestApi }) {
+        super(scope, id, {
+          ...props,
+          stackName: `RPW-Frontend-${props.envName}`,
+        });
         this.envName = props.envName;
-      // Skip hosted zone lookup for local development
-      const hostedZone = this.envName === 'local' 
-        ? undefined 
-        : HostedZone.fromLookup(this, 'HostedZone', {
-            domainName: props.hostedZone,
-          });
 
-      const subdomainPrefix = props.envName === 'prod' ? '' : `${props.envName}.`;
-      this.fullDomain = hostedZone 
-        ? `${subdomainPrefix}raffle-picker.${hostedZone.zoneName}`
-        : `${subdomainPrefix}raffle-picker.localhost`;
-      this.apiDomain = hostedZone 
-        ? `${subdomainPrefix}api.raffle-picker.${hostedZone.zoneName}`
-        : `${subdomainPrefix}api.raffle-picker.localhost`;
+        // Skip hosted zone lookup for local development
+        const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
+                domainName: props.hostedZone,
+            });
 
-      // Create backend infrastructure
-      const raffleTable = this.createDynamoTable();
-      const api = this.createApi(raffleTable, hostedZone);
+        const subdomainPrefix = props.envName === 'prod' ? '' : `${props.envName}.`;
+        this.fullDomain = `${subdomainPrefix}raffle-picker.${hostedZone.zoneName}`
 
-      // Create frontend infrastructure  
-      const bucket = this.createWebsiteBucket();
-      
-      // Only create CloudFront and Route53 for real environments
-      if (hostedZone) {
-        const distribution = this.createCfDistribution(hostedZone, bucket, api);
-        this.createRoute53Records(hostedZone, distribution);
-      }
-      
-      this.uploadWebsiteAssets(bucket);
-      
-      cdk.Tags.of(this).add('environment', props.envName);
-      cdk.Tags.of(this).add('project', 'raffle-winner-picker');
-  }
-
-    private createDynamoTable(): Table {
-        return new Table(this, 'RaffleRunsTable', {
-            tableName: `raffle-runs-${this.envName}`,
-            partitionKey: {
-                name: 'userId',
-                type: AttributeType.STRING,
-            },
-            sortKey: {
-                name: 'runId',
-                type: AttributeType.STRING,
-            },
-            billingMode: BillingMode.PAY_PER_REQUEST,
-            removalPolicy: this.envName === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
-            pointInTimeRecoverySpecification: {
-                pointInTimeRecoveryEnabled: this.envName === 'prod'
-            },
-        });
-    }
-
-    private createApi(raffleTable: Table, hostedZone?: cdk.aws_route53.IHostedZone): RestApi {
-        // Lambda function for raffle operations
-        const raffleFunction = new Function(this, 'RaffleFunction', {
-            runtime: Runtime.NODEJS_18_X,
-            architecture: Architecture.ARM_64,
-            handler: 'index.handler',
-            code: Code.fromAsset(path.join(__dirname, '../lambda/raffle-api')),
-            environment: {
-                TABLE_NAME: raffleTable.tableName,
-                ALLOWED_ORIGIN: `https://${this.fullDomain}`,
-            },
-            timeout: cdk.Duration.seconds(30),
-        });
-
-        // Grant DynamoDB permissions
-        raffleTable.grantReadWriteData(raffleFunction);
-
-        // Create API Gateway
-        const api = new RestApi(this, 'RaffleApi', {
-            restApiName: `raffle-api-${this.envName}`,
-            description: 'API for Raffle Winner Picker application',
-            defaultCorsPreflightOptions: {
-                allowOrigins: [`https://${this.fullDomain}`],
-                allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-                allowHeaders: ['Content-Type', 'Authorization'],
-            },
-        });
-
-        // API routes
-        const raffleResource = api.root.addResource('raffle-runs');
-        raffleResource.addMethod('GET', new LambdaIntegration(raffleFunction));
-        raffleResource.addMethod('POST', new LambdaIntegration(raffleFunction));
-
-        const singleRaffleResource = raffleResource.addResource('{runId}');
-        singleRaffleResource.addMethod('GET', new LambdaIntegration(raffleFunction));
-
-        // Output API URL
-        new cdk.CfnOutput(this, 'ApiUrl', {
-            value: api.url,
-            description: 'API Gateway endpoint URL',
-        });
-
-        return api;
+        // Create frontend infrastructure  
+        const bucket = this.createWebsiteBucket();
+        
+        // Only create CloudFront and Route53 for real environments
+        if (hostedZone) {
+            const distribution = this.createCfDistribution(hostedZone, bucket, props.api);
+            this.createRoute53Records(hostedZone, distribution);
+        }
+        
+        this.uploadWebsiteAssets(bucket);
+        
+        cdk.Tags.of(this).add('environment', props.envName);
+        cdk.Tags.of(this).add('project', 'raffle-winner-picker');
     }
 
     private createWebsiteBucket() {

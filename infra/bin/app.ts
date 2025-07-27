@@ -1,6 +1,7 @@
 import { App } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import { ComputeStack } from "../lib/compute-stack";
+import { ApiStack } from "../lib/api-stack";
+import { FrontendStack } from "../lib/frontend-stack";
 import { type AppStackProps } from "./interfaces";
 
 const region = 'us-east-1';
@@ -39,9 +40,17 @@ console.log(`Creating stacks for environments: ${awsEnvironments.map((env) => en
 const cdkApp = new App();
 
 class RootApp extends Construct {
-    constructor(scope: Construct, id: string, props: AppStackProps ) {
+    constructor(scope: Construct, id: string, props: AppStackProps) {
         super(scope, id);
-        new ComputeStack(this, 'Compute', props);
+        
+        // Create API stack first
+        const apiStack = new ApiStack(this, 'Api', props);
+        
+        // Create frontend stack with API reference
+        new FrontendStack(this, 'Frontend', {
+            ...props,
+            api: apiStack.api
+        });
     }
 }
 

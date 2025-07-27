@@ -31,5 +31,7 @@ jobs:
         uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      - name: Dummy build directory for cdk
+        run: mkdir build && touch build/index.js
       - name: Destroy PR environment
-        run: bunx projen destroy --force --context envName=pr${{ github.event.number }}
+        run: bunx projen destroy --force

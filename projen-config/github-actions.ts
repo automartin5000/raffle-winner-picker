@@ -139,7 +139,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           name: "Get CloudFront URL",
           id: "get-url",
           run: [
-            'URL=$(cdk --app cdk.out --context envName=pr${{ github.event.number }} --outputs-file outputs.json deploy --require-approval never 2>/dev/null && cat outputs.json | jq -r \'.[] | select(.CloudFrontUrl) | .CloudFrontUrl\' || echo "Not available yet")',
+            'URL=$(cdk --app cdk.out --outputs-file outputs.json deploy --require-approval never 2>/dev/null && cat outputs.json | jq -r \'.[] | select(.CloudFrontUrl) | .CloudFrontUrl\' || echo "Not available yet")',
             'echo "CLOUDFRONT_URL=$URL" >> $GITHUB_OUTPUT',
           ].join("\n"),
         },
@@ -596,8 +596,12 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
           run: "bun install --frozen-lockfile",
         },
         {
+          name: "Dummy build directory for cdk",
+          run: "mkdir build && touch build/index.js",
+        },
+        {
           name: "Destroy PR environment",
-          run: "bunx projen destroy --force --context envName=pr${{ github.event.number }}",
+          run: "bunx projen destroy --force",
         },
       ],
     },
