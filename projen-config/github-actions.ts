@@ -10,6 +10,7 @@ export const generateGitHubActions = (project: awscdk.AwsCdkTypeScriptApp) => {
   updateBuildWorkflow(project.buildWorkflow!);
   addDeployPrEnvironmentWorkflow(github);
   addProductionDeployWorkflow(github);
+  addManualProductionDeployWorkflow(github);
   addCleanupPrEnvironmentWorkflow(github);
   addSecurityScanningJob(github);
 };
@@ -188,17 +189,21 @@ const addProductionDeployWorkflow = (github: GitHub) => {
   const workflow = new GithubWorkflow(github, "prod-deploy");
 
   workflow.on({
-    push: { branches: ["main"] },
-    workflowDispatch: {},
+    pullRequestTarget: {
+      types: ["closed"],
+      branches: ["main"]
+    }
   });
 
   workflow.addJobs({
     find_artifact: {
       name: "Find Build Artifact",
       runsOn: RUNNER_TYPE,
+      if: "github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'",
       permissions: {
         contents: JobPermission.READ,
         actions: JobPermission.READ,
+        pullRequests: JobPermission.READ,
       },
       steps: [
         {
@@ -207,6 +212,12 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           id: "find-artifact",
           with: {
             script: `
+              const sha = context.eventName === 'pull_request' 
+                ? context.payload.pull_request.head.sha  // PR head commit
+                : context.sha;  // Manual workflow run
+              
+              console.log('Looking for build for commit:', sha);
+              
               // First, find the build workflow
               const workflows = await github.rest.actions.listRepoWorkflows({
                 owner: context.repo.owner,
@@ -217,24 +228,38 @@ const addProductionDeployWorkflow = (github: GitHub) => {
               if (!buildWorkflow) {
                 throw new Error('Could not find build workflow');
               }
-
-              // Get workflow runs for the current commit
+              
+              // Get workflow runs for the target commit
               const runs = await github.rest.actions.listWorkflowRuns({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: buildWorkflow.id,
-                commit_sha: context.sha,
               });
+              
+              console.log('Found workflow runs:', runs.data.workflow_runs.map(r => 
+                \`\${r.head_sha} (\${r.status})\`).join(', '));
 
-              if (runs.data.workflow_runs.length === 0) {
-                throw new Error('No build workflow run found for commit ' + context.sha);
-              }
-
-              // Find the successful run
-              const successRun = runs.data.workflow_runs.find(r => r.status === 'completed' && r.conclusion === 'success');
+              // Find the successful run for our target commit
+              const successRun = runs.data.workflow_runs.find(r => 
+                r.head_sha === sha && 
+                r.status === 'completed' && 
+                r.conclusion === 'success'
+              );
+              
               if (!successRun) {
-                throw new Error('No successful build found for commit ' + context.sha);
+                throw new Error(
+                  \`No successful build found for commit \${sha}\\n\` +
+                  \`Event: \${context.eventName}\\n\` +
+                  \`Available runs: \${runs.data.workflow_runs.map(r => \`\${r.head_sha} (\${r.status})\`).join(', ')}\`
+                );
               }
+              
+              console.log('Found successful build run:', {
+                id: successRun.id,
+                sha: successRun.head_sha,
+                status: successRun.status,
+                conclusion: successRun.conclusion
+              });
 
               // List artifacts for the successful run
               const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
@@ -243,19 +268,26 @@ const addProductionDeployWorkflow = (github: GitHub) => {
                 run_id: successRun.id,
               });
 
-              const cdkArtifact = artifacts.data.artifacts.find(a => a.name === \`cdk-out-\${context.sha}\`);
+              const cdkArtifact = artifacts.data.artifacts.find(a => a.name === \`cdk-out-\${sha}\`);
               if (!cdkArtifact) {
-                throw new Error('No CDK artifact found for commit ' + context.sha);
+                throw new Error('No CDK artifact found for commit ' + sha);
               }
 
               console.log('Found CDK artifact:', cdkArtifact.name);
-              return cdkArtifact.name;
+              return JSON.stringify({
+                artifactName: cdkArtifact.name,
+                runId: successRun.id
+              });
             `
           }
         },
         {
-          name: "Set artifact name",
-          run: 'echo "artifact-name=${{ steps.find-artifact.outputs.result }}" >> $GITHUB_OUTPUT',
+          name: "Set artifact details",
+          run: [
+            'RESULT=${{ steps.find-artifact.outputs.result }}',
+            'echo "artifact-name=$(echo $RESULT | jq -r .artifactName)" >> $GITHUB_OUTPUT',
+            'echo "run-id=$(echo $RESULT | jq -r .runId)" >> $GITHUB_OUTPUT'
+          ].join('\n'),
         }
       ],
     },
@@ -267,6 +299,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
       permissions: {
         contents: JobPermission.READ,
         idToken: JobPermission.WRITE,
+        actions: JobPermission.READ,  // Needed to download artifacts
       },
       steps: [
         { name: "Checkout", uses: "actions/checkout@v4" },
@@ -315,6 +348,212 @@ const addProductionDeployWorkflow = (github: GitHub) => {
   });
 };
 
+const addManualProductionDeployWorkflow = (github: GitHub) => {
+  const workflow = new GithubWorkflow(github, "manual-prod-deploy");
+
+  workflow.on({
+    workflowDispatch: {
+      inputs: {
+        commit: {
+          description: "The commit SHA to deploy. If not provided, will use the latest commit on main.",
+          required: false,
+          type: "string"
+        }
+      }
+    }
+  });
+
+  workflow.addJobs({
+    find_artifact: {
+      name: "Find Build Artifact",
+      runsOn: RUNNER_TYPE,
+      permissions: {
+        contents: JobPermission.READ,
+        actions: JobPermission.READ
+      },
+      steps: [
+        {
+          name: "Find build artifact",
+          uses: "actions/github-script@v7",
+          id: "find-artifact",
+          with: {
+            script: `
+              const targetSha = core.getInput('commit') || context.sha;
+              console.log('Looking for build for commit:', targetSha);
+              
+              // First, find the build workflow
+              const workflows = await github.rest.actions.listRepoWorkflows({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              });
+              
+              const buildWorkflow = workflows.data.workflows.find(w => w.name === 'build');
+              if (!buildWorkflow) {
+                throw new Error('Could not find build workflow');
+              }
+              
+              // Get the commit details to handle merge and squash commits
+              const commit = await github.rest.git.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: targetSha
+              });
+              
+              // Get the commit message to check for squash merge
+              const commitInfo = await github.rest.repos.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: targetSha
+              });
+              
+              let commitToFind = targetSha;
+              
+              if (commit.data.parents.length > 1) {
+                // Regular merge commit - use the PR branch commit
+                commitToFind = commit.data.parents[1].sha;
+              } else if (commitInfo.data.commit.message.includes('(#')) {
+                // Squash merge - try to extract PR number and find the last PR commit
+                const prNumber = commitInfo.data.commit.message.match(/\\(#(\\d+)\\)/)?.[1];
+                if (prNumber) {
+                  // Get the PR to find its last commit
+                  const pr = await github.rest.pulls.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: parseInt(prNumber, 10)
+                  });
+                  commitToFind = pr.data.head.sha;
+                }
+              }
+              
+              console.log('Using commit SHA for artifact:', commitToFind);
+              
+              // Get workflow runs for the target commit
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: buildWorkflow.id,
+              });
+
+              console.log('Found workflow runs:', runs.data.workflow_runs.map(r => 
+                \`\${r.head_sha} (\${r.status})\`).join(', '));
+
+              const successRun = runs.data.workflow_runs.find(r => 
+                (r.head_sha === commitToFind || r.head_sha === targetSha) && 
+                r.status === 'completed' && 
+                r.conclusion === 'success'
+              );
+              
+              if (!successRun) {
+                throw new Error(
+                  \`No successful build found for commit \${targetSha}\\n\` +
+                  \`Commit message: \${commitInfo.data.commit.message}\\n\` +
+                  \`Commit type: \${commit.data.parents.length > 1 ? 'merge' : commitInfo.data.commit.message.includes('(#') ? 'squash' : 'regular'}\\n\` +
+                  \`Tried looking for: \${commitToFind} and \${targetSha}\\n\` +
+                  \`Available runs: \${runs.data.workflow_runs.map(r => \`\${r.head_sha} (\${r.status})\`).join(', ')}\`
+                );
+              }
+
+              // List artifacts for the successful run
+              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: successRun.id,
+              });
+
+              const cdkArtifact = artifacts.data.artifacts.find(a => 
+                a.name === \`cdk-out-\${commitToFind}\` || a.name === \`cdk-out-\${targetSha}\`
+              );
+              if (!cdkArtifact) {
+                throw new Error(
+                  \`No CDK artifact found for commits \${commitToFind} or \${targetSha}\\n\` +
+                  \`Available artifacts: \${artifacts.data.artifacts.map(a => a.name).join(', ')}\`
+                );
+              }
+
+              console.log('Found CDK artifact:', cdkArtifact.name);
+              return JSON.stringify({
+                artifactName: cdkArtifact.name,
+                runId: successRun.id,
+                commitSha: commitToFind
+              });
+            `
+          }
+        },
+        {
+          name: "Set artifact details",
+          run: [
+            'RESULT=${{ steps.find-artifact.outputs.result }}',
+            'echo "artifact-name=$(echo $RESULT | jq -r .artifactName)" >> $GITHUB_OUTPUT',
+            'echo "run-id=$(echo $RESULT | jq -r .runId)" >> $GITHUB_OUTPUT',
+            'echo "commit-sha=$(echo $RESULT | jq -r .commitSha)" >> $GITHUB_OUTPUT'
+          ].join('\n'),
+        }
+      ],
+    },
+    deploy_production: {
+      name: "Deploy to Production",
+      runsOn: RUNNER_TYPE,
+      needs: ["find_artifact"],
+      environment: "production",
+      permissions: {
+        contents: JobPermission.READ,
+        idToken: JobPermission.WRITE,
+        actions: JobPermission.READ,
+      },
+      steps: [
+        { 
+          name: "Checkout",
+          uses: "actions/checkout@v4",
+          with: {
+            ref: "${{ needs.find_artifact.outputs.commit-sha }}"
+          }
+        },
+        {
+          name: "Configure AWS credentials",
+          uses: "aws-actions/configure-aws-credentials@v4",
+          with: {
+            "aws-region": "us-east-1",
+            audience: "sts.amazonaws.com",
+            "role-to-assume": "arn:aws:iam::${{ secrets.PROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer",
+          },
+        },
+        {
+          name: "Download CDK artifacts",
+          uses: "actions/download-artifact@v4",
+          with: {
+            name: "${{ needs.find_artifact.outputs.artifact-name }}",
+            path: "cdk.out/",
+            "github-token": "${{ secrets.GITHUB_TOKEN }}",
+            "run-id": "${{ needs.find_artifact.outputs.run-id }}",
+          },
+        },
+        { name: "Setup Bun", uses: "oven-sh/setup-bun@v2" },
+        { name: "Install dependencies", run: "bun install --frozen-lockfile" },
+        {
+          name: "Deploy to Production",
+          run: "bunx cdk deploy 'prod/*' --app cdk.out --require-approval never",
+        },
+        {
+          name: "Get Production URL",
+          id: "get-prod-url",
+          run: [
+            'URL=$(bunx cdk --app cdk.out --outputs-file prod-outputs.json deploy --require-approval never 2>/dev/null && cat prod-outputs.json | jq -r \'.[] | select(.CloudFrontUrl) | .CloudFrontUrl\' || echo "Deployment completed")',
+            'echo "PROD_URL=$URL" >> $GITHUB_OUTPUT',
+          ].join("\n"),
+        },
+        {
+          name: "Notify deployment success",
+          run: [
+            'echo "🎉 Production deployment successful!"',
+            'echo "URL: ${{ steps.get-prod-url.outputs.PROD_URL }}"',
+            'echo "Commit: ${{ needs.find_artifact.outputs.commit-sha }}"'
+          ].join("\n"),
+        },
+      ],
+    },
+  });
+};
+
 const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
   const workflow = new GithubWorkflow(github, "cleanup-pr-environment");
 
@@ -329,6 +568,13 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
       permissions: {
         contents: JobPermission.READ,
         idToken: JobPermission.WRITE,
+      },
+      env: {
+        AWS_CDK_ENV_NAME: "pr${{ github.event.number }}",
+        NONPROD_AWS_ACCOUNT_ID: '${{ secrets.NONPROD_AWS_ACCOUNT_ID }}',
+        PROD_AWS_ACCOUNT_ID: '${{ secrets.PROD_AWS_ACCOUNT_ID }}',
+        NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
+        PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
       },
       steps: [
         { name: "Checkout", uses: "actions/checkout@v4" },
