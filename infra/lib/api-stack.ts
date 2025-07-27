@@ -14,7 +14,10 @@ export class ApiStack extends cdk.Stack {
     private readonly apiDomain: string;
 
     constructor(scope: Construct, id: string, props: AppStackProps) {
-        super(scope, id, props);
+      super(scope, id, {
+        ...props,
+        stackName: `RPW-Api-${props.envName}`,
+      });
         this.envName = props.envName;
 
         // Skip hosted zone lookup for local development

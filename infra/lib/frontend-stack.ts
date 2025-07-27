@@ -15,11 +15,14 @@ export const INDEX_FILES_CACHE_CONTROL_SECONDS = 0;
 export const IMMUATABLE_FILES_CACHE_CONTROL_DAYS = 365 * 10;
 
 export class FrontendStack extends cdk.Stack {
-    private readonly envName: string;
-    private readonly fullDomain: string;
-    
-    constructor(scope: Construct, id: string, props: AppStackProps & { api: RestApi }) {
-        super(scope, id, props);
+  private readonly envName: string;
+  private readonly fullDomain: string;
+  
+  constructor(scope: Construct, id: string, props: AppStackProps & { api: RestApi }) {
+        super(scope, id, {
+          ...props,
+          stackName: `RPW-Frontend-${props.envName}`,
+        });
         this.envName = props.envName;
 
         // Skip hosted zone lookup for local development
