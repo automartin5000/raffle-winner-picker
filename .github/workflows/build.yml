@@ -6,7 +6,20 @@ on:
     branches:
       - "**"
       - "!main"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      upload_artifacts:
+        description: Upload build artifacts
+        required: false
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      upload_artifacts:
+        description: Upload build artifacts
+        required: false
+        default: false
+        type: boolean
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -41,6 +54,12 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer
       - name: build
         run: npx projen build
+      - name: Upload CDK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdk-out-${{ github.sha }}
+          path: cdk.out/
+          retention-days: "30"
       - name: Find mutations
         id: self_mutation
         run: |-

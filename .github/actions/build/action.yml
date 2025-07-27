@@ -1,0 +1,38 @@
+name: build
+inputs:
+  upload_artifacts:
+    description: Upload build artifacts
+    required: false
+    default: false
+    type: boolean
+outputs:
+  cdk_artifact:
+    description: The path to the CDK artifacts
+    value: ${{ steps.upload_cdk_artifact.outputs.artifact_id }}
+runs:
+  using: "composite"
+  steps:
+    - name: Setup bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+      shell: bash
+    - name: AWS Account Login
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: us-east-1
+        audience: sts.amazonaws.com
+        role-to-assume: arn:aws:iam::${{ env.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer
+    - name: build
+      run: bunx projen build
+      shell: bash
+    - name: Upload CDK artifacts
+      id: upload_cdk_artifact
+      uses: actions/upload-artifact@v4
+      if: ${{ inputs.upload_artifacts }}
+      with:
+        name: cdk-out-${{ github.sha }}
+        path: cdk.out/
+        retention-days: "30"
