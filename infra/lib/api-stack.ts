@@ -21,19 +21,13 @@ export class ApiStack extends cdk.Stack {
         this.envName = props.envName;
 
         // Skip hosted zone lookup for local development
-        const hostedZone = this.envName === 'local'
-            ? undefined
-            : HostedZone.fromLookup(this, 'HostedZone', {
+        const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
                 domainName: props.hostedZone,
             });
 
         const subdomainPrefix = props.envName === 'prod' ? '' : `${props.envName}.`;
-        this.fullDomain = hostedZone
-            ? `${subdomainPrefix}raffle-picker.${hostedZone.zoneName}`
-            : `${subdomainPrefix}raffle-picker.localhost`;
-        this.apiDomain = hostedZone
-            ? `${subdomainPrefix}api.raffle-picker.${hostedZone.zoneName}`
-            : `${subdomainPrefix}api.raffle-picker.localhost`;
+        this.fullDomain = `${subdomainPrefix}raffle-picker.${hostedZone.zoneName}`
+        this.apiDomain = `${subdomainPrefix}api.raffle-picker.${hostedZone.zoneName}`
 
         // Create backend infrastructure
         const raffleTable = this.createDynamoTable();
@@ -46,7 +40,6 @@ export class ApiStack extends cdk.Stack {
 
     private createDynamoTable(): Table {
         return new Table(this, 'RaffleRunsTable', {
-            tableName: `raffle-runs-${this.envName}`,
             partitionKey: {
                 name: 'userId',
                 type: AttributeType.STRING,
@@ -82,7 +75,6 @@ export class ApiStack extends cdk.Stack {
 
         // Create API Gateway
         const api = new RestApi(this, 'RaffleApi', {
-            restApiName: `raffle-api-${this.envName}`,
             description: 'API for Raffle Winner Picker application',
             defaultCorsPreflightOptions: {
                 allowOrigins: [`https://${this.fullDomain}`],
