@@ -85,7 +85,8 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         }
       },
       outputs: {
-        "CDK_DIFF": { stepId: "cdk-diff", outputName: "CDK_DIFF" } as JobStepOutput
+        "CDK_DIFF": { stepId: "cdk-diff", outputName: "CDK_DIFF" } as JobStepOutput,
+        "CLOUDFRONT_URL": { stepId: "get-url", outputName: "CLOUDFRONT_URL" } as JobStepOutput
       },
       // environment: "development",
       permissions: {
@@ -105,21 +106,22 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           id: "build",
           uses: "./.github/actions/build",
           with: {
-            uploadArtifacts: true,
+            upload_artifacts: true,
           },
         },
         {
           name: "Generate CDK Diff",
           id: "cdk-diff",
           run: [
-            "cdk diff --app cdk.out > cdk-diff.txt 2>&1 || true",
             'echo "CDK_DIFF<<EOF" >> $GITHUB_OUTPUT',
-            "cat cdk-diff.txt >> $GITHUB_OUTPUT",
+            'echo "Stack Changes:" >> $GITHUB_OUTPUT',
+            'echo "" >> $GITHUB_OUTPUT',
+            'bunx cdk diff --app cdk.out "$AWS_CDK_ENV_NAME/*" >> $GITHUB_OUTPUT 2>&1 || true',
             'echo "EOF" >> $GITHUB_OUTPUT',
           ].join("\n"),
         },
         {
-          name: "Deploy ephemeral environment",
+          name: "Deploy PR environment",
           run: "bunx projen deploy \"$AWS_CDK_ENV_NAME/*\" --require-approval never",
         },
         {
@@ -162,15 +164,14 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
               "## 🚀 PR Environment Status",
               "",
               "**Environment:** `pr${{ github.event.number }}`",
-              "**Status:** ${{ needs.deploy_ephemeral.result == 'success' && '✅ Deployed' || '❌ Failed' }}",
-              "**Preview URL:** Deployment in progress...",
+              "**Status:** ${{ needs.deploy_pr.result == 'success' && '✅ Deployed' || '❌ Failed' }}",
               "",
               "### 📋 CDK Diff",
               "<details>",
               "<summary>Click to view infrastructure changes</summary>",
               "",
               "```diff",
-              "${{ needs.deploy_pr.outputs.CDK_DIFF }}",
+              "${{ needs.deploy_pr.outputs.CDK_DIFF || 'No infrastructure changes' }}",
               "```",
               "</details>",
               "",
