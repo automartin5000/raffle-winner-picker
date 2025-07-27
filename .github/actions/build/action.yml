@@ -6,7 +6,9 @@ inputs:
     default: false
     type: boolean
 outputs:
-  cdk_artifact: ${{ steps.upload_cdk_artifact.outputs.artifact_id }}
+  cdk_artifact:
+    description: The path to the CDK artifacts
+    value: ${{ steps.upload_cdk_artifact.outputs.artifact_id }}
 runs:
   using: "composite"
   steps:
@@ -25,6 +27,7 @@ runs:
     - name: build
       run: bunx projen build
     - name: Upload CDK artifacts
+      id: upload_cdk_artifact
       uses: actions/upload-artifact@v4
       if: ${{ inputs.upload_artifacts }}
       with:
