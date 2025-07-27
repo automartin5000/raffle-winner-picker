@@ -42,10 +42,13 @@ jobs:
         run: |-
           echo "Stack Changes:" > cdk-diff.txt
           echo "" >> cdk-diff.txt
-          bunx cdk diff "prod/*" --app cdk.out "$AWS_CDK_ENV_NAME/*" >> cdk-diff.txt 2>&1 || true
+          bunx cdk diff "prod/*" --app cdk.out "$AWS_CDK_ENV_NAME/*" > cdk-diff-raw.txt 2>&1 || true
+          # Obfuscate sensitive information
+          cat cdk-diff-raw.txt | sed -E "s/[0-9]{12}/XXXX-ACCOUNT-ID-XXXX/g" | sed -E "s/${{ secrets.NONPROD_AWS_ACCOUNT_ID }}/XXXX-NONPROD-ACCOUNT-ID-XXXX/g" | sed -E "s/${{ secrets.PROD_AWS_ACCOUNT_ID }}/XXXX-PROD-ACCOUNT-ID-XXXX/g" | sed -E "s/${{ secrets.NONPROD_HOSTED_ZONE }}/nonprod.example.com/g" | sed -E "s/${{ secrets.PROD_HOSTED_ZONE }}/example.com/g" > cdk-diff.txt
           echo "CDK_DIFF_CONTENT<<EOF" >> $GITHUB_OUTPUT
           cat cdk-diff.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          rm cdk-diff-raw.txt
       - name: Deploy PR environment
         id: deploy
         run: bunx projen deploy "$AWS_CDK_ENV_NAME/*" --require-approval never
