@@ -34,4 +34,4 @@ jobs:
       - name: Dummy build directory for cdk
         run: mkdir build && touch build/index.js
       - name: Destroy PR environment
-        run: bunx projen destroy --force
+        run: bunx projen destroy "$AWS_CDK_ENV_NAME/*" --force

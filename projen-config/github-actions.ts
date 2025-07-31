@@ -199,7 +199,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
     find_artifact: {
       name: "Find Build Artifact",
       runsOn: RUNNER_TYPE,
-      if: "github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'",
+      if: "github.event.pull_request.merged == true",
       permissions: {
         contents: JobPermission.READ,
         actions: JobPermission.READ,
@@ -212,11 +212,33 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           id: "find-artifact",
           with: {
             script: `
-              const sha = context.eventName === 'pull_request' 
-                ? context.payload.pull_request.head.sha  // PR head commit
-                : context.sha;  // Manual workflow run
+              // For PR events, we need both the head commit (where the build happened)
+              // and the merge commit (what's in the main branch)
+              const headSha = context.eventName === 'pull_request_target'
+                ? context.payload.pull_request.head.sha  // The PR's last commit, where the build ran
+                : context.sha;
               
-              console.log('Looking for build for commit:', sha);
+              const mergeCommitSha = context.eventName === 'pull_request_target'
+                ? context.payload.pull_request.merge_commit_sha  // The squash commit in main
+                : null;
+              
+              console.log('Event type:', context.eventName);
+              console.log('Event action:', context.payload.action);
+              console.log('Looking for builds:', {
+                headSha,
+                mergeCommitSha
+              });
+              
+              if (context.eventName === 'pull_request_target') {
+                console.log('PR details:', {
+                  number: context.payload.pull_request.number,
+                  title: context.payload.pull_request.title,
+                  merged: context.payload.pull_request.merged,
+                  merge_commit_sha: context.payload.pull_request.merge_commit_sha,
+                  head_sha: context.payload.pull_request.head.sha,
+                  base_sha: context.payload.pull_request.base.sha
+                });
+              }
               
               // First, find the build workflow
               const workflows = await github.rest.actions.listRepoWorkflows({
@@ -241,17 +263,33 @@ const addProductionDeployWorkflow = (github: GitHub) => {
 
               // Find the successful run for our target commit
               const successRun = runs.data.workflow_runs.find(r => 
-                r.head_sha === sha && 
+                (r.head_sha === headSha || r.head_sha === mergeCommitSha) && 
                 r.status === 'completed' && 
                 r.conclusion === 'success'
               );
               
               if (!successRun) {
-                throw new Error(
-                  \`No successful build found for commit \${sha}\\n\` +
-                  \`Event: \${context.eventName}\\n\` +
-                  \`Available runs: \${runs.data.workflow_runs.map(r => \`\${r.head_sha} (\${r.status})\`).join(', ')}\`
+                const errorDetails = [
+                  \`No successful build found for \${context.eventName === 'pull_request_target' ? 'PR' : 'commit'}\`,
+                  \`Event: \${context.eventName}\`
+                ];
+
+                if (context.eventName === 'pull_request_target') {
+                  errorDetails.push(
+                    \`PR: #\${context.payload.pull_request.number} - \${context.payload.pull_request.title}\`,
+                    \`Head commit (expected build): \${headSha}\`,
+                    \`Squash commit: \${mergeCommitSha}\`
+                  );
+                } else {
+                  errorDetails.push(\`Commit: \${headSha}\`);
+                }
+
+                errorDetails.push(
+                  'Available workflow runs:',
+                  ...runs.data.workflow_runs.map(r => \`  \${r.head_sha} (\${r.status}/\${r.conclusion})\`)
                 );
+
+                throw new Error(errorDetails.join('\\n'));
               }
               
               console.log('Found successful build run:', {
@@ -268,9 +306,21 @@ const addProductionDeployWorkflow = (github: GitHub) => {
                 run_id: successRun.id,
               });
 
-              const cdkArtifact = artifacts.data.artifacts.find(a => a.name === \`cdk-out-\${sha}\`);
+              // Look for artifacts with either the head SHA or merge commit SHA
+              const cdkArtifact = artifacts.data.artifacts.find(a => 
+                a.name === \`cdk-out-\${headSha}\` || 
+                (mergeCommitSha && a.name === \`cdk-out-\${mergeCommitSha}\`)
+              );
+              
               if (!cdkArtifact) {
-                throw new Error('No CDK artifact found for commit ' + sha);
+                const expected = [
+                  \`cdk-out-\${headSha}\`,
+                  ...(mergeCommitSha ? [\`cdk-out-\${mergeCommitSha}\`] : [])
+                ];
+                throw new Error(
+                  \`No CDK artifact found. Expected one of:\\n  \${expected.join('\\n  ')}\\n\` +
+                  \`Available artifacts:\\n  \${artifacts.data.artifacts.map(a => a.name).join('\\n  ')}\`
+                );
               }
 
               console.log('Found CDK artifact:', cdkArtifact.name);
@@ -601,7 +651,7 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
         },
         {
           name: "Destroy PR environment",
-          run: "bunx projen destroy --force",
+          run: "bunx projen destroy \"$AWS_CDK_ENV_NAME/*\" --force",
         },
       ],
     },
