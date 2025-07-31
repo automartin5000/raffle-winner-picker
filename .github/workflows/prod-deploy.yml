@@ -15,7 +15,7 @@ jobs:
       contents: read
       actions: read
       pull-requests: read
-    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.merged == true
     steps:
       - name: Find build artifact
         id: find-artifact
@@ -23,15 +23,59 @@ jobs:
         with:
           script: "
 
-            \              const sha = context.eventName === 'pull_request'\ 
+            \              // For PR events, we need both the head commit (where the build happened)
 
-            \                ? context.payload.pull_request.head.sha  // PR head commit
+            \              // and the merge commit (what's in the main branch)
 
-            \                : context.sha;  // Manual workflow run
+            \              const headSha = context.eventName === 'pull_request_target'
+
+            \                ? context.payload.pull_request.head.sha  // The PR's last commit, where the build ran
+
+            \                : context.sha;
 
             \             \ 
 
-            \              console.log('Looking for build for commit:', sha);
+            \              const mergeCommitSha = context.eventName === 'pull_request_target'
+
+            \                ? context.payload.pull_request.merge_commit_sha  // The squash commit in main
+
+            \                : null;
+
+            \             \ 
+
+            \              console.log('Event type:', context.eventName);
+
+            \              console.log('Event action:', context.payload.action);
+
+            \              console.log('Looking for builds:', {
+
+            \                headSha,
+
+            \                mergeCommitSha
+
+            \              });
+
+            \             \ 
+
+            \              if (context.eventName === 'pull_request_target') {
+
+            \                console.log('PR details:', {
+
+            \                  number: context.payload.pull_request.number,
+
+            \                  title: context.payload.pull_request.title,
+
+            \                  merged: context.payload.pull_request.merged,
+
+            \                  merge_commit_sha: context.payload.pull_request.merge_commit_sha,
+
+            \                  head_sha: context.payload.pull_request.head.sha,
+
+            \                  base_sha: context.payload.pull_request.base.sha
+
+            \                });
+
+            \              }
 
             \             \ 
 
@@ -80,7 +124,7 @@ jobs:
 
             \              const successRun = runs.data.workflow_runs.find(r =>\ 
 
-            \                r.head_sha === sha &&\ 
+            \                (r.head_sha === headSha || r.head_sha === mergeCommitSha) &&\ 
 
             \                r.status === 'completed' &&\ 
 
@@ -92,15 +136,44 @@ jobs:
 
             \              if (!successRun) {
 
-            \                throw new Error(
+            \                const errorDetails = [
 
-            \                  `No successful build found for commit ${sha}\\n` +
+            \                  `No successful build found for ${context.eventName === 'pull_request_target' ? 'PR' : 'commit'}`,
 
-            \                  `Event: ${context.eventName}\\n` +
+            \                  `Event: ${context.eventName}`
 
-            \                  `Available runs: ${runs.data.workflow_runs.map(r => `${r.head_sha} (${r.status})`).join(', ')}`
+            \                ];
+
+
+            \                if (context.eventName === 'pull_request_target') {
+
+            \                  errorDetails.push(
+
+            \                    `PR: #${context.payload.pull_request.number} - ${context.payload.pull_request.title}`,
+
+            \                    `Head commit (expected build): ${headSha}`,
+
+            \                    `Squash commit: ${mergeCommitSha}`
+
+            \                  );
+
+            \                } else {
+
+            \                  errorDetails.push(`Commit: ${headSha}`);
+
+            \                }
+
+
+            \                errorDetails.push(
+
+            \                  'Available workflow runs:',
+
+            \                  ...runs.data.workflow_runs.map(r => `  ${r.head_sha} (${r.status}/${r.conclusion})`)
 
             \                );
+
+
+            \                throw new Error(errorDetails.join('\\n'));
 
             \              }
 
@@ -132,11 +205,35 @@ jobs:
             \              });
 
 
-            \              const cdkArtifact = artifacts.data.artifacts.find(a => a.name === `cdk-out-${sha}`);
+            \              // Look for artifacts with either the head SHA or merge commit SHA
+
+            \              const cdkArtifact = artifacts.data.artifacts.find(a =>\ 
+
+            \                a.name === `cdk-out-${headSha}` ||\ 
+
+            \                (mergeCommitSha && a.name === `cdk-out-${mergeCommitSha}`)
+
+            \              );
+
+            \             \ 
 
             \              if (!cdkArtifact) {
 
-            \                throw new Error('No CDK artifact found for commit ' + sha);
+            \                const expected = [
+
+            \                  `cdk-out-${headSha}`,
+
+            \                  ...(mergeCommitSha ? [`cdk-out-${mergeCommitSha}`] : [])
+
+            \                ];
+
+            \                throw new Error(
+
+            \                  `No CDK artifact found. Expected one of:\\n  ${expected.join('\\n  ')}\\n` +
+
+            \                  `Available artifacts:\\n  ${artifacts.data.artifacts.map(a => a.name).join('\\n  ')}`
+
+            \                );
 
             \              }
 
