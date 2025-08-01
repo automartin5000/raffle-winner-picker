@@ -205,6 +205,12 @@ const addProductionDeployWorkflow = (github: GitHub) => {
         actions: JobPermission.READ,
         pullRequests: JobPermission.READ,
       },
+      outputs: {
+        artifact_path: {
+          stepId: "find-artifact",
+          outputName: "artifact-name",
+        }
+      },
       steps: [
         {
           name: "Find build artifact",
