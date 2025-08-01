@@ -191,7 +191,7 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Deploy to Production
-        run: bunx cdk deploy 'prod/*' --app cdk.out --require-approval never
+        run: pj deploy 'prod/*' --app cdk.out --require-approval never
       - name: Get Production URL
         id: get-prod-url
         run: |-
