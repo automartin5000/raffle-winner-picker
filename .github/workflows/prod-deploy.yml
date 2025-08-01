@@ -17,6 +17,8 @@ jobs:
       actions: read
       pull-requests: read
     environment: production
+    outputs:
+      artifact_path: ${{ steps.find-artifact.outputs.artifact-name }}
     if: github.event.pull_request.merged == true
     steps:
       - name: Checkout
