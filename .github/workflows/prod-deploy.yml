@@ -8,80 +8,48 @@ on:
     branches:
       - main
 jobs:
-  find_artifact:
-    name: Find Build Artifact
+  deploy_production:
+    name: Deploy to Production
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
       actions: read
       pull-requests: read
+    environment: production
     outputs:
       artifact_path: ${{ steps.find-artifact.outputs.artifact-name }}
     if: github.event.pull_request.merged == true
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Find build artifact
         id: find-artifact
         uses: actions/github-script@v7
         with:
           script: "
 
-            \              // For PR events, we need both the head commit (where the build happened)
+            \              const headSha = context.payload.pull_request.head.sha;
 
-            \              // and the merge commit (what's in the main branch)
-
-            \              const headSha = context.eventName === 'pull_request_target'
-
-            \                ? context.payload.pull_request.head.sha  // The PR's last commit, where the build ran
-
-            \                : context.sha;
+            \              const mergeCommitSha = context.payload.pull_request.merge_commit_sha;
 
             \             \ 
-
-            \              const mergeCommitSha = context.eventName === 'pull_request_target'
-
-            \                ? context.payload.pull_request.merge_commit_sha  // The squash commit in main
-
-            \                : null;
-
-            \             \ 
-
-            \              console.log('Event type:', context.eventName);
-
-            \              console.log('Event action:', context.payload.action);
 
             \              console.log('Looking for builds:', {
 
             \                headSha,
 
-            \                mergeCommitSha
+            \                mergeCommitSha,
+
+            \                pr: context.payload.pull_request.number,
+
+            \                title: context.payload.pull_request.title
 
             \              });
 
             \             \ 
 
-            \              if (context.eventName === 'pull_request_target') {
-
-            \                console.log('PR details:', {
-
-            \                  number: context.payload.pull_request.number,
-
-            \                  title: context.payload.pull_request.title,
-
-            \                  merged: context.payload.pull_request.merged,
-
-            \                  merge_commit_sha: context.payload.pull_request.merge_commit_sha,
-
-            \                  head_sha: context.payload.pull_request.head.sha,
-
-            \                  base_sha: context.payload.pull_request.base.sha
-
-            \                });
-
-            \              }
-
-            \             \ 
-
-            \              // First, find the build workflow
+            \              // Find the build workflow
 
             \              const workflows = await github.rest.actions.listRepoWorkflows({
 
@@ -138,60 +106,23 @@ jobs:
 
             \              if (!successRun) {
 
-            \                const errorDetails = [
+            \                throw new Error(
 
-            \                  `No successful build found for ${context.eventName === 'pull_request_target' ? 'PR' : 'commit'}`,
+            \                  `No successful build found for PR #${context.payload.pull_request.number}\\n` +
 
-            \                  `Event: ${context.eventName}`
+            \                  `Head commit: ${headSha}\\n` +
 
-            \                ];
+            \                  `Merge commit: ${mergeCommitSha}\\n` +
 
-
-            \                if (context.eventName === 'pull_request_target') {
-
-            \                  errorDetails.push(
-
-            \                    `PR: #${context.payload.pull_request.number} - ${context.payload.pull_request.title}`,
-
-            \                    `Head commit (expected build): ${headSha}`,
-
-            \                    `Squash commit: ${mergeCommitSha}`
-
-            \                  );
-
-            \                } else {
-
-            \                  errorDetails.push(`Commit: ${headSha}`);
-
-            \                }
-
-
-            \                errorDetails.push(
-
-            \                  'Available workflow runs:',
-
-            \                  ...runs.data.workflow_runs.map(r => `  ${r.head_sha} (${r.status}/${r.conclusion})`)
+            \                  `Available runs: ${runs.data.workflow_runs.map(r => `${r.head_sha} (${r.status})`).join(', ')}`
 
             \                );
-
-
-            \                throw new Error(errorDetails.join('\\n'));
 
             \              }
 
             \             \ 
 
-            \              console.log('Found successful build run:', {
-
-            \                id: successRun.id,
-
-            \                sha: successRun.head_sha,
-
-            \                status: successRun.status,
-
-            \                conclusion: successRun.conclusion
-
-            \              });
+            \              console.log('Found successful build run:', successRun.head_sha);
 
 
             \              // List artifacts for the successful run
@@ -213,7 +144,7 @@ jobs:
 
             \                a.name === `cdk-out-${headSha}` ||\ 
 
-            \                (mergeCommitSha && a.name === `cdk-out-${mergeCommitSha}`)
+            \                a.name === `cdk-out-${mergeCommitSha}`
 
             \              );
 
@@ -221,19 +152,11 @@ jobs:
 
             \              if (!cdkArtifact) {
 
-            \                const expected = [
-
-            \                  `cdk-out-${headSha}`,
-
-            \                  ...(mergeCommitSha ? [`cdk-out-${mergeCommitSha}`] : [])
-
-            \                ];
-
             \                throw new Error(
 
-            \                  `No CDK artifact found. Expected one of:\\n  ${expected.join('\\n  ')}\\n` +
+            \                  `No CDK artifact found. Expected cdk-out-${headSha} or cdk-out-${mergeCommitSha}\\n` +
 
-            \                  `Available artifacts:\\n  ${artifacts.data.artifacts.map(a => a.name).join('\\n  ')}`
+            \                  `Available artifacts: ${artifacts.data.artifacts.map(a => a.name).join(', ')}`
 
             \                );
 
@@ -251,23 +174,6 @@ jobs:
             \              });
 
             \            "
-      - name: Set artifact details
-        run: |-
-          RESULT=${{ steps.find-artifact.outputs.result }}
-          echo "artifact-name=$(echo $RESULT | jq -r .artifactName)" >> $GITHUB_OUTPUT
-          echo "run-id=$(echo $RESULT | jq -r .runId)" >> $GITHUB_OUTPUT
-  deploy_production:
-    name: Deploy to Production
-    needs: find_artifact
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-      actions: read
-    environment: production
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -277,10 +183,9 @@ jobs:
       - name: Download CDK artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.find_artifact.outputs.artifact-name }}
+          name: ${{ fromJSON(steps.find-artifact.outputs.result).artifactName }}
           path: cdk.out/
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ needs.find_artifact.outputs.run-id }}
+          run-id: ${{ fromJSON(steps.find-artifact.outputs.result).runId }}
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
       - name: Install dependencies
@@ -296,3 +201,4 @@ jobs:
         run: |-
           echo "🎉 Production deployment successful!"
           echo "URL: ${{ steps.get-prod-url.outputs.PROD_URL }}"
+          echo "Artifact: ${{ fromJSON(steps.find-artifact.outputs.result).artifactName }}"

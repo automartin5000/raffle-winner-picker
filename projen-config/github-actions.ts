@@ -196,13 +196,15 @@ const addProductionDeployWorkflow = (github: GitHub) => {
   });
 
   workflow.addJobs({
-    find_artifact: {
-      name: "Find Build Artifact",
+    deploy_production: {
+      name: "Deploy to Production",
       runsOn: RUNNER_TYPE,
       if: "github.event.pull_request.merged == true",
+      environment: "production",
       permissions: {
         contents: JobPermission.READ,
-        actions: JobPermission.READ,
+        idToken: JobPermission.WRITE,
+        actions: JobPermission.READ,  // Needed to download artifacts
         pullRequests: JobPermission.READ,
       },
       outputs: {
@@ -212,41 +214,24 @@ const addProductionDeployWorkflow = (github: GitHub) => {
         }
       },
       steps: [
+        { name: "Checkout", uses: "actions/checkout@v4" },
         {
           name: "Find build artifact",
-          uses: "actions/github-script@v7",
           id: "find-artifact",
+          uses: "actions/github-script@v7",
           with: {
             script: `
-              // For PR events, we need both the head commit (where the build happened)
-              // and the merge commit (what's in the main branch)
-              const headSha = context.eventName === 'pull_request_target'
-                ? context.payload.pull_request.head.sha  // The PR's last commit, where the build ran
-                : context.sha;
+              const headSha = context.payload.pull_request.head.sha;
+              const mergeCommitSha = context.payload.pull_request.merge_commit_sha;
               
-              const mergeCommitSha = context.eventName === 'pull_request_target'
-                ? context.payload.pull_request.merge_commit_sha  // The squash commit in main
-                : null;
-              
-              console.log('Event type:', context.eventName);
-              console.log('Event action:', context.payload.action);
               console.log('Looking for builds:', {
                 headSha,
-                mergeCommitSha
+                mergeCommitSha,
+                pr: context.payload.pull_request.number,
+                title: context.payload.pull_request.title
               });
               
-              if (context.eventName === 'pull_request_target') {
-                console.log('PR details:', {
-                  number: context.payload.pull_request.number,
-                  title: context.payload.pull_request.title,
-                  merged: context.payload.pull_request.merged,
-                  merge_commit_sha: context.payload.pull_request.merge_commit_sha,
-                  head_sha: context.payload.pull_request.head.sha,
-                  base_sha: context.payload.pull_request.base.sha
-                });
-              }
-              
-              // First, find the build workflow
+              // Find the build workflow
               const workflows = await github.rest.actions.listRepoWorkflows({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -275,35 +260,15 @@ const addProductionDeployWorkflow = (github: GitHub) => {
               );
               
               if (!successRun) {
-                const errorDetails = [
-                  \`No successful build found for \${context.eventName === 'pull_request_target' ? 'PR' : 'commit'}\`,
-                  \`Event: \${context.eventName}\`
-                ];
-
-                if (context.eventName === 'pull_request_target') {
-                  errorDetails.push(
-                    \`PR: #\${context.payload.pull_request.number} - \${context.payload.pull_request.title}\`,
-                    \`Head commit (expected build): \${headSha}\`,
-                    \`Squash commit: \${mergeCommitSha}\`
-                  );
-                } else {
-                  errorDetails.push(\`Commit: \${headSha}\`);
-                }
-
-                errorDetails.push(
-                  'Available workflow runs:',
-                  ...runs.data.workflow_runs.map(r => \`  \${r.head_sha} (\${r.status}/\${r.conclusion})\`)
+                throw new Error(
+                  \`No successful build found for PR #\${context.payload.pull_request.number}\\n\` +
+                  \`Head commit: \${headSha}\\n\` +
+                  \`Merge commit: \${mergeCommitSha}\\n\` +
+                  \`Available runs: \${runs.data.workflow_runs.map(r => \`\${r.head_sha} (\${r.status})\`).join(', ')}\`
                 );
-
-                throw new Error(errorDetails.join('\\n'));
               }
               
-              console.log('Found successful build run:', {
-                id: successRun.id,
-                sha: successRun.head_sha,
-                status: successRun.status,
-                conclusion: successRun.conclusion
-              });
+              console.log('Found successful build run:', successRun.head_sha);
 
               // List artifacts for the successful run
               const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
@@ -315,17 +280,13 @@ const addProductionDeployWorkflow = (github: GitHub) => {
               // Look for artifacts with either the head SHA or merge commit SHA
               const cdkArtifact = artifacts.data.artifacts.find(a => 
                 a.name === \`cdk-out-\${headSha}\` || 
-                (mergeCommitSha && a.name === \`cdk-out-\${mergeCommitSha}\`)
+                a.name === \`cdk-out-\${mergeCommitSha}\`
               );
               
               if (!cdkArtifact) {
-                const expected = [
-                  \`cdk-out-\${headSha}\`,
-                  ...(mergeCommitSha ? [\`cdk-out-\${mergeCommitSha}\`] : [])
-                ];
                 throw new Error(
-                  \`No CDK artifact found. Expected one of:\\n  \${expected.join('\\n  ')}\\n\` +
-                  \`Available artifacts:\\n  \${artifacts.data.artifacts.map(a => a.name).join('\\n  ')}\`
+                  \`No CDK artifact found. Expected cdk-out-\${headSha} or cdk-out-\${mergeCommitSha}\\n\` +
+                  \`Available artifacts: \${artifacts.data.artifacts.map(a => a.name).join(', ')}\`
                 );
               }
 
@@ -337,28 +298,6 @@ const addProductionDeployWorkflow = (github: GitHub) => {
             `
           }
         },
-        {
-          name: "Set artifact details",
-          run: [
-            'RESULT=${{ steps.find-artifact.outputs.result }}',
-            'echo "artifact-name=$(echo $RESULT | jq -r .artifactName)" >> $GITHUB_OUTPUT',
-            'echo "run-id=$(echo $RESULT | jq -r .runId)" >> $GITHUB_OUTPUT'
-          ].join('\n'),
-        }
-      ],
-    },
-    deploy_production: {
-      name: "Deploy to Production",
-      runsOn: RUNNER_TYPE,
-      needs: ["find_artifact"],
-      environment: "production",
-      permissions: {
-        contents: JobPermission.READ,
-        idToken: JobPermission.WRITE,
-        actions: JobPermission.READ,  // Needed to download artifacts
-      },
-      steps: [
-        { name: "Checkout", uses: "actions/checkout@v4" },
         {
           name: "Configure AWS credentials",
           uses: "aws-actions/configure-aws-credentials@v4",
@@ -372,10 +311,9 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            name: "${{ needs.find_artifact.outputs.artifact-name }}",
+            name: "${{ fromJSON(steps.find-artifact.outputs.result).artifactName }}",
             path: "cdk.out/",
-            "github-token": "${{ secrets.GITHUB_TOKEN }}",
-            "run-id": "${{ needs.find_artifact.outputs.run-id }}",
+            "run-id": "${{ fromJSON(steps.find-artifact.outputs.result).runId }}",
           },
         },
         { name: "Setup Bun", uses: "oven-sh/setup-bun@v2" },
@@ -397,6 +335,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           run: [
             'echo "🎉 Production deployment successful!"',
             'echo "URL: ${{ steps.get-prod-url.outputs.PROD_URL }}"',
+            'echo "Artifact: ${{ fromJSON(steps.find-artifact.outputs.result).artifactName }}"'
           ].join("\n"),
         },
       ],
