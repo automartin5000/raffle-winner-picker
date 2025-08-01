@@ -207,6 +207,12 @@ const addProductionDeployWorkflow = (github: GitHub) => {
         actions: JobPermission.READ,  // Needed to download artifacts
         pullRequests: JobPermission.READ,
       },
+      outputs: {
+        artifact_path: {
+          stepId: "find-artifact",
+          outputName: "artifact-name",
+        }
+      },
       steps: [
         { name: "Checkout", uses: "actions/checkout@v4" },
         {
