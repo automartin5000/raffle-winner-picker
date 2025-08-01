@@ -291,10 +291,10 @@ const addProductionDeployWorkflow = (github: GitHub) => {
               }
 
               console.log('Found CDK artifact:', cdkArtifact.name);
-              return JSON.stringify({
+              return {
                 artifactName: cdkArtifact.name,
                 runId: successRun.id
-              });
+              };
             `
           }
         },
@@ -311,16 +311,16 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            name: "${{ fromJSON(steps.find-artifact.outputs.result).artifactName }}",
+            name: "${{ steps.find-artifact.outputs.result.artifactName }}",
             path: "cdk.out/",
-            "run-id": "${{ fromJSON(steps.find-artifact.outputs.result).runId }}",
+            "run-id": "${{ steps.find-artifact.outputs.result.runId }}",
           },
         },
         { name: "Setup Bun", uses: "oven-sh/setup-bun@v2" },
         { name: "Install dependencies", run: "bun install --frozen-lockfile" },
         {
           name: "Deploy to Production",
-          run: "bunx cdk deploy 'prod/*' --app cdk.out --require-approval never",
+          run: "bun projen deploy 'prod/*' --app cdk.out --require-approval never",
         },
         {
           name: "Get Production URL",
