@@ -23,7 +23,7 @@ const updateBuildWorkflow = (workflow: BuildWorkflow) => {
       uses: "actions/upload-artifact@v4",
       with: {
         name: "cdk-out-${{ github.sha }}",
-        path: "cdk.out/",
+        path: "cdk.out/*",
         "retention-days": "30",
       },
     },
@@ -319,12 +319,8 @@ const addProductionDeployWorkflow = (github: GitHub) => {
             "artifact-ids": "${{ steps.artifact-details.outputs.artifact-id }}",
             "run-id": "${{ steps.artifact-details.outputs.run-id }}",
             "github-token": "${{ secrets.GITHUB_TOKEN }}",
-            path: "./",
+            path: "cdk.out/",
           },
-        },
-        {
-          name: "Move CDK artifacts to correct location",
-          run: "mv cdk-out-*/* cdk.out/ && rmdir cdk-out-*",
         },
         { name: "Setup Bun", uses: "oven-sh/setup-bun@v2" },
         { name: "Install dependencies", run: "bun install --frozen-lockfile" },
