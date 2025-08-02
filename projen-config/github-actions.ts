@@ -286,6 +286,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
               }
 
               console.log('Found CDK artifact:', cdkArtifact.name);
+              console.log('Artifact ID:', cdkArtifact.id);
               return cdkArtifact.id;
             `
           }
