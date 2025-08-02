@@ -23,7 +23,7 @@ const updateBuildWorkflow = (workflow: BuildWorkflow) => {
       uses: "actions/upload-artifact@v4",
       with: {
         name: "cdk-out-${{ github.sha }}",
-        path: "cdk.out/",
+        path: "cdk.out/*",
         "retention-days": "30",
       },
     },
