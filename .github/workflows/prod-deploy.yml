@@ -17,8 +17,6 @@ jobs:
       actions: read
       pull-requests: read
     environment: production
-    outputs:
-      artifact_path: ${{ steps.find-artifact.outputs.artifact-name }}
     if: github.event.pull_request.merged == true
     steps:
       - name: Checkout
@@ -27,6 +25,7 @@ jobs:
         id: find-artifact
         uses: actions/github-script@v7
         with:
+          result-encoding: string
           script: "
 
             \              const headSha = context.payload.pull_request.head.sha;
@@ -165,13 +164,7 @@ jobs:
 
             \              console.log('Found CDK artifact:', cdkArtifact.name);
 
-            \              return {
-
-            \                artifactName: cdkArtifact.name,
-
-            \                runId: successRun.id
-
-            \              };
+            \              return cdkArtifact.id;
 
             \            "
       - name: Configure AWS credentials
@@ -183,9 +176,8 @@ jobs:
       - name: Download CDK artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ${{ steps.find-artifact.outputs.result.artifactName }}
+          artifact-id: ${{ steps.find-artifact.outputs.result.id }}
           path: cdk.out/
-          run-id: ${{ steps.find-artifact.outputs.result.runId }}
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
       - name: Install dependencies
@@ -201,4 +193,4 @@ jobs:
         run: |-
           echo "🎉 Production deployment successful!"
           echo "URL: ${{ steps.get-prod-url.outputs.PROD_URL }}"
-          echo "Artifact: ${{ fromJSON(steps.find-artifact.outputs.result).artifactName }}"
+          echo "Artifact: ${{ steps.find-artifact.outputs.result.id }}"

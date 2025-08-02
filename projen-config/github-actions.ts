@@ -207,12 +207,6 @@ const addProductionDeployWorkflow = (github: GitHub) => {
         actions: JobPermission.READ,  // Needed to download artifacts
         pullRequests: JobPermission.READ,
       },
-      outputs: {
-        artifact_path: {
-          stepId: "find-artifact",
-          outputName: "artifact-name",
-        }
-      },
       steps: [
         { name: "Checkout", uses: "actions/checkout@v4" },
         {
@@ -220,6 +214,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           id: "find-artifact",
           uses: "actions/github-script@v7",
           with: {
+            "result-encoding": "string",
             script: `
               const headSha = context.payload.pull_request.head.sha;
               const mergeCommitSha = context.payload.pull_request.merge_commit_sha;
@@ -291,10 +286,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
               }
 
               console.log('Found CDK artifact:', cdkArtifact.name);
-              return {
-                artifactName: cdkArtifact.name,
-                runId: successRun.id
-              };
+              return cdkArtifact.id;
             `
           }
         },
@@ -311,9 +303,8 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            name: "${{ steps.find-artifact.outputs.result.artifactName }}",
+            "artifact-id": "${{ steps.find-artifact.outputs.result.id }}",
             path: "cdk.out/",
-            "run-id": "${{ steps.find-artifact.outputs.result.runId }}",
           },
         },
         { name: "Setup Bun", uses: "oven-sh/setup-bun@v2" },
@@ -335,7 +326,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           run: [
             'echo "🎉 Production deployment successful!"',
             'echo "URL: ${{ steps.get-prod-url.outputs.PROD_URL }}"',
-            'echo "Artifact: ${{ fromJSON(steps.find-artifact.outputs.result).artifactName }}"'
+            'echo "Artifact: ${{ steps.find-artifact.outputs.result.id }}"',
           ].join("\n"),
         },
       ],
