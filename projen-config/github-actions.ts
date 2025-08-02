@@ -286,6 +286,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
               }
 
               console.log('Found CDK artifact:', cdkArtifact.name);
+              console.log('Artifact ID:', cdkArtifact.id);
               return cdkArtifact.id;
             `
           }
@@ -303,7 +304,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            "artifact-id": "${{ steps.find-artifact.outputs.result.id }}",
+            "artifact-ids": "${{ steps.find-artifact.outputs.result.id }}",
             path: "cdk.out/",
           },
         },
