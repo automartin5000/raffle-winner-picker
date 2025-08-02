@@ -303,7 +303,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            "artifact-id": "${{ steps.find-artifact.outputs.result.id }}",
+            "artifact-ids": "${{ steps.find-artifact.outputs.result.id }}",
             path: "cdk.out/",
           },
         },
