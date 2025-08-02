@@ -304,7 +304,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            "artifact-ids": "${{ steps.find-artifact.outputs.result.id }}",
+            "artifact-ids": "${{ steps.find-artifact.outputs.result }}",
             path: "cdk.out/",
           },
         },
@@ -327,7 +327,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           run: [
             'echo "🎉 Production deployment successful!"',
             'echo "URL: ${{ steps.get-prod-url.outputs.PROD_URL }}"',
-            'echo "Artifact: ${{ steps.find-artifact.outputs.result.id }}"',
+            'echo "Artifact: ${{ steps.find-artifact.outputs.result }}"',
           ].join("\n"),
         },
       ],
