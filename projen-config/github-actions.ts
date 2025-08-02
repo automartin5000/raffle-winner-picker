@@ -298,7 +298,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           name: "Set artifact details",
           id: "artifact-details",
           run: [
-            'RESULT=${{ steps.find-artifact.outputs.result }}',
+            'RESULT=\'${{ steps.find-artifact.outputs.result }}\'',
             'echo "artifact-id=$(echo $RESULT | jq -r .artifactId)" >> $GITHUB_OUTPUT',
             'echo "run-id=$(echo $RESULT | jq -r .runId)" >> $GITHUB_OUTPUT'
           ].join('\n'),
