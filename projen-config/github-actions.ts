@@ -287,9 +287,21 @@ const addProductionDeployWorkflow = (github: GitHub) => {
 
               console.log('Found CDK artifact:', cdkArtifact.name);
               console.log('Artifact ID:', cdkArtifact.id);
-              return cdkArtifact.id;
+              return JSON.stringify({
+                artifactId: cdkArtifact.id,
+                runId: successRun.id
+              });
             `
           }
+        },
+        {
+          name: "Set artifact details",
+          id: "artifact-details",
+          run: [
+            'RESULT=${{ steps.find-artifact.outputs.result }}',
+            'echo "artifact-id=$(echo $RESULT | jq -r .artifactId)" >> $GITHUB_OUTPUT',
+            'echo "run-id=$(echo $RESULT | jq -r .runId)" >> $GITHUB_OUTPUT'
+          ].join('\n'),
         },
         {
           name: "Configure AWS credentials",
@@ -304,7 +316,8 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           name: "Download CDK artifacts",
           uses: "actions/download-artifact@v4",
           with: {
-            "artifact-ids": "${{ steps.find-artifact.outputs.result }}",
+            "artifact-ids": "${{ steps.artifact-details.outputs.artifact-id }}",
+            "run-id": "${{ steps.artifact-details.outputs.run-id }}",
             path: "cdk.out/",
           },
         },
