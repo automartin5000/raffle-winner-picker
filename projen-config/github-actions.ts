@@ -319,7 +319,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
             "artifact-ids": "${{ steps.artifact-details.outputs.artifact-id }}",
             "run-id": "${{ steps.artifact-details.outputs.run-id }}",
             "github-token": "${{ secrets.GITHUB_TOKEN }}",
-            mergeMultiple: true,
+            "merge-multiple": true,
             path: "cdk.out/",
           },
         },
