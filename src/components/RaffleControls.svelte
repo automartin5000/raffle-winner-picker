@@ -175,11 +175,11 @@
             <span class="numeric-unit">seconds</span>
           </div>
           <div class="numeric-pad">
-            <button class="num-btn" on:click={() => adjustDuration(1)}>1s</button>
-            <button class="num-btn" on:click={() => adjustDuration(2)}>2s</button>
-            <button class="num-btn" on:click={() => adjustDuration(3)}>3s</button>
-            <button class="num-btn" on:click={() => adjustDuration(5)}>5s</button>
-            <button class="num-btn" on:click={() => adjustDuration(10)}>10s</button>
+            <button class="num-btn" class:active={spinDurationSeconds === 1} on:click={() => adjustDuration(1)}>1s</button>
+            <button class="num-btn" class:active={spinDurationSeconds === 2} on:click={() => adjustDuration(2)}>2s</button>
+            <button class="num-btn" class:active={spinDurationSeconds === 3} on:click={() => adjustDuration(3)}>3s</button>
+            <button class="num-btn" class:active={spinDurationSeconds === 5} on:click={() => adjustDuration(5)}>5s</button>
+            <button class="num-btn" class:active={spinDurationSeconds === 10} on:click={() => adjustDuration(10)}>10s</button>
             <button class="num-btn clear-btn" on:click={() => spinDurationSeconds = 3}>↺</button>
           </div>
         </div>
@@ -396,6 +396,19 @@
   .num-btn:active {
     transform: translateY(0);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .num-btn.active {
+    background: linear-gradient(145deg, #3b82f6, #2563eb);
+    border-color: #1d4ed8;
+    color: white;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+  }
+
+  .num-btn.active:hover {
+    background: linear-gradient(145deg, #2563eb, #1d4ed8);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
   }
 
   .clear-btn {

@@ -1,186 +1,64 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import { isAuthenticated, user, loginWithPopup, logout } from '../lib/auth';
-  import CSVUpload from '../components/CSVUpload.svelte';
-  import WinnerWheel from '../components/WinnerWheel.svelte';
-  import WinnersTable from '../components/WinnersTable.svelte';
-  import RaffleControls from '../components/RaffleControls.svelte';
-  import { saveRaffleRun } from '../lib/api';
-  import { extractPrizesFromEntries } from '../utils/csv';
-  
-  
-  let entries: Array<{name: string; email?: string; tickets?: number; prize?: string}> = [];
-  let csvPrizes: string[] = [];
-  let entryPool: string[] = [];
-  let winners: Array<{name: string; prize?: string; timestamp: string; email?: string}> = [];
-  let isRunning = false;
-  let isPaused = false;
-  let currentWinner = '';
-  let currentPrize = '';
-  let winnerWheelComponent: WinnerWheel;
-  let prizes: string[] = [];
-  let currentPrizeIndex = 0;
-  let prizeWinnerCounts: Record<string, number> = {};
-  let currentWinnerInPrize = 0;
-  let spinDuration = 3000; // Default 3 seconds
-  
+  import { parseCSV } from '../utils/csv';
+  import { setCSVData } from '../lib/stores/raffle';
+
+  let fileInput: HTMLInputElement;
+  let csvData: any = null;
+  let columnMapping = {
+    name: '',
+    email: '',
+    tickets: '',
+    prize: ''
+  };
+
   onMount(() => {
     // App is ready
   });
 
-  async function handleEntriesLoaded(event: CustomEvent) {
-    console.log('handleEntriesLoaded called with event:', event.detail);
-    const { entries: loadedEntries, pool, prizeWinnerCounts: counts } = event.detail;
-    entries = loadedEntries;
-    entryPool = pool;
-    prizeWinnerCounts = counts || {};
+  function handleFileUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     
-    // Extract unique prizes from CSV
-    csvPrizes = extractPrizesFromEntries(loadedEntries);
-    console.log('Entries loaded successfully:', { entriesCount: entries.length, poolSize: entryPool.length, prizeWinnerCounts });
-  }
-
-  async function handleRaffleStart(event: CustomEvent) {
-    const { prizes: selectedPrizes, spinDuration: duration } = event.detail;
-    if (duration) spinDuration = duration;
+    if (!file) return;
     
-    prizes = selectedPrizes;
-    currentPrizeIndex = 0;
-    currentWinnerInPrize = 0;
-    winners = [];
-    
-    isRunning = true;
-    isPaused = false;
-    
-    await drawNextWinner();
-  }
-
-  async function drawNextWinner() {
-    if (isPaused || !isRunning) return;
-    
-    // Check if we've completed all winners
-    if (currentPrizeIndex >= prizes.length) {
-      isRunning = false;
-      await saveResults();
-      return;
-    }
-    
-    currentPrize = prizes[currentPrizeIndex];
-    
-    // Select winner from pool
-    const availableEntries = entryPool.filter(name => 
-      !winners.some(w => w.name === name && w.prize === currentPrize)
-    );
-    
-    if (availableEntries.length === 0) {
-      // Move to next prize if no more entries available
-      currentPrizeIndex++;
-      currentWinnerInPrize = 0;
-      await drawNextWinner();
-      return;
-    }
-    
-    const randomIndex = Math.floor(Math.random() * availableEntries.length);
-    currentWinner = availableEntries[randomIndex];
-    
-    // Start wheel animation
-    if (winnerWheelComponent) {
-      await winnerWheelComponent.spin();
-    }
-    
-    // Add winner to list
-    const entry = entries.find(e => e.name === currentWinner);
-    winners = [...winners, {
-      name: currentWinner,
-      prize: currentPrize,
-      timestamp: new Date().toISOString(),
-      email: entry?.email
-    }];
-    
-    currentWinnerInPrize++;
-    
-    // Get winner count for current prize
-    const winnersNeeded = prizeWinnerCounts[currentPrize] || 1;
-    
-    // Check if we need more winners for this prize
-    if (currentWinnerInPrize < winnersNeeded) {
-      // 2-second pause before next winner for same prize
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      await drawNextWinner();
-    } else {
-      // Move to next prize
-      currentPrizeIndex++;
-      currentWinnerInPrize = 0;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      csvData = parseCSV(content);
       
-      if (currentPrizeIndex < prizes.length) {
-        // 3-second pause before next prize
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        await drawNextWinner();
-      } else {
-        // All done
-        isRunning = false;
-        await saveResults();
+      if (csvData.headers.length > 0) {
+        // Auto-detect common column names
+        columnMapping.name = csvData.headers.find((h: string) => 
+          ['name', 'participant', 'entry', 'person'].some(term => h.toLowerCase().includes(term))
+        ) || csvData.headers[0];
+        
+        columnMapping.email = csvData.headers.find((h: string) => 
+          h.toLowerCase().includes('email') || h.toLowerCase().includes('mail')
+        ) || '';
+        
+        columnMapping.tickets = csvData.headers.find((h: string) => 
+          ['ticket', 'count', 'quantity', 'number'].some(term => h.toLowerCase().includes(term))
+        ) || '';
+        
+        columnMapping.prize = csvData.headers.find((h: string) => 
+          ['prize', 'award', 'reward', 'category'].some(term => h.toLowerCase().includes(term))
+        ) || '';
+        
+        // Save to store and navigate to configure page
+        setCSVData(csvData, columnMapping);
+        goto('/configure');
       }
-    }
+    };
+    reader.readAsText(file);
   }
 
-  function handlePause() {
-    isPaused = true;
-  }
-
-  function handleResume() {
-    isPaused = false;
-    drawNextWinner();
-  }
-
-  function handleReset() {
-    isRunning = false;
-    isPaused = false;
-    winners = [];
-    currentWinner = '';
-    currentPrize = '';
-    currentPrizeIndex = 0;
-    currentWinnerInPrize = 0;
-    if (winnerWheelComponent) {
-      winnerWheelComponent.reset();
-    }
-  }
-
-  function handleNewRaffle() {
-    // Reset everything and go back to upload screen
-    entries = [];
-    csvPrizes = [];
-    entryPool = [];
-    winners = [];
-    isRunning = false;
-    isPaused = false;
-    currentWinner = '';
-    currentPrize = '';
-    prizes = [];
-    currentPrizeIndex = 0;
-    prizeWinnerCounts = {};
-    currentWinnerInPrize = 0;
-    if (winnerWheelComponent) {
-      winnerWheelComponent.reset();
-    }
-  }
-
-  async function saveResults() {
-    if (winners.length === 0) return;
-    
-    try {
-      await saveRaffleRun({
-        entries,
-        winners: winners.map(w => ({
-          name: w.name,
-          email: w.email,
-          prize: w.prize || 'Prize',
-          timestamp: w.timestamp
-        }))
-      });
-      console.log('Raffle results saved successfully');
-    } catch (error) {
-      console.error('Failed to save raffle results:', error);
+  function resetUpload() {
+    csvData = null;
+    if (fileInput) {
+      fileInput.value = '';
     }
   }
 </script>
@@ -206,7 +84,7 @@
     </div>
   </div>
 {:else}
-  <!-- SMUI Main Application -->
+  <!-- Main Application -->
   <div class="min-h-screen bg-gray-50">
     <!-- Modern Header -->
     <header class="header-modern">
@@ -239,119 +117,62 @@
       </div>
     </header>
 
-    <main class="main-content" class:drawing-phase={entries.length > 0}>
-      {#if entries.length === 0}
-        <!-- Upload Phase -->
-        <div class="upload-container-wrapper">
-          <CSVUpload on:entriesLoaded={handleEntriesLoaded} />
-        </div>
-      {:else}
-        <!-- Drawing Phase -->
-        <div class="app-container">
-          <!-- Main Content Grid -->
-          <div class="main-grid">
-            <!-- Left: Terminal App -->
-            <div class="app-panel terminal-panel">
-              <div class="app-header">
-                <span class="app-title">🎲 Winner Selection</span>
-              </div>
-              <div class="app-content terminal-content">
-                <WinnerWheel 
-                  bind:this={winnerWheelComponent}
-                  names={entryPool}
-                  winner={currentWinner}
-                  {spinDuration}
-                />
-                
-                <!-- Status Boxes -->
-                <div class="status-boxes">
-                  <!-- Left: Status Display -->
-                  <div class="status-box">
-                    {#if isRunning}
-                      <div class="status-content running">
-                        <div class="status-spinner">⚡</div>
-                        <span class="status-label">Raffle in Progress</span>
-                      </div>
-                    {:else if winners.length > 0}
-                      <div class="status-content complete">
-                        <div class="status-icon">🎉</div>
-                        <span class="status-label">Raffle Complete!</span>
-                      </div>
-                    {:else}
-                      <div class="status-content ready">
-                        <div class="status-icon">🎯</div>
-                        <span class="status-label">Ready to Start</span>
-                      </div>
-                    {/if}
-                  </div>
-                  
-                  <!-- Right: Winner Count -->
-                  <div class="status-box">
-                    <div class="status-content count">
-                      <div class="count-number">{winners.length}</div>
-                      <span class="count-label">Winners Selected</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {#if !isRunning && winners.length > 0}
-                  <div class="new-raffle-section">
-                    <button class="btn-new-raffle-terminal" on:click={handleNewRaffle}>
-                      🎲 Start New Raffle
-                    </button>
-                  </div>
-                {/if}
-              </div>
+    <main class="main-content">
+      <!-- Upload Interface -->
+      <div class="upload-container-wrapper">
+        <div class="upload-container">
+          <div class="upload-header">
+            <div class="upload-icon">📊</div>
+            <h2 class="upload-title">Upload Raffle Entries</h2>
+            <p class="upload-subtitle">Select a CSV file with your participant data</p>
+          </div>
+          
+          <div class="upload-dropzone" class:hover={false}>
+            <div class="upload-visual">
+              <div class="upload-symbol">↑</div>
             </div>
             
-            <!-- Right: Control Panel -->
-            <div class="app-panel control-panel-app">
-              <div class="app-header">
-                <span class="app-title">⚙️ Controls</span>
-              </div>
-              <div class="app-content controls-content">
-                <div class="controls-section">
-                  <RaffleControls 
-                    hasEntries={entries.length > 0}
-                    {isRunning}
-                    {isPaused}
-                    winnersCount={winners.length}
-                    {csvPrizes}
-                    isComplete={!isRunning && winners.length > 0}
-                    on:start={handleRaffleStart}
-                    on:pause={handlePause}
-                    on:resume={handleResume}
-                    on:reset={handleReset}
-                  />
-                  
-                  <!-- Quick Stats -->
-                  <div class="stats-row">
-                    <div class="stat-item">
-                      <span class="stat-value">{entries.length}</span>
-                      <span class="stat-label">Participants</span>
-                    </div>
-                    <div class="stat-item">  
-                      <span class="stat-value">{entryPool.length}</span>
-                      <span class="stat-label">Pool</span>
-                    </div>
-                    <div class="stat-item">
-                      <span class="stat-value">{winners.length}</span>
-                      <span class="stat-label">Winners</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Winners List -->
-                <div class="winners-container">
-                  <WinnersTable 
-                    {winners}
-                  />
-                </div>
+            <div class="upload-text">
+              <p class="upload-main-text">Drop your CSV file here</p>
+              <p class="upload-sub-text">or click to browse</p>
+            </div>
+            
+            <input
+              bind:this={fileInput}
+              type="file"
+              accept=".csv"
+              on:change={handleFileUpload}
+              class="upload-input"
+            />
+            
+            <button
+              class="upload-button"
+              on:click={() => fileInput?.click()}
+            >
+              <span class="upload-button-icon">📁</span>
+              Choose CSV File
+            </button>
+          </div>
+          
+          <div class="format-info">
+            <div class="format-header">
+              <span class="format-icon">📋</span>
+              <span class="format-title">Expected Format</span>
+            </div>
+            <div class="format-example">
+              <div class="format-code">
+                Name,Email,Tickets,Prize<br>
+                John Doe,john@example.com,3,Grand Prize<br>
+                Jane Smith,jane@example.com,1,Second Place<br>
+                Bob Wilson,bob@example.com,2,Grand Prize
               </div>
             </div>
+            <p class="format-note">
+              💡 Prize column is optional - if provided, it will auto-populate the prizes list
+            </p>
           </div>
         </div>
-      {/if}
+      </div>
     </main>
   </div>
 {/if}
@@ -591,17 +412,11 @@
   /* Main Content Styles */
   .main-content {
     min-height: calc(100vh - 50px);
-    padding: 0.25rem;
+    padding: 2rem 0.25rem;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow-y: auto;
-  }
-
-  /* When in drawing phase, use fixed height and no overflow */
-  .main-content.drawing-phase {
-    height: calc(100vh - 50px);
-    overflow: hidden;
   }
 
   .upload-container-wrapper {
@@ -609,242 +424,183 @@
     width: 100%;
   }
 
-  /* App Container Styles */
-  .app-container {
-    max-width: 1200px;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
-
-  .main-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    flex: 1;
-    min-height: 0;
-    max-height: calc(100vh - 90px);
-  }
-
-  .app-panel {
+  /* Upload Container Styles */
+  .upload-container {
     background: linear-gradient(145deg, #ffffff, #f8fafc);
     border: 1px solid #e1e5e9;
-    border-radius: 0.75rem;
+    border-radius: 1.5rem;
+    padding: 2rem;
     box-shadow: 
-      0 2px 8px rgba(0, 0, 0, 0.06),
-      0 1px 3px rgba(0, 0, 0, 0.04);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-height: 0;
+      0 10px 25px rgba(0, 0, 0, 0.1),
+      0 4px 10px rgba(0, 0, 0, 0.05);
   }
 
-  .app-header {
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-    border-bottom: 1px solid #e1e5e9;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
+  .upload-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .upload-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .upload-title {
+    font-size: 1.5rem;
     font-weight: 600;
     color: #1e293b;
-    flex-shrink: 0;
+    margin: 0 0 0.5rem 0;
   }
 
-  .app-title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  .upload-subtitle {
+    color: #64748b;
+    font-size: 1rem;
+    margin: 0;
   }
 
-  .app-content {
-    flex: 1;
-    padding: 0.5rem;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
+  .upload-dropzone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 1rem;
+    padding: 3rem 2rem;
+    text-align: center;
+    background: linear-gradient(145deg, #f8fafc, #ffffff);
+    transition: all 0.3s ease;
+    position: relative;
+    cursor: pointer;
+    margin-bottom: 2rem;
   }
 
-  .terminal-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 0.5rem 0.5rem 0.75rem 0.5rem;
-    gap: 0.75rem;
+  .upload-dropzone:hover {
+    border-color: #3b82f6;
+    background: linear-gradient(145deg, #eff6ff, #f8fafc);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
   }
-  
-  .new-raffle-section {
-    width: 100%;
-    display: flex;
-    justify-content: center;
+
+  .upload-visual {
+    margin-bottom: 1.5rem;
   }
-  
-  .btn-new-raffle-terminal {
-    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+
+  .upload-symbol {
+    font-size: 3rem;
+    color: #94a3b8;
+    font-weight: 300;
+    display: inline-block;
+    animation: bounce 2s infinite;
+  }
+
+  .upload-text {
+    margin-bottom: 2rem;
+  }
+
+  .upload-main-text {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #374151;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .upload-sub-text {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+  }
+
+  .upload-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .upload-button {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: white;
     border: none;
-    padding: 0.75rem 1.5rem;
+    padding: 0.75rem 2rem;
     border-radius: 0.75rem;
-    font-size: 0.875rem;
+    font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: 0.5rem;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
   }
-  
-  .btn-new-raffle-terminal:hover {
+
+  .upload-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
   }
 
-  /* Status Boxes Layout */
-  .status-boxes {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    width: 100%;
+  .upload-button-icon {
+    font-size: 1.125rem;
   }
 
-  .status-box {
-    background: linear-gradient(145deg, #ffffff, #f8fafc);
-    border: 1px solid #e1e5e9;
-    border-radius: 0.75rem;
-    padding: 0.75rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  }
-
-  .status-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    text-align: center;
-  }
-
-  .status-content.running {
-    color: #2563eb;
-  }
-
-  .status-content.complete {
-    color: #059669;
-  }
-
-  .status-content.ready {
-    color: #64748b;
-  }
-
-  .status-content.count {
-    color: #7c3aed;
-  }
-
-  .status-spinner {
-    font-size: 1.5rem;
-    animation: spin 1s linear infinite;
-  }
-
-  .status-icon {
-    font-size: 1.5rem;
-  }
-
-  .status-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .count-number {
-    font-size: 1.5rem;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .count-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  .controls-content {
-    gap: 0.5rem;
-    overflow: hidden;
-    min-height: 0;
-  }
-  
-  .controls-section {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .stats-row {
-    display: flex;
-    gap: 0.375rem;
-    margin: 0.5rem 0;
-    padding: 0.375rem;
+  .format-info {
     background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
-    border-radius: 0.375rem;
+    border-radius: 1rem;
+    padding: 1.5rem;
     border: 1px solid #e2e8f0;
-    flex-shrink: 0;
   }
 
-  .stat-item {
-    flex: 1;
-    text-align: center;
-  }
-
-  .stat-value {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: #1e40af;
-    line-height: 1;
-  }
-
-  .stat-label {
-    font-size: 0.625rem;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-top: 0.0625rem;
-  }
-
-  .winners-container {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
+  .format-header {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .format-icon {
+    font-size: 1.25rem;
+  }
+
+  .format-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .format-example {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .format-code {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    color: #374151;
+    line-height: 1.6;
+  }
+
+  .format-note {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  @keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-10px);
+    }
+    60% {
+      transform: translateY(-5px);
+    }
   }
 
   /* Responsive Design */
   @media (max-width: 1024px) {
-    .main-grid {
-      grid-template-columns: 1fr;
-      gap: 0.5rem;
-      height: auto;
-      max-height: none;
-    }
-    
-    .app-panel {
-      height: auto;
-    }
-    
     .header-content {
       padding: 0.375rem 0.75rem;
     }
@@ -867,21 +623,8 @@
       display: none;
     }
     
-    .app-container {
-      padding: 0;
-    }
-    
-    .app-content {
-      padding: 0.5rem;
-    }
-    
-    
     .main-content {
       padding: 0.125rem;
-    }
-    
-    .main-grid {
-      gap: 0.375rem;
     }
   }
 </style>
