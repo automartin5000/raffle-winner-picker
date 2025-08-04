@@ -24,13 +24,13 @@ export interface RaffleState {
     tickets: string;
     prize: string;
   };
-  
+
   // Processed Data
   entries: RaffleEntry[];
   entryPool: string[];
   csvPrizes: string[];
   prizeWinnerCounts: Record<string, number>;
-  
+
   // Raffle State
   winners: RaffleWinner[];
   isRunning: boolean;
@@ -40,7 +40,7 @@ export interface RaffleState {
   currentPrizeIndex: number;
   currentWinnerInPrize: number;
   spinDuration: number;
-  
+
   // Navigation
   step: 'upload' | 'configure' | 'raffle';
 }
@@ -51,7 +51,7 @@ const initialState: RaffleState = {
     name: '',
     email: '',
     tickets: '',
-    prize: ''
+    prize: '',
   },
   entries: [],
   entryPool: [],
@@ -65,7 +65,7 @@ const initialState: RaffleState = {
   currentPrizeIndex: 0,
   currentWinnerInPrize: 0,
   spinDuration: 3000,
-  step: 'upload'
+  step: 'upload',
 };
 
 export const raffleStore = writable<RaffleState>(initialState);
@@ -80,7 +80,7 @@ export const setCSVData = (csvData: any, columnMapping: any) => {
     ...state,
     csvData,
     columnMapping,
-    step: 'configure'
+    step: 'configure',
   }));
 };
 
@@ -91,13 +91,13 @@ export const setEntries = (entries: RaffleEntry[], entryPool: string[], csvPrize
     entryPool,
     csvPrizes,
     prizeWinnerCounts,
-    step: 'raffle'
+    step: 'raffle',
   }));
 };
 
 export const updateRaffleState = (updates: Partial<RaffleState>) => {
   raffleStore.update(state => ({
     ...state,
-    ...updates
+    ...updates,
   }));
 };

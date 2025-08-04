@@ -129,7 +129,7 @@
           
           <div class="upload-dropzone" class:hover={false}>
             <div class="upload-visual">
-              <div class="upload-symbol">↑</div>
+              <div class="upload-symbol">📄</div>
             </div>
             
             <div class="upload-text">
@@ -487,7 +487,6 @@
     color: #94a3b8;
     font-weight: 300;
     display: inline-block;
-    animation: bounce 2s infinite;
   }
 
   .upload-text {
@@ -587,17 +586,6 @@
     gap: 0.5rem;
   }
 
-  @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {
-      transform: translateY(0);
-    }
-    40% {
-      transform: translateY(-10px);
-    }
-    60% {
-      transform: translateY(-5px);
-    }
-  }
 
   /* Responsive Design */
   @media (max-width: 1024px) {

@@ -24,8 +24,7 @@
     }
     
     // Check if we should go directly to prize config
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('step') === 'prizes' && $raffleStore.csvPrizes.length > 0) {
+    if ($page.url.searchParams.get('step') === 'prizes' && $raffleStore.csvPrizes.length > 0) {
       // Recreate the state for prize configuration
       mappedEntries = mapCSVData($raffleStore.csvData.data, $raffleStore.columnMapping);
       extractedPrizes = extractPrizesFromEntries(mappedEntries);
