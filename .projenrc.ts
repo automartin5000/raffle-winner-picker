@@ -44,6 +44,12 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       PROD_AWS_ACCOUNT_ID: '${{ secrets.PROD_AWS_ACCOUNT_ID }}',
       NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
       PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+      // Auth0 environment variables for client management
+      AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+      AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
+      AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
+      AUTH0_SPA_CALLBACK_URL: '${{ secrets.AUTH0_SPA_CALLBACK_URL }}',
+      DEPLOY_ENV: 'dev', // Set deployment environment for Auth0 client creation
     },
     workflowTriggers: {
       push: {
@@ -137,9 +143,25 @@ project.addFields({
     },
   },
 });
+// Auth0 client management tasks
+const getAuth0ClientTask = project.addTask('get-auth0-client', {
+  description: 'Get Auth0 SPA client ID for build (no updates)',
+  exec: 'node scripts/manage-auth0-client.cjs get-for-build',
+  condition: '[ "$DEPLOY_ENV" != "" ]',
+});
+
+const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
+  description: 'Setup/update Auth0 SPA client for deployment',
+  exec: 'node scripts/manage-auth0-client.cjs ensure-client',
+  condition: '[ "$DEPLOY_ENV" != "" ]',
+});
+
+// Use get-for-build during compile to avoid updating clients during PR builds
+project.compileTask.prependSpawn(getAuth0ClientTask);
+
+
 // Svelte/Vite tasks
 project.addTask('dev', { exec: 'vite dev' });
-project.compileTask.reset('vite build');
 project.addTask('preview', { exec: 'vite preview' });
 project.addTask('prepare', { exec: 'svelte-kit sync || echo ""' });
 project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json' });

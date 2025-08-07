@@ -91,7 +91,7 @@
       "description": "Only compile",
       "steps": [
         {
-          "exec": "vite build"
+          "spawn": "get-auth0-client"
         }
       ]
     },
@@ -166,6 +166,16 @@
         }
       ]
     },
+    "get-auth0-client": {
+      "name": "get-auth0-client",
+      "description": "Get Auth0 SPA client ID for build (no updates)",
+      "steps": [
+        {
+          "exec": "bun run scripts/manage-auth0-client.js get-for-build"
+        }
+      ],
+      "condition": "[ \"$DEPLOY_ENV\" != \"\" ]"
+    },
     "install": {
       "name": "install",
       "description": "Install project dependencies and update lockfile (non-frozen)",
@@ -216,6 +226,16 @@
           "exec": "vite preview"
         }
       ]
+    },
+    "setup-auth0-client": {
+      "name": "setup-auth0-client",
+      "description": "Setup/update Auth0 SPA client for deployment",
+      "steps": [
+        {
+          "exec": "bun run scripts/manage-auth0-client.js ensure-client"
+        }
+      ],
+      "condition": "[ \"$DEPLOY_ENV\" != \"\" ]"
     },
     "synth": {
       "name": "synth",

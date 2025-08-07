@@ -17,6 +17,12 @@ jobs:
       actions: read
       pull-requests: read
     environment: production
+    env:
+      AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+      AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+      AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+      AUTH0_SPA_CALLBACK_URL: ${{ secrets.AUTH0_SPA_CALLBACK_URL }}
+      DEPLOY_ENV: prod
     if: github.event.pull_request.merged == true
     steps:
       - name: Checkout
@@ -199,8 +205,10 @@ jobs:
         uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      - name: Setup Auth0 Production Client
+        run: bun run setup-auth0-client
       - name: Deploy to Production
-        run: bun projen deploy 'prod/*' --app cdk.out --require-approval never
+        run: bun projen deploy "$DEPLOY_ENV/*" --app cdk.out --require-approval never
       - name: Get Production URL
         id: get-prod-url
         run: |-

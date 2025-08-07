@@ -13,7 +13,7 @@ jobs:
       contents: read
       id-token: write
     env:
-      AWS_CDK_ENV_NAME: pr${{ github.event.number }}
+      DEPLOY_ENV: pr${{ github.event.number }}
       NONPROD_AWS_ACCOUNT_ID: ${{ secrets.NONPROD_AWS_ACCOUNT_ID }}
       PROD_AWS_ACCOUNT_ID: ${{ secrets.PROD_AWS_ACCOUNT_ID }}
       NONPROD_HOSTED_ZONE: ${{ secrets.NONPROD_HOSTED_ZONE }}
@@ -34,4 +34,4 @@ jobs:
       - name: Dummy build directory for cdk
         run: mkdir build && touch build/index.js
       - name: Destroy PR environment
-        run: bunx projen destroy "$AWS_CDK_ENV_NAME/*" --force
+        run: bunx projen destroy "$DEPLOY_ENV/*" --force
