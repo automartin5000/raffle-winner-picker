@@ -18,36 +18,39 @@ const currentDeployEnv = resolveDeploymentEnvironment({
 
 console.log(`Resolved deployment environment: ${currentDeployEnv}`);
 
-// If this is an ephemeral deployment (PR), create stack with PR-specific name but use dev configuration
-if (process.env.DEPLOY_EPHEMERAL === 'true' && process.env.DEPLOY_ENV) {
+// Always create both dev and prod static environments for CDK synthesis
+getAllEnvironments().forEach(envKey => {
   awsEnvironments.push({
     env: {
-      account: process.env.NONPROD_AWS_ACCOUNT_ID!,
       region,
+      account: envKey === 'prod' 
+        ? process.env.PROD_AWS_ACCOUNT_ID 
+        : process.env.NONPROD_AWS_ACCOUNT_ID,
     },
-    envName: process.env.DEPLOY_ENV, // Use PR-specific name (e.g., "pr123")
-    hostedZone: process.env.NONPROD_HOSTED_ZONE!,
-    deploymentEnv: currentDeployEnv, // But use "dev" for configuration
+    envName: envKey,
+    hostedZone: envKey === 'prod' 
+      ? process.env.PROD_HOSTED_ZONE! 
+      : process.env.NONPROD_HOSTED_ZONE!,
+    deploymentEnv: envKey,
   });
-} else {
-  // For non-ephemeral deployments, create both dev and prod environments
-  getAllEnvironments().forEach(envKey => {
-    const envConfig = DEPLOYMENT_ENVIRONMENTS[envKey];
-    
+});
+
+// If this is an ephemeral deployment (PR), also create the ephemeral environment
+// But only if it's different from the static environments
+if (process.env.DEPLOY_EPHEMERAL === 'true' && process.env.DEPLOY_ENV) {
+  const isStaticEnv = getAllEnvironments().includes(process.env.DEPLOY_ENV as any);
+  
+  if (!isStaticEnv) {
     awsEnvironments.push({
       env: {
+        account: process.env.NONPROD_AWS_ACCOUNT_ID!,
         region,
-        account: envKey === 'prod' 
-          ? process.env.PROD_AWS_ACCOUNT_ID 
-          : process.env.NONPROD_AWS_ACCOUNT_ID,
       },
-      envName: envKey,
-      hostedZone: envKey === 'prod' 
-        ? process.env.PROD_HOSTED_ZONE! 
-        : process.env.NONPROD_HOSTED_ZONE!,
-      deploymentEnv: envKey,
+      envName: process.env.DEPLOY_ENV, // Use PR-specific name (e.g., "pr123")
+      hostedZone: process.env.NONPROD_HOSTED_ZONE!,
+      deploymentEnv: currentDeployEnv, // But use "dev" for configuration
     });
-  });
+  }
 }
 console.log(`Creating stacks for environments: ${awsEnvironments.map((env) => env.envName).join(', ')}`);
 const cdkApp = new App();
