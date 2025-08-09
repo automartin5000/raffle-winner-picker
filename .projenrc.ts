@@ -1,8 +1,8 @@
 import { awscdk } from 'projen';
 import { JobPermission } from 'projen/lib/github/workflows-model';
 import { NodePackageManager, TypescriptConfigExtends, TypeScriptModuleResolution } from 'projen/lib/javascript';
-import { generateGitHubActions } from './projen-config/github-actions';
 import { BUILD_CONSTANTS } from './projen-config/constants';
+import { generateGitHubActions } from './projen-config/github-actions';
 
 const buildWorkflowCallConfig = {
   inputs: {
@@ -127,7 +127,7 @@ project.gitignore.exclude(
   '.env',
   '.env.*',
   '!.env.example',
-  
+
   // Vite
   'vite.config.js.timestamp-*',
   'vite.config.ts.timestamp-*',

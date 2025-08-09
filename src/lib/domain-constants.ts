@@ -1,6 +1,6 @@
 /**
  * Domain and Service Constants
- * 
+ *
  * This file contains all domain patterns, service endpoints, and URL structures
  * used throughout the application. This ensures consistency and makes it easy
  * to update domain patterns in one place.
@@ -48,7 +48,7 @@ export const EXTERNAL_SERVICES = {
    * Used in CSP headers and documentation
    */
   AUTH0_DOMAIN: '*.auth0.com',
-  
+
   /**
    * GitHub service domain
    */
@@ -73,7 +73,7 @@ export function buildApiDomain(options: {
 }
 
 /**
- * Construct frontend domain from environment and hosted zone  
+ * Construct frontend domain from environment and hosted zone
  */
 export function buildFrontendDomain(options: {
   envName: string;

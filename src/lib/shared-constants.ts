@@ -15,16 +15,16 @@ export const DEPLOYMENT_ENVIRONMENTS = {
     isProd: false,
     isEphemeral: false, // Development is persistent
   },
-  
+
   // Production environment
   prod: {
     name: 'Production',
     description: 'Production environment for live users',
-    auth0ClientName: 'Raffle Winner Picker (Production)', 
+    auth0ClientName: 'Raffle Winner Picker (Production)',
     auth0Description: 'Production environment for Raffle Winner Picker application',
     isProd: true,
     isEphemeral: false, // Production is persistent
-  }
+  },
 } as const;
 
 export type DeploymentEnvironment = keyof typeof DEPLOYMENT_ENVIRONMENTS;
@@ -46,20 +46,20 @@ export function resolveDeploymentEnvironment(options: {
   hostname?: string;
 }): DeploymentEnvironment {
   const { deployEnv, isEphemeral, hostname } = options;
-  
+
   // If explicitly ephemeral (PR environment), use dev
   if (isEphemeral) {
     return 'dev';
   }
-  
+
   // Check explicit environment variable
   if (deployEnv === 'prod' || deployEnv === 'production') {
     return 'prod';
   }
-  
+
   // Check if hostname suggests production (for frontend)
 
-  
+
   // Default to dev for all other cases (local dev, PR environments, etc.)
   return 'dev';
 }
@@ -112,7 +112,7 @@ export function getFrontendUrl(options: {
   envName?: string;
 }): string {
   const { deploymentEnv, hostedZone, envName } = options;
-  
+
   if (!hostedZone) {
     return 'http://localhost:5173'; // fallback for local development
   }

@@ -1,7 +1,7 @@
-import { 
-  type DeploymentEnvironment, 
+import {
+  type DeploymentEnvironment,
   resolveDeploymentEnvironment,
-  getApiBaseUrl as deriveApiBaseUrl
+  getApiBaseUrl as deriveApiBaseUrl,
 } from './shared-constants';
 
 /**
@@ -20,7 +20,7 @@ export function getDeploymentEnvironment(): DeploymentEnvironment {
  */
 export function getAuth0ClientId(): string {
   const env = getDeploymentEnvironment();
-  
+
   if (env === 'prod') {
     return import.meta.env.VITE_AUTH0_CLIENT_ID_PROD || import.meta.env.VITE_AUTH0_CLIENT_ID || '';
   } else {
@@ -33,12 +33,12 @@ export function getAuth0ClientId(): string {
  */
 export function getApiBaseUrl(): string {
   const env = getDeploymentEnvironment();
-  
+
   // Get hosted zone from environment variables
-  const hostedZone = env === 'prod' 
-    ? import.meta.env.VITE_PROD_HOSTED_ZONE 
+  const hostedZone = env === 'prod'
+    ? import.meta.env.VITE_PROD_HOSTED_ZONE
     : import.meta.env.VITE_NONPROD_HOSTED_ZONE;
-  
+
   if (hostedZone) {
     return deriveApiBaseUrl({
       deploymentEnv: env,
@@ -46,7 +46,7 @@ export function getApiBaseUrl(): string {
       envName: import.meta.env.VITE_DEPLOY_ENV,
     });
   }
-  
+
   // Fallback for local development when hosted zones aren't available
   console.warn('No hosted zone available. Using local development API URL.');
   return 'http://localhost:3000/api';
