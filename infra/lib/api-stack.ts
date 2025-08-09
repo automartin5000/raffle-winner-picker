@@ -2,16 +2,20 @@ import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Architecture, Function, Runtime, Code } from 'aws-cdk-lib/aws-lambda';
-import { RestApi, LambdaIntegration, Cors } from 'aws-cdk-lib/aws-apigateway';
-import { HostedZone } from 'aws-cdk-lib/aws-route53';
+import { RestApi, LambdaIntegration, DomainName, BasePathMapping } from 'aws-cdk-lib/aws-apigateway';
+import { Certificate, CertificateValidation } from 'aws-cdk-lib/aws-certificatemanager';
+import { HostedZone, ARecord, RecordTarget, IHostedZone } from 'aws-cdk-lib/aws-route53';
+import { ApiGatewayDomain } from 'aws-cdk-lib/aws-route53-targets';
 import { Construct } from 'constructs';
 import { AppStackProps } from "../bin/interfaces";
+import { buildApiDomain } from "../../src/lib/domain-constants";
 
 export class ApiStack extends cdk.Stack {
     public readonly api: RestApi;
     private readonly envName: string;
     private readonly fullDomain: string;
     private readonly apiDomain: string;
+    private readonly hostedZone: IHostedZone;
 
     constructor(scope: Construct, id: string, props: AppStackProps) {
       super(scope, id, {
@@ -21,13 +25,18 @@ export class ApiStack extends cdk.Stack {
         this.envName = props.envName;
 
         // Skip hosted zone lookup for local development
-        const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
-                domainName: props.hostedZone,
+        this.hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
+          domainName: props.hostedZone,
+          
             });
 
         const subdomainPrefix = props.envName === 'prod' ? '' : `${props.envName}.`;
-        this.fullDomain = `${subdomainPrefix}raffle-picker.${hostedZone.zoneName}`
-        this.apiDomain = `${subdomainPrefix}api.raffle-picker.${hostedZone.zoneName}`
+        this.fullDomain = `${subdomainPrefix}${this.hostedZone.zoneName}`
+        this.apiDomain = buildApiDomain({
+            envName: props.envName,
+            hostedZone: this.hostedZone.zoneName,
+            isProd: props.envName === 'prod',
+        });
 
         // Create backend infrastructure
         const raffleTable = this.createDynamoTable();
@@ -91,12 +100,49 @@ export class ApiStack extends cdk.Stack {
         const singleRaffleResource = raffleResource.addResource('{runId}');
         singleRaffleResource.addMethod('GET', new LambdaIntegration(raffleFunction));
 
+        // Create custom domain for API
+        this.setupCustomDomain(api);
+
         // Output API URL
         new cdk.CfnOutput(this, 'ApiUrl', {
             value: api.url,
             description: 'API Gateway endpoint URL',
         });
 
+        new cdk.CfnOutput(this, 'ApiCustomDomainUrl', {
+            value: `https://${this.apiDomain}`,
+            description: 'Custom domain URL for API',
+        });
+
         return api;
+    }
+
+    private setupCustomDomain(api: RestApi): void {
+        // Create SSL certificate for the API domain
+        const certificate = new Certificate(this, 'ApiCertificate', {
+            domainName: this.apiDomain,
+            validation: CertificateValidation.fromDns(this.hostedZone),
+        });
+
+        // Create custom domain name
+        const customDomain = new DomainName(this, 'ApiCustomDomain', {
+            domainName: this.apiDomain,
+            certificate: certificate,
+        });
+
+        // Map the custom domain to the API
+        new BasePathMapping(this, 'ApiBasePathMapping', {
+            domainName: customDomain,
+            restApi: api,
+        });
+
+        // Create A record pointing to the custom domain
+        // Extract just the subdomain part (everything before the hosted zone)
+        const recordName = this.apiDomain.replace(`.${this.hostedZone.zoneName}`, '');
+        new ARecord(this, 'ApiAliasRecord', {
+            zone: this.hostedZone,
+            recordName: recordName || undefined, // undefined for apex domain
+            target: RecordTarget.fromAlias(new ApiGatewayDomain(customDomain)),
+        });
     }
 }

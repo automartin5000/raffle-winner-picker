@@ -16,12 +16,13 @@ A modern, full-stack raffle application built with SvelteKit and AWS CDK.
 
 1. **Copy environment file**
    ```bash
-   cp .env.example .env
+   cp .env.example .env.local
    ```
 
-2. **Update `.env` with your credentials**
-   - Auth0 domain, client ID, and audience
-   - API Gateway URL (provided after CDK deployment)
+2. **Configure environment variables**
+   - See `.env.example` for all required variables
+   - Update TODOs with your actual values
+   - See `GITHUB-SECRETS.md` for CI/CD setup
 
 3. **Start development server**
    ```bash
@@ -32,6 +33,31 @@ A modern, full-stack raffle application built with SvelteKit and AWS CDK.
    ```bash
    pj deploy
    ```
+
+## Configuration
+
+### Required Setup
+
+1. **Auth0 Configuration**
+   - Create Auth0 tenant and applications
+   - Configure Management API permissions
+   - Update domain and callback URLs
+
+2. **AWS Setup**
+   - Configure AWS accounts and IAM roles
+   - Set up Route 53 hosted zones
+   - Configure GitHub OIDC integration
+
+3. **GitHub Secrets**
+   - See `GITHUB-SECRETS.md` for complete list
+   - Required for CI/CD pipelines
+
+### Environment Variables
+
+All configuration is done via environment variables. See:
+- `.env.example` - Complete list with examples
+- `GITHUB-SECRETS.md` - GitHub repository secrets
+- TODO comments in code for hardcoded values that need updating
 
 ## Development
 

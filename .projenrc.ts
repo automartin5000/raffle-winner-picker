@@ -2,6 +2,7 @@ import { awscdk } from 'projen';
 import { JobPermission } from 'projen/lib/github/workflows-model';
 import { NodePackageManager, TypescriptConfigExtends, TypeScriptModuleResolution } from 'projen/lib/javascript';
 import { generateGitHubActions } from './projen-config/github-actions';
+import { BUILD_CONSTANTS } from './projen-config/constants';
 
 const buildWorkflowCallConfig = {
   inputs: {
@@ -34,7 +35,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
         uses: 'aws-actions/configure-aws-credentials@v4',
         with: {
           'aws-region': 'us-east-1',
-          'audience': 'sts.amazonaws.com',
+          'audience': BUILD_CONSTANTS.AWS_STS_AUDIENCE,
           'role-to-assume': 'arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer',
         },
       },
@@ -48,7 +49,6 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
       AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
       AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
-      AUTH0_SPA_CALLBACK_URL: '${{ secrets.AUTH0_SPA_CALLBACK_URL }}',
       DEPLOY_ENV: 'dev', // Set deployment environment for Auth0 client creation
     },
     workflowTriggers: {
@@ -64,7 +64,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   licensed: false,
   vscode: true,
   packageManager: NodePackageManager.BUN,
-  // TODO: Extract Svelete config to separate project
+  // TODO: Extract Svelte config to separate project
   tsconfig: {
     extends: TypescriptConfigExtends.fromPaths(['./.svelte-kit/tsconfig.json']),
     compilerOptions: {
@@ -127,7 +127,7 @@ project.gitignore.exclude(
   '.env',
   '.env.*',
   '!.env.example',
-  '!.env.test',
+  
   // Vite
   'vite.config.js.timestamp-*',
   'vite.config.ts.timestamp-*',
@@ -146,13 +146,13 @@ project.addFields({
 // Auth0 client management tasks
 const getAuth0ClientTask = project.addTask('get-auth0-client', {
   description: 'Get Auth0 SPA client ID for build (no updates)',
-  exec: 'node scripts/manage-auth0-client.cjs get-for-build',
+  exec: 'bun run scripts/manage-auth0-client.cjs get-for-build',
   condition: '[ "$DEPLOY_ENV" != "" ]',
 });
 
 const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
   description: 'Setup/update Auth0 SPA client for deployment',
-  exec: 'node scripts/manage-auth0-client.cjs ensure-client',
+  exec: 'bun run scripts/manage-auth0-client.cjs ensure-client',
   condition: '[ "$DEPLOY_ENV" != "" ]',
 });
 

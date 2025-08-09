@@ -1,6 +1,7 @@
 import { 
   type DeploymentEnvironment, 
-  resolveDeploymentEnvironment 
+  resolveDeploymentEnvironment,
+  getApiBaseUrl as deriveApiBaseUrl
 } from './shared-constants';
 
 /**
@@ -25,4 +26,28 @@ export function getAuth0ClientId(): string {
   } else {
     return import.meta.env.VITE_AUTH0_CLIENT_ID_DEV || import.meta.env.VITE_AUTH0_CLIENT_ID || '';
   }
+}
+
+/**
+ * Get the API base URL for the current environment
+ */
+export function getApiBaseUrl(): string {
+  const env = getDeploymentEnvironment();
+  
+  // Get hosted zone from environment variables
+  const hostedZone = env === 'prod' 
+    ? import.meta.env.VITE_PROD_HOSTED_ZONE 
+    : import.meta.env.VITE_NONPROD_HOSTED_ZONE;
+  
+  if (hostedZone) {
+    return deriveApiBaseUrl({
+      deploymentEnv: env,
+      hostedZone,
+      envName: import.meta.env.VITE_DEPLOY_ENV,
+    });
+  }
+  
+  // Fallback for local development when hosted zones aren't available
+  console.warn('No hosted zone available. Using local development API URL.');
+  return 'http://localhost:3000/api';
 }

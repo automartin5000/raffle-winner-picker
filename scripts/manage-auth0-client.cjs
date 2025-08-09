@@ -5,7 +5,11 @@ const fs = require('fs');
 const path = require('path');
 
 // Import shared environment configuration
-const { resolveDeploymentEnvironment, getEnvironmentConfig } = require('../lib/environments.cjs');
+const { 
+  resolveDeploymentEnvironment, 
+  getEnvironmentConfig, 
+  getFrontendUrl
+} = require('../lib/environments.cjs');
 
 /**
  * Auth0 SPA Client Management Script
@@ -18,7 +22,9 @@ const { resolveDeploymentEnvironment, getEnvironmentConfig } = require('../lib/e
  * - AUTH0_CLIENT_ID: Management API client ID (Machine to Machine)
  * - AUTH0_CLIENT_SECRET: Management API client secret
  * - DEPLOY_ENV: Environment name (dev, prod, etc.)
- * - AUTH0_SPA_CALLBACK_URL: Callback URL for the SPA client
+ * - PROD_HOSTED_ZONE: Production domain for callback URL (derived from domain-constants)
+ * - NONPROD_HOSTED_ZONE: Development domain for callback URL (derived from domain-constants)
+ * - AUTH0_SPA_CALLBACK_URL: Manual override for callback URL (optional)
  * 
  * Usage:
  * node scripts/manage-auth0-client.js create
@@ -34,7 +40,7 @@ class Auth0ClientManager {
     this.clientId = process.env.AUTH0_CLIENT_ID;
     this.clientSecret = process.env.AUTH0_CLIENT_SECRET;
     this.deployEnv = this.getStaticEnvironment();
-    this.callbackUrl = process.env.AUTH0_SPA_CALLBACK_URL;
+    this.callbackUrl = this.getCallbackUrl();
     
     if (!this.domain || !this.clientId || !this.clientSecret) {
       console.error('❌ Missing required Auth0 environment variables:');
@@ -54,6 +60,34 @@ class Auth0ClientManager {
       deployEnv: process.env.DEPLOY_ENV,
       isEphemeral: process.env.DEPLOY_EPHEMERAL === 'true',
     });
+  }
+
+  /**
+   * Get callback URL from hosted zone environment variables
+   */
+  getCallbackUrl() {
+    // Manual override takes precedence (for testing/custom setups)
+    if (process.env.AUTH0_SPA_CALLBACK_URL) {
+      return process.env.AUTH0_SPA_CALLBACK_URL;
+    }
+
+    // Derive from hosted zones based on environment
+    const hostedZone = this.deployEnv === 'prod' 
+      ? process.env.PROD_HOSTED_ZONE 
+      : process.env.NONPROD_HOSTED_ZONE;
+
+    const frontendUrl = getFrontendUrl({
+      deploymentEnv: this.deployEnv,
+      hostedZone,
+      envName: process.env.DEPLOY_ENV
+    });
+
+    if (frontendUrl && !frontendUrl.includes('localhost')) {
+      return frontendUrl;
+    }
+
+    console.warn('⚠️  No callback URL available - neither AUTH0_SPA_CALLBACK_URL nor hosted zone environment variables are set');
+    return null;
   }
 
   /**
@@ -177,7 +211,7 @@ class Auth0ClientManager {
       name: this.appName,
       description: this.getAppDescription(),
       app_type: 'spa',
-      logo_uri: 'https://your-domain.com/favicon.svg',
+      logo_uri: this.callbackUrl ? `${new URL(this.callbackUrl).origin}/favicon.svg` : undefined, // TODO: Update with actual logo URL
       callbacks: this.callbackUrl ? [this.callbackUrl] : [],
       allowed_logout_urls: this.callbackUrl ? [this.callbackUrl] : [],
       web_origins: this.callbackUrl ? [new URL(this.callbackUrl).origin] : [],
@@ -339,7 +373,7 @@ class Auth0ClientManager {
   }
 
   /**
-   * Write client ID to environment file
+   * Write client ID and derived URLs to environment file
    */
   writeClientIdToEnv(clientId) {
     const envFile = path.join(process.cwd(), '.env.local');
@@ -352,42 +386,35 @@ class Auth0ClientManager {
     
     const lines = envContent.split('\n');
     
+    // Helper function to update or add environment variable
+    const updateEnvVar = (varName, value) => {
+      const envVarLine = `${varName}=${value}`;
+      const existingLineIndex = lines.findIndex(line => line.startsWith(`${varName}=`));
+      
+      if (existingLineIndex >= 0) {
+        lines[existingLineIndex] = envVarLine;
+      } else {
+        lines.push(envVarLine);
+      }
+    };
+    
     // Update or add the environment-specific client ID
     const envVarName = `VITE_AUTH0_CLIENT_ID_${this.deployEnv.toUpperCase()}`;
-    const envVarLine = `${envVarName}=${clientId}`;
-    const existingLineIndex = lines.findIndex(line => line.startsWith(`${envVarName}=`));
-    
-    if (existingLineIndex >= 0) {
-      lines[existingLineIndex] = envVarLine;
-    } else {
-      lines.push(envVarLine);
-    }
+    updateEnvVar(envVarName, clientId);
     
     // Also add the current environment's client ID as the default
-    const defaultVarName = 'VITE_AUTH0_CLIENT_ID';
-    const defaultLineIndex = lines.findIndex(line => line.startsWith(`${defaultVarName}=`));
-    
-    if (defaultLineIndex >= 0) {
-      lines[defaultLineIndex] = `${defaultVarName}=${clientId}`;
-    } else {
-      lines.push(`${defaultVarName}=${clientId}`);
-    }
+    updateEnvVar('VITE_AUTH0_CLIENT_ID', clientId);
     
     // Add environment metadata for Vite
-    const deployEnvVar = `VITE_DEPLOY_ENV=${this.deployEnv}`;
-    const deployEnvIndex = lines.findIndex(line => line.startsWith('VITE_DEPLOY_ENV='));
-    if (deployEnvIndex >= 0) {
-      lines[deployEnvIndex] = deployEnvVar;
-    } else {
-      lines.push(deployEnvVar);
-    }
+    updateEnvVar('VITE_DEPLOY_ENV', this.deployEnv);
+    updateEnvVar('VITE_DEPLOY_EPHEMERAL', process.env.DEPLOY_EPHEMERAL || 'false');
     
-    const ephemeralVar = `VITE_DEPLOY_EPHEMERAL=${process.env.DEPLOY_EPHEMERAL || 'false'}`;
-    const ephemeralIndex = lines.findIndex(line => line.startsWith('VITE_DEPLOY_EPHEMERAL='));
-    if (ephemeralIndex >= 0) {
-      lines[ephemeralIndex] = ephemeralVar;
-    } else {
-      lines.push(ephemeralVar);
+    // Add hosted zone environment variables for frontend API URL derivation
+    if (process.env.PROD_HOSTED_ZONE) {
+      updateEnvVar('VITE_PROD_HOSTED_ZONE', process.env.PROD_HOSTED_ZONE);
+    }
+    if (process.env.NONPROD_HOSTED_ZONE) {
+      updateEnvVar('VITE_NONPROD_HOSTED_ZONE', process.env.NONPROD_HOSTED_ZONE);
     }
     
     fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');

@@ -3,6 +3,8 @@
  * This file defines the canonical list of deployment environments and their properties
  */
 
+import { buildApiUrl, buildFrontendUrl } from './domain-constants';
+
 export const DEPLOYMENT_ENVIRONMENTS = {
   // Development environment (PRs, local dev, testing)
   dev: {
@@ -11,7 +13,7 @@ export const DEPLOYMENT_ENVIRONMENTS = {
     auth0ClientName: 'Raffle Winner Picker (Development)',
     auth0Description: 'Development environment for Raffle Winner Picker application',
     isProd: false,
-    isEphemeral: false, // PRs and dev environments are ephemeral
+    isEphemeral: false, // Development is persistent
   },
   
   // Production environment
@@ -56,11 +58,7 @@ export function resolveDeploymentEnvironment(options: {
   }
   
   // Check if hostname suggests production (for frontend)
-  if (hostname) {
-    if (hostname.includes('rafflewinnerpicker.com') && !hostname.includes('dev.')) {
-      return 'prod';
-    }
-  }
+
   
   // Default to dev for all other cases (local dev, PR environments, etc.)
   return 'dev';
@@ -85,4 +83,43 @@ export function isProductionEnvironment(env: DeploymentEnvironment): boolean {
  */
 export function isEphemeralEnvironment(env: DeploymentEnvironment): boolean {
   return DEPLOYMENT_ENVIRONMENTS[env].isEphemeral;
+}
+
+/**
+ * Derive API base URL from hosted zone and environment
+ */
+export function getApiBaseUrl(options: {
+  deploymentEnv?: DeploymentEnvironment;
+  hostedZone: string;
+  envName?: string;
+}): string {
+  const { deploymentEnv, hostedZone, envName } = options;
+
+
+  return buildApiUrl({
+    envName: envName || deploymentEnv || 'dev',
+    hostedZone,
+    isProd: deploymentEnv === 'prod',
+  });
+}
+
+/**
+ * Derive frontend URL from hosted zone and environment
+ */
+export function getFrontendUrl(options: {
+  deploymentEnv?: DeploymentEnvironment;
+  hostedZone?: string;
+  envName?: string;
+}): string {
+  const { deploymentEnv, hostedZone, envName } = options;
+  
+  if (!hostedZone) {
+    return 'http://localhost:5173'; // fallback for local development
+  }
+
+  return buildFrontendUrl({
+    envName: envName || deploymentEnv || 'dev',
+    hostedZone,
+    isProd: deploymentEnv === 'prod',
+  });
 }

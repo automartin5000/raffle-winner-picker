@@ -10,6 +10,7 @@ import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { RestApi } from 'aws-cdk-lib/aws-apigateway';
 import { Construct } from 'constructs';
 import { AppStackProps } from "../bin/interfaces";
+import { EXTERNAL_SERVICES } from '../../src/lib/domain-constants';
 
 export const INDEX_FILES_CACHE_CONTROL_SECONDS = 0;
 export const IMMUATABLE_FILES_CACHE_CONTROL_DAYS = 365 * 10;
@@ -113,7 +114,7 @@ export class FrontendStack extends cdk.Stack {
                             },
                             contentSecurityPolicy: {
                                 override: true,
-                                contentSecurityPolicy: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.auth0.com; style-src 'self' 'unsafe-inline' *.auth0.com; img-src 'self' data: *.auth0.com; connect-src 'self' *.auth0.com ${api.url}; font-src 'self' *.auth0.com; frame-src *.auth0.com; object-src 'none'; media-src 'self'; frame-ancestors 'self'; form-action 'self' *.auth0.com; base-uri 'self'; manifest-src 'self'; worker-src 'self'; child-src *.auth0.com;` 
+                                contentSecurityPolicy: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; style-src 'self' 'unsafe-inline' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; img-src 'self' data: ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; connect-src 'self' ${EXTERNAL_SERVICES.AUTH0_DOMAIN} ${api.url}; font-src 'self' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; frame-src ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; object-src 'none'; media-src 'self'; frame-ancestors 'self'; form-action 'self' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; base-uri 'self'; manifest-src 'self'; worker-src 'self'; child-src ${EXTERNAL_SERVICES.AUTH0_DOMAIN};` 
                             },
                             referrerPolicy: {
                                 override: true,

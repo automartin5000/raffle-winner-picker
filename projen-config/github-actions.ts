@@ -2,6 +2,7 @@ import { awscdk } from "projen";
 import { BuildWorkflow } from "projen/lib/build";
 import { GitHub, GithubWorkflow } from "projen/lib/github";
 import { JobPermission, JobStepOutput } from "projen/lib/github/workflows-model";
+import { BUILD_CONSTANTS } from "./constants";
 
 const RUNNER_TYPE = ["ubuntu-latest"];
 
@@ -75,7 +76,6 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
       AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
       AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
       AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
-      AUTH0_SPA_CALLBACK_URL: '${{ secrets.AUTH0_SPA_CALLBACK_URL }}',
       DEPLOY_EPHEMERAL: 'true', // Indicate this is an ephemeral PR deployment
     }
   });
@@ -128,8 +128,8 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
             'cat cdk-diff-raw.txt | sed -E "s/[0-9]{12}/XXXX-ACCOUNT-ID-XXXX/g" | ' +
             'sed -E "s/${{ secrets.NONPROD_AWS_ACCOUNT_ID }}/XXXX-NONPROD-ACCOUNT-ID-XXXX/g" | ' +
             'sed -E "s/${{ secrets.PROD_AWS_ACCOUNT_ID }}/XXXX-PROD-ACCOUNT-ID-XXXX/g" | ' +
-            'sed -E "s/${{ secrets.NONPROD_HOSTED_ZONE }}/nonprod.example.com/g" | ' +
-            'sed -E "s/${{ secrets.PROD_HOSTED_ZONE }}/example.com/g" > cdk-diff.txt',
+            `sed -E "s/\\$\\{\\{ secrets.NONPROD_HOSTED_ZONE \\}\\}/${BUILD_CONSTANTS.EXAMPLE_DOMAINS.NONPROD}/g" | ` +
+            `sed -E "s/\\$\\{\\{ secrets.PROD_HOSTED_ZONE \\}\\}/${BUILD_CONSTANTS.EXAMPLE_DOMAINS.PROD}/g" > cdk-diff.txt`,
             'echo "CDK_DIFF_CONTENT<<EOF" >> $GITHUB_OUTPUT',
             'cat cdk-diff.txt >> $GITHUB_OUTPUT',
             'echo "EOF" >> $GITHUB_OUTPUT',
@@ -212,7 +212,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
         AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
         AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
         AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
-        AUTH0_SPA_CALLBACK_URL: '${{ secrets.AUTH0_SPA_CALLBACK_URL }}',
+        PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
         DEPLOY_ENV: 'prod', // Set production environment for Auth0 client creation
       },
       permissions: {
@@ -322,7 +322,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           uses: "aws-actions/configure-aws-credentials@v4",
           with: {
             "aws-region": "us-east-1",
-            audience: "sts.amazonaws.com",
+            audience: BUILD_CONSTANTS.AWS_STS_AUDIENCE,
             "role-to-assume": "arn:aws:iam::${{ secrets.PROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer",
           },
         },
@@ -520,7 +520,7 @@ const addManualProductionDeployWorkflow = (github: GitHub) => {
         AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
         AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
         AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
-        AUTH0_SPA_CALLBACK_URL: '${{ secrets.AUTH0_SPA_CALLBACK_URL }}',
+        PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
         DEPLOY_ENV: 'prod', // Set production environment for Auth0 client creation
       },
       permissions: {
@@ -541,7 +541,7 @@ const addManualProductionDeployWorkflow = (github: GitHub) => {
           uses: "aws-actions/configure-aws-credentials@v4",
           with: {
             "aws-region": "us-east-1",
-            audience: "sts.amazonaws.com",
+            audience: BUILD_CONSTANTS.AWS_STS_AUDIENCE,
             "role-to-assume": "arn:aws:iam::${{ secrets.PROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer",
           },
         },
@@ -615,7 +615,7 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
           uses: "aws-actions/configure-aws-credentials@v4",
           with: {
             "aws-region": "us-east-1",
-            audience: "sts.amazonaws.com",
+            audience: BUILD_CONSTANTS.AWS_STS_AUDIENCE,
             "role-to-assume": "arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer",
           },
         },
