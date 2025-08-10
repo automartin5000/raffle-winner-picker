@@ -3,6 +3,7 @@
   import { getAccessToken } from '$lib/auth';
   import { getApiUrl, CORE_SERVICES } from '$lib/domain-constants';
   import { getHostedZone } from '$lib/constants';
+  import Header from '../../components/Header.svelte';
 
   interface RaffleEntry {
     name: string;
@@ -140,7 +141,10 @@
   <title>My Raffle Entries - Raffle Winner Picker</title>
 </svelte:head>
 
-<main class="container">
+<div class="min-h-screen bg-gray-50">
+  <Header />
+  
+  <main class="container">
   <h1>My Raffle Entries</h1>
   <p class="subtitle">View all the raffles you've participated in and your results</p>
 
@@ -208,7 +212,8 @@
       {/each}
     </div>
   {/if}
-</main>
+  </main>
+</div>
 
 <style>
   .container {

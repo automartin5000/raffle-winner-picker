@@ -164,7 +164,7 @@ const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
 
 // Use get-for-build during compile to avoid updating clients during PR builds
 project.compileTask.prependSpawn(setupAuth0ClientTask);
-project.cdkTasks.deploy.prependExec("echo Deploying to environment: $DEPLOY_ENV");
+project.cdkTasks.deploy.prependExec('echo Deploying to environment: $DEPLOY_ENV');
 project.cdkTasks.deploy.prependSpawn(project.compileTask);
 // Svelte/Vite tasks
 project.addTask('dev', { exec: 'vite dev' });

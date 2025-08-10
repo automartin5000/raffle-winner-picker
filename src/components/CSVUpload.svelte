@@ -183,9 +183,6 @@
             Bob Wilson,bob@example.com,2,Grand Prize
           </div>
         </div>
-        <p class="format-note">
-          💡 Prize column is optional - if provided, it will auto-populate the prizes list
-        </p>
       </div>
     </div>
   

@@ -22,7 +22,7 @@ export function getHostedZone(): string {
   // We match against the non-production hosted zone first
   // because it is a subdomain of the production hosted zone
   const isNonProd = currentHostname.endsWith(import.meta.env.nonprod_hosted_zone);
-  console.log("Running in environment:", isNonProd ? 'non-production' : 'production');
+  console.log('Running in environment:', isNonProd ? 'non-production' : 'production');
   const hostedZone = isNonProd
     ? import.meta.env.nonprod_hosted_zone
     : import.meta.env.prod_hosted_zone;

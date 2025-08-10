@@ -1,4 +1,4 @@
-import type { ServiceConfig } from "./domain-constants";
+import type { ServiceConfig } from './domain-constants';
 
 export interface UrlBuilderProps {
   envName: string;

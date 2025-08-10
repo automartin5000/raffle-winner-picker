@@ -61,6 +61,40 @@
       fileInput.value = '';
     }
   }
+
+  function useSampleData() {
+    // Sample data from sample_raffle_tickets.csv
+    const sampleCsvContent = `Donor Name,Email,Prize,Quantity
+Minney Mouse,minney_mouse@email.com,5 nights in Aspen,1
+Mickey Mouse,mickey_mouse@email.com,(2) Coldplay tickets (take a coworker!),1
+Jane Doe,jane_doe@email.com,(2) Coldplay tickets (take a coworker!),1
+Jane Doe,jane_doe@email.com,(2) Coldplay tickets (take a coworker!),1
+Jane Doe,jane_doe@email.com,(2) VIP seats for the school concert,1
+John Doe,john_doe@email.com,(4) Savannah Bananas Tickets,1
+John Doe,john_doe@email.com,(1) 5 nights at a 5-star resort,3
+Iron Man,iron_man@email.com,"Family fun gift pack (Questing, mini golf, and bowling)",3
+George Washington,george_washington@email.com,Private wine class for 20 people from Total Wine & More,1
+Bluey Heeler,bluey_heeler@email.com,"Family fun gift pack (Questing, mini golf, and bowling)",1
+Iron Man,iron_man@email.com,Valentine's Day Scratch Ticket Board,5
+George Washington,george_washington@email.com,(1) 5 nights at a 5-star resort,1
+Minney Mouse,minney_mouse@email.com,7-10 night stay in Antigua with Elite Island Resorts,1
+George Washington,george_washington@email.com,Principal for the Day,5
+George Washington,george_washington@email.com,Principal for the Day,5`;
+
+    csvData = parseCSV(sampleCsvContent);
+    
+    if (csvData.headers.length > 0) {
+      // Set up column mapping for the sample data
+      columnMapping.name = 'Donor Name';
+      columnMapping.email = 'Email';
+      columnMapping.tickets = 'Quantity';
+      columnMapping.prize = 'Prize';
+      
+      // Save to store and navigate to configure page
+      setCSVData(csvData, columnMapping);
+      goto('/configure');
+    }
+  }
 </script>
 
 {#if !$isAuthenticated}
@@ -177,8 +211,21 @@
                 Bob Wilson,bob@example.com,2,Grand Prize
               </div>
             </div>
-            <p class="format-note">
-              💡 Prize column is optional - if provided, it will auto-populate the prizes list
+          </div>
+          
+          <div class="sample-data-section">
+            <div class="sample-divider">
+              <div class="sample-divider-line"></div>
+              <span class="sample-divider-text">or</span>
+              <div class="sample-divider-line"></div>
+            </div>
+            
+            <button class="sample-data-button" on:click={useSampleData}>
+              <span class="sample-data-icon">🎲</span>
+              Use Sample Data for Demo
+            </button>
+            <p class="sample-data-note">
+              ✨ Try the app with realistic sample raffle data
             </p>
           </div>
         </div>
@@ -453,16 +500,17 @@
 
   /* Main Content Styles */
   .main-content {
-    min-height: calc(100vh - 50px);
-    padding: 2rem 0.25rem;
+    min-height: calc(100vh - 80px);
+    padding: 1rem 0.25rem;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     overflow-y: auto;
+    padding-top: 2rem;
   }
 
   .upload-container-wrapper {
-    max-width: 500px;
+    max-width: 450px;
     width: 100%;
   }
 
@@ -470,8 +518,8 @@
   .upload-container {
     background: linear-gradient(145deg, #ffffff, #f8fafc);
     border: 1px solid #e1e5e9;
-    border-radius: 1.5rem;
-    padding: 2rem;
+    border-radius: 1.25rem;
+    padding: 1.25rem;
     box-shadow: 
       0 10px 25px rgba(0, 0, 0, 0.1),
       0 4px 10px rgba(0, 0, 0, 0.05);
@@ -479,38 +527,38 @@
 
   .upload-header {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
   }
 
   .upload-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
     display: block;
   }
 
   .upload-title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 600;
     color: #1e293b;
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.375rem 0;
   }
 
   .upload-subtitle {
     color: #64748b;
-    font-size: 1rem;
+    font-size: 0.9375rem;
     margin: 0;
   }
 
   .upload-dropzone {
     border: 2px dashed #cbd5e1;
-    border-radius: 1rem;
-    padding: 3rem 2rem;
+    border-radius: 0.875rem;
+    padding: 1.5rem 1.25rem;
     text-align: center;
     background: linear-gradient(145deg, #f8fafc, #ffffff);
     transition: all 0.3s ease;
     position: relative;
     cursor: pointer;
-    margin-bottom: 2rem;
+    margin-bottom: 1.25rem;
   }
 
   .upload-dropzone:hover {
@@ -521,29 +569,29 @@
   }
 
   .upload-visual {
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.75rem;
   }
 
   .upload-symbol {
-    font-size: 3rem;
+    font-size: 2rem;
     color: #94a3b8;
     font-weight: 300;
     display: inline-block;
   }
 
   .upload-text {
-    margin-bottom: 2rem;
+    margin-bottom: 1.25rem;
   }
 
   .upload-main-text {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 500;
     color: #374151;
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.375rem 0;
   }
 
   .upload-sub-text {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: #64748b;
     margin: 0;
   }
@@ -582,8 +630,8 @@
 
   .format-info {
     background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
-    border-radius: 1rem;
-    padding: 1.5rem;
+    border-radius: 0.875rem;
+    padding: 0.875rem;
     border: 1px solid #e2e8f0;
   }
 
@@ -591,7 +639,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   .format-icon {
@@ -608,15 +656,15 @@
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 0.5rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
+    padding: 0.875rem;
+    margin-bottom: 0.75rem;
   }
 
   .format-code {
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: #374151;
-    line-height: 1.6;
+    line-height: 1.5;
   }
 
   .format-note {
@@ -628,6 +676,70 @@
     gap: 0.5rem;
   }
 
+  /* Sample Data Styles */
+  .sample-data-section {
+    margin-top: 1rem;
+    text-align: center;
+  }
+
+  .sample-divider {
+    display: flex;
+    align-items: center;
+    margin: 1rem 0;
+    gap: 1rem;
+  }
+
+  .sample-divider-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #cbd5e1, transparent);
+  }
+
+  .sample-divider-text {
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .sample-data-button {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    margin-bottom: 0.5rem;
+  }
+
+  .sample-data-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, #059669, #047857);
+  }
+
+  .sample-data-icon {
+    font-size: 1rem;
+  }
+
+  .sample-data-note {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    font-style: italic;
+  }
 
   /* Responsive Design */
   @media (max-width: 1024px) {
@@ -663,7 +775,8 @@
     }
     
     .main-content {
-      padding: 0.125rem;
+      padding: 0.5rem 0.125rem;
+      padding-top: 1rem;
     }
   }
 </style>

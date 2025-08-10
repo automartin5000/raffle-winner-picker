@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { getRaffleRuns } from '$lib/api';
+  import Header from '../../components/Header.svelte';
 
   interface RaffleEntry {
     name: string;
@@ -75,7 +76,10 @@
   <title>My Raffles - Raffle Winner Picker</title>
 </svelte:head>
 
-<main class="container">
+<div class="min-h-screen bg-gray-50">
+  <Header />
+  
+  <main class="container">
   <h1>My Raffles</h1>
   <p class="subtitle">View and manage all the raffles you've created</p>
 
@@ -201,6 +205,7 @@
     </div>
   </div>
 {/if}
+</div>
 
 <style>
   .container {
