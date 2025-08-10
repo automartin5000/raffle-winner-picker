@@ -90,6 +90,50 @@ class Auth0ClientManager {
   }
 
   /**
+   * Get all callback URLs including additional ones from environment
+   */
+  getAllCallbackUrls() {
+    const urls = [];
+    
+    // Add primary callback URL
+    if (this.callbackUrl) {
+      urls.push(this.callbackUrl);
+    }
+
+    // Add additional callback URLs from environment variable
+    if (process.env.AUTH0_ADDITIONAL_CALLBACK_URLS) {
+      const additionalUrls = process.env.AUTH0_ADDITIONAL_CALLBACK_URLS
+        .split(',')
+        .map(url => url.trim())
+        .filter(url => url && !urls.includes(url));
+      urls.push(...additionalUrls);
+    }
+
+    return urls;
+  }
+
+  /**
+   * Get all allowed origins from callback URLs
+   */
+  getAllowedOrigins() {
+    const urls = this.getAllCallbackUrls();
+    const origins = [];
+
+    urls.forEach(url => {
+      try {
+        const origin = new URL(url).origin;
+        if (!origins.includes(origin)) {
+          origins.push(origin);
+        }
+      } catch (error) {
+        console.warn(`⚠️  Invalid callback URL: ${url}`);
+      }
+    });
+
+    return origins;
+  }
+
+  /**
    * Get the standardized app name and description from shared config
    */
   getAppName() {
@@ -210,15 +254,18 @@ class Auth0ClientManager {
    * Create a new SPA client
    */
   async createClient() {
+    const callbackUrls = this.getAllCallbackUrls();
+    const allowedOrigins = this.getAllowedOrigins();
+    
     const clientData = {
       name: this.appName,
       description: this.getAppDescription(),
       app_type: 'spa',
-      logo_uri: this.callbackUrl ? `${new URL(this.callbackUrl).origin}/favicon.svg` : undefined, // TODO: Update with actual logo URL
-      callbacks: this.callbackUrl ? [this.callbackUrl] : [],
-      allowed_logout_urls: this.callbackUrl ? [this.callbackUrl] : [],
-      web_origins: this.callbackUrl ? [new URL(this.callbackUrl).origin] : [],
-      allowed_origins: this.callbackUrl ? [new URL(this.callbackUrl).origin] : [],
+      logo_uri: allowedOrigins.length > 0 ? `${allowedOrigins[0]}/favicon.svg` : undefined,
+      callbacks: callbackUrls,
+      allowed_logout_urls: callbackUrls,
+      web_origins: allowedOrigins,
+      allowed_origins: allowedOrigins,
       oidc_conformant: true,
       token_endpoint_auth_method: 'none',
       grant_types: ['authorization_code', 'implicit', 'refresh_token'],
@@ -271,12 +318,15 @@ class Auth0ClientManager {
    * Update an existing client
    */
   async updateClient(clientId) {
+    const callbackUrls = this.getAllCallbackUrls();
+    const allowedOrigins = this.getAllowedOrigins();
+    
     const updates = {
       name: this.appName,
-      callbacks: this.callbackUrl ? [this.callbackUrl] : [],
-      allowed_logout_urls: this.callbackUrl ? [this.callbackUrl] : [],
-      web_origins: this.callbackUrl ? [new URL(this.callbackUrl).origin] : [],
-      allowed_origins: this.callbackUrl ? [new URL(this.callbackUrl).origin] : [],
+      callbacks: callbackUrls,
+      allowed_logout_urls: callbackUrls,
+      web_origins: allowedOrigins,
+      allowed_origins: allowedOrigins,
       client_metadata: {
         environment: this.deployEnv
       }

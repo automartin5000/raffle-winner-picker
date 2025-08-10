@@ -77,6 +77,7 @@ export class ApiStack extends cdk.Stack {
             environment: {
                 TABLE_NAME: raffleTable.tableName,
                 ALLOWED_ORIGIN: `https://${this.fullDomain}`,
+                DEPLOY_ENV: this.envName,
             },
             timeout: cdk.Duration.seconds(30),
         });
@@ -85,11 +86,24 @@ export class ApiStack extends cdk.Stack {
         raffleTable.grantReadWriteData(raffleFunction);
 
         // Create HTTP API with CORS
-      const api = new HttpApi(this, 'RaffleApi', {
+        const allowedOrigins = [`https://${this.fullDomain}`];
+        
+        // Add localhost origins for non-production environments only
+        if (this.envName !== 'prod') {
+            allowedOrigins.push(
+                'http://localhost:5173',
+                'http://localhost:5174',
+                'http://localhost:3000', 
+                'http://127.0.0.1:5173',
+                'http://127.0.0.1:5174'
+            );
+        }
+
+        const api = new HttpApi(this, 'RaffleApi', {
             disableExecuteApiEndpoint: true,
             description: 'HTTP API for Raffle Winner Picker application',
             corsPreflight: {
-                allowOrigins: [`https://${this.fullDomain}`],
+                allowOrigins: allowedOrigins,
                 allowMethods: [CorsHttpMethod.GET, CorsHttpMethod.POST, CorsHttpMethod.PUT, CorsHttpMethod.DELETE, CorsHttpMethod.OPTIONS],
                 allowHeaders: ['Content-Type', 'Authorization'],
                 allowCredentials: true,
@@ -123,6 +137,19 @@ export class ApiStack extends cdk.Stack {
             methods: [HttpMethod.GET],
             integration: lambdaIntegration,
             authorizer: jwtAuthorizer,
+        });
+
+        // Add OPTIONS routes without authorization for CORS preflight
+        api.addRoutes({
+            path: '/runs',
+            methods: [HttpMethod.OPTIONS],
+            integration: lambdaIntegration,
+        });
+
+        api.addRoutes({
+            path: '/runs/{runId}',
+            methods: [HttpMethod.OPTIONS],
+            integration: lambdaIntegration,
         });
 
         // Create custom domain for API

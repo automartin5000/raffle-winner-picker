@@ -7,22 +7,55 @@ const docClient = DynamoDBDocumentClient.from(client);
 const TABLE_NAME = process.env.TABLE_NAME;
 
 exports.handler = async (event) => {
+    // Determine the appropriate CORS origin
+    const requestOrigin = event.headers?.origin || event.headers?.Origin;
+    const allowedOrigins = [process.env.ALLOWED_ORIGIN].filter(Boolean);
+    
+    // Only add localhost origins for non-production environments
+    if (process.env.DEPLOY_ENV !== 'prod') {
+        allowedOrigins.push(
+            'http://localhost:5173',
+            'http://localhost:5174',
+            'http://localhost:3000',
+            'http://127.0.0.1:5173',
+            'http://127.0.0.1:5174'
+        );
+    }
+    
+    const corsOrigin = allowedOrigins.includes(requestOrigin) ? requestOrigin : (process.env.ALLOWED_ORIGIN || '*');
+    
     const headers = {
-        'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
+        'Access-Control-Allow-Origin': corsOrigin,
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+        'Access-Control-Allow-Credentials': 'true',
     };
 
     try {
         // Handle preflight requests (HTTP API format)
         if (event.requestContext?.http?.method === 'OPTIONS') {
-            return { statusCode: 200, headers, body: '' };
+            console.log('Handling OPTIONS preflight request');
+            console.log('Request origin:', requestOrigin);
+            console.log('CORS origin:', corsOrigin);
+            return { 
+                statusCode: 204,
+                headers: {
+                    ...headers,
+                    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+                    'Access-Control-Max-Age': '86400'
+                },
+                body: '' 
+            };
         }
 
         // Extract user ID from HTTP API JWT authorizer context
         // HTTP API with JWT authorizer automatically validates the token
         // and provides user info in requestContext.authorizer.jwt.claims
-        const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
+        const claims = event.requestContext?.authorizer?.jwt?.claims;
+        console.log('User claims:', claims);
+        // Use email as primary identifier (consistent across OAuth providers), fallback to sub
+        const userId = claims?.email || claims?.sub;
         if (!userId) {
             return { 
                 statusCode: 401, 
@@ -52,6 +85,8 @@ exports.handler = async (event) => {
             await docClient.send(new PutCommand({
                 TableName: TABLE_NAME,
                 Item: item,
+                // Ensure raffle runs are immutable - prevent overwriting existing runs
+                ConditionExpression: 'attribute_not_exists(runId)',
             }));
 
             return {

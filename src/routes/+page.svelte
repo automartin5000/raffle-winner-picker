@@ -100,6 +100,16 @@
         </div>
         
         <div class="header-actions">
+          <nav class="header-nav">
+            <a href="/my-entries" class="nav-link">
+              <span class="nav-icon">🎫</span>
+              My Entries
+            </a>
+            <a href="/my-raffles" class="nav-link">
+              <span class="nav-icon">🏆</span>
+              My Raffles
+            </a>
+          </nav>
           <div class="user-info">
             <div class="user-avatar">
               {($user?.name || 'User').charAt(0).toUpperCase()}
@@ -345,6 +355,38 @@
     display: flex;
     align-items: center;
     gap: 1.5rem;
+  }
+
+  .header-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    color: white;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+  }
+
+  .nav-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .nav-icon {
+    font-size: 1rem;
   }
 
   .user-info {
@@ -609,6 +651,15 @@
     
     .user-info {
       display: none;
+    }
+    
+    .header-nav {
+      gap: 0.5rem;
+    }
+    
+    .nav-link {
+      padding: 0.5rem;
+      font-size: 0.8rem;
     }
     
     .main-content {
