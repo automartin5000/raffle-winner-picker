@@ -2,19 +2,21 @@ import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Architecture, Function, Runtime, Code } from 'aws-cdk-lib/aws-lambda';
-import { RestApi, LambdaIntegration, DomainName, BasePathMapping } from 'aws-cdk-lib/aws-apigateway';
+import { CorsHttpMethod, HttpApi, HttpMethod, DomainName, ApiMapping } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { Certificate, CertificateValidation } from 'aws-cdk-lib/aws-certificatemanager';
-import { HostedZone, ARecord, RecordTarget, IHostedZone } from 'aws-cdk-lib/aws-route53';
-import { ApiGatewayDomain } from 'aws-cdk-lib/aws-route53-targets';
+import { HostedZone, IHostedZone, ARecord, RecordTarget } from 'aws-cdk-lib/aws-route53';
+import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
 import { Construct } from 'constructs';
 import { AppStackProps } from "../bin/interfaces";
-import { buildApiDomain } from "../../src/lib/domain-constants";
+import { buildApiDomain, CORE_SERVICES } from "../../src/lib/domain-constants";
 
 export class ApiStack extends cdk.Stack {
-    public readonly api: RestApi;
+    public readonly winnersApi: HttpApi;
+    public readonly winnersApiDomain: string;
     private readonly envName: string;
     private readonly fullDomain: string;
-    private readonly apiDomain: string;
     private readonly hostedZone: IHostedZone;
 
     constructor(scope: Construct, id: string, props: AppStackProps) {
@@ -32,15 +34,15 @@ export class ApiStack extends cdk.Stack {
 
         const subdomainPrefix = props.envName === 'prod' ? '' : `${props.envName}.`;
         this.fullDomain = `${subdomainPrefix}${this.hostedZone.zoneName}`
-        this.apiDomain = buildApiDomain({
+        this.winnersApiDomain = buildApiDomain({
             envName: props.envName,
-            hostedZone: this.hostedZone.zoneName,
-            isProd: props.envName === 'prod',
+          hostedZone: this.hostedZone.zoneName,
+            service: CORE_SERVICES.WINNERS
         });
 
         // Create backend infrastructure
         const raffleTable = this.createDynamoTable();
-        this.api = this.createApi(raffleTable);
+        this.winnersApi = this.createApi(raffleTable);
 
         // Add tags
         cdk.Tags.of(this).add('environment', props.envName);
@@ -65,10 +67,10 @@ export class ApiStack extends cdk.Stack {
         });
     }
 
-    private createApi(raffleTable: Table): RestApi {
+    private createApi(raffleTable: Table): HttpApi {
         // Lambda function for raffle operations
         const raffleFunction = new Function(this, 'RaffleFunction', {
-            runtime: Runtime.NODEJS_18_X,
+            runtime: Runtime.NODEJS_22_X,
             architecture: Architecture.ARM_64,
             handler: 'index.handler',
             code: Code.fromAsset(path.join(__dirname, '../lambda/raffle-api')),
@@ -82,67 +84,87 @@ export class ApiStack extends cdk.Stack {
         // Grant DynamoDB permissions
         raffleTable.grantReadWriteData(raffleFunction);
 
-        // Create API Gateway
-        const api = new RestApi(this, 'RaffleApi', {
-            description: 'API for Raffle Winner Picker application',
-            defaultCorsPreflightOptions: {
+        // Create HTTP API with CORS
+      const api = new HttpApi(this, 'RaffleApi', {
+            disableExecuteApiEndpoint: true,
+            description: 'HTTP API for Raffle Winner Picker application',
+            corsPreflight: {
                 allowOrigins: [`https://${this.fullDomain}`],
-                allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+                allowMethods: [CorsHttpMethod.GET, CorsHttpMethod.POST, CorsHttpMethod.PUT, CorsHttpMethod.DELETE, CorsHttpMethod.OPTIONS],
                 allowHeaders: ['Content-Type', 'Authorization'],
+                allowCredentials: true,
             },
         });
 
-        // API routes
-        const raffleResource = api.root.addResource('raffle-runs');
-        raffleResource.addMethod('GET', new LambdaIntegration(raffleFunction));
-        raffleResource.addMethod('POST', new LambdaIntegration(raffleFunction));
+        // Create JWT Authorizer for Auth0
+        const jwtAuthorizer = new HttpJwtAuthorizer(
+            'Auth0JWTAuthorizer',
+            `https://${process.env.VITE_AUTH0_DOMAIN || 'dev-7h1ax9uy.us.auth0.com'}/`,
+            {
+                authorizerName: 'Auth0JWTAuthorizer',
+                identitySource: ['$request.header.Authorization'],
+                jwtAudience: [process.env.VITE_AUTH0_AUDIENCE || 'https://local2.api.winners.dev.rafflewinnerpicker.com'],
+            }
+        );
 
-        const singleRaffleResource = raffleResource.addResource('{runId}');
-        singleRaffleResource.addMethod('GET', new LambdaIntegration(raffleFunction));
+        // Create Lambda integration
+        const lambdaIntegration = new HttpLambdaIntegration('RaffleLambdaIntegration', raffleFunction);
+
+        // Add routes with JWT authorization
+        api.addRoutes({
+            path: '/runs',
+            methods: [HttpMethod.GET, HttpMethod.POST],
+            integration: lambdaIntegration,
+            authorizer: jwtAuthorizer,
+        });
+
+        api.addRoutes({
+            path: '/runs/{runId}',
+            methods: [HttpMethod.GET],
+            integration: lambdaIntegration,
+            authorizer: jwtAuthorizer,
+        });
 
         // Create custom domain for API
         this.setupCustomDomain(api);
 
         // Output API URL
-        new cdk.CfnOutput(this, 'ApiUrl', {
-            value: api.url,
-            description: 'API Gateway endpoint URL',
-        });
 
         new cdk.CfnOutput(this, 'ApiCustomDomainUrl', {
-            value: `https://${this.apiDomain}`,
+            value: `https://${this.winnersApiDomain}`,
             description: 'Custom domain URL for API',
         });
 
         return api;
     }
 
-    private setupCustomDomain(api: RestApi): void {
-        // Create SSL certificate for the API domain
+    private setupCustomDomain(api: HttpApi): void {
+        // Create certificate for the API domain
         const certificate = new Certificate(this, 'ApiCertificate', {
-            domainName: this.apiDomain,
+            domainName: this.winnersApiDomain,
             validation: CertificateValidation.fromDns(this.hostedZone),
         });
 
-        // Create custom domain name
-        const customDomain = new DomainName(this, 'ApiCustomDomain', {
-            domainName: this.apiDomain,
+        // Create custom domain name for HTTP API
+        const domainName = new DomainName(this, 'ApiDomainName', {
+            domainName: this.winnersApiDomain,
             certificate: certificate,
         });
 
-        // Map the custom domain to the API
-        new BasePathMapping(this, 'ApiBasePathMapping', {
-            domainName: customDomain,
-            restApi: api,
+        // Create API mapping to connect custom domain to the API
+        new ApiMapping(this, 'ApiMapping', {
+            api: api,
+            domainName: domainName,
         });
 
-        // Create A record pointing to the custom domain
-        // Extract just the subdomain part (everything before the hosted zone)
-        const recordName = this.apiDomain.replace(`.${this.hostedZone.zoneName}`, '');
+        // Create Route53 record to point to the custom domain
         new ARecord(this, 'ApiAliasRecord', {
             zone: this.hostedZone,
-            recordName: recordName || undefined, // undefined for apex domain
-            target: RecordTarget.fromAlias(new ApiGatewayDomain(customDomain)),
+            recordName: this.winnersApiDomain.replace(`.${this.hostedZone.zoneName}`, ''),
+            target: RecordTarget.fromAlias(new ApiGatewayv2DomainProperties(
+                domainName.regionalDomainName,
+                domainName.regionalHostedZoneId
+            )),
         });
     }
 }

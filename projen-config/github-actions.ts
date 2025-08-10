@@ -160,6 +160,27 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           },
         },
         {
+          name: "Run Integration Tests",
+          id: "integration-tests",
+          run: [
+            'echo "Running integration tests against PR environment..."',
+            'export API_BASE_URL="https://${{ env.DEPLOY_ENV }}.api.winners.dev.rafflewinnerpicker.com"',
+            'bun run test:integration'
+          ].join("\n"),
+          continueOnError: true,
+        },
+        {
+          name: "Run E2E Tests", 
+          id: "e2e-tests",
+          run: [
+            'echo "Running E2E tests against PR environment..."',
+            'export BASE_URL="https://${{ env.DEPLOY_ENV }}.dev.rafflewinnerpicker.com"',
+            'bunx playwright install --with-deps chromium',
+            'bun run test:e2e --project=chromium'
+          ].join("\n"),
+          continueOnError: true,
+        },
+        {
           name: "Create or update comment",
           uses: "peter-evans/create-or-update-comment@v4",
           with: {
@@ -171,6 +192,11 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
               "",
               "**Environment:** `${{ env.DEPLOY_ENV }}`",
               "**Status:** ${{ steps.deploy.outcome == 'success' && '✅ Deployed' || '❌ Failed' }}",
+              "**URL:** https://${{ env.DEPLOY_ENV }}.dev.rafflewinnerpicker.com",
+              "",
+              "### 🧪 Test Results",
+              "- **Integration Tests:** ${{ steps.integration-tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }}",
+              "- **E2E Tests:** ${{ steps.e2e-tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }}",
               "",
               "### 📋 CDK Prod Diff",
               "<details>",

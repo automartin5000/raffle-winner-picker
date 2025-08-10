@@ -1,53 +1,32 @@
 import {
   type DeploymentEnvironment,
-  resolveDeploymentEnvironment,
-  getApiBaseUrl as deriveApiBaseUrl,
+  resolveAwsAccount,
 } from './shared-constants';
-
-/**
- * Get the appropriate deployment environment for the current frontend context
- */
-export function getDeploymentEnvironment(): DeploymentEnvironment {
-  return resolveDeploymentEnvironment({
-    deployEnv: import.meta.env.VITE_DEPLOY_ENV,
-    isEphemeral: import.meta.env.VITE_DEPLOY_EPHEMERAL === 'true',
-    hostname: typeof window !== 'undefined' ? window.location.hostname : undefined,
-  });
-}
 
 /**
  * Get the Auth0 client ID for the current environment
  */
 export function getAuth0ClientId(): string {
-  const env = getDeploymentEnvironment();
+  const spaAuth0ClientId = import.meta.env.VITE_SPA_AUTH0_CLIENT_ID;
+  console.log(`Using Auth0 client ID: ${spaAuth0ClientId}`);
 
-  if (env === 'prod') {
-    return import.meta.env.VITE_AUTH0_CLIENT_ID_PROD || import.meta.env.VITE_AUTH0_CLIENT_ID || '';
-  } else {
-    return import.meta.env.VITE_AUTH0_CLIENT_ID_DEV || import.meta.env.VITE_AUTH0_CLIENT_ID || '';
-  }
+  return spaAuth0ClientId;
 }
 
 /**
- * Get the API base URL for the current environment
+ * Get the base hosted zone for the current environment
  */
-export function getApiBaseUrl(): string {
-  const env = getDeploymentEnvironment();
+export function getHostedZone(): string {
+  const currentHostname = window.location.hostname;
+  // Match against non-production hosted zone or production
+  // We match against the non-production hosted zone first
+  // because it is a subdomain of the production hosted zone
+  const isNonProd = currentHostname.endsWith(import.meta.env.nonprod_hosted_zone);
+  console.log("Running in environment:", isNonProd ? 'non-production' : 'production');
+  const hostedZone = isNonProd
+    ? import.meta.env.nonprod_hosted_zone
+    : import.meta.env.prod_hosted_zone;
 
-  // Get hosted zone from environment variables
-  const hostedZone = env === 'prod'
-    ? import.meta.env.VITE_PROD_HOSTED_ZONE
-    : import.meta.env.VITE_NONPROD_HOSTED_ZONE;
+  return hostedZone;
 
-  if (hostedZone) {
-    return deriveApiBaseUrl({
-      deploymentEnv: env,
-      hostedZone,
-      envName: import.meta.env.VITE_DEPLOY_ENV,
-    });
-  }
-
-  // Fallback for local development when hosted zones aren't available
-  console.warn('No hosted zone available. Using local development API URL.');
-  return 'http://localhost:3000/api';
 }

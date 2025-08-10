@@ -1,4 +1,4 @@
-PaymentID,Donor Name,First Name,Last Name,Email,Date,Item Name,Item Price,Item Fundraising Type,Quantity,Total Item Amount,RallyUp Fees,Processing Fees,Net Amount,Payment Type,Processing Type,Source,Currency,Fund Code,Type
+PaymentID,Donor Name,First Name,Last Name,Email,Date,Prize,Item Price,Item Fundraising Type,Quantity,Total Item Amount,RallyUp Fees,Processing Fees,Net Amount,Payment Type,Processing Type,Source,Currency,Fund Code,Type
 10399808,Minney Mouse,Minney,Mouse,minney_mouse@email.com,1/20/2025 3:05:09 PM,Wachusett Mountain lift tickets,5.00,Store,1,5.00,0.00000,-0.24667,4.75,CreditCard,Direct Funds,Eventgroove Fundraising,USD,,Payment
 10459642,Mickey Mouse,Mickey,Mouse,mickey_mouse@email.com,1/31/2025 8:08:43 PM,(2) Coldplay tickets at Gillette Stadium,10.00,Store,1,10.00,0.00000,-0.37273,9.62,CreditCard,Direct Funds,Eventgroove Fundraising,USD,,Payment
 10460365,Jane Doe,Jane,Doe,jane_doe@email.com,1/31/2025 9:25:18 PM,(2) Coldplay tickets at Gillette Stadium,10.00,Store,1,10.00,0.00000,-0.36500,9.63,CreditCard,Direct Funds,Eventgroove Fundraising,USD,,Payment

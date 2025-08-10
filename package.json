@@ -25,6 +25,10 @@
     "synth": "npx projen synth",
     "synth:silent": "npx projen synth:silent",
     "test": "npx projen test",
+    "test:all": "npx projen test:all",
+    "test:e2e": "npx projen test:e2e",
+    "test:e2e:local": "npx projen test:e2e:local",
+    "test:integration": "npx projen test:integration",
     "test:watch": "npx projen test:watch",
     "watch": "npx projen watch",
     "projen": "npx projen"

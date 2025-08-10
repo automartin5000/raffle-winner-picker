@@ -1,8 +1,16 @@
 /// <reference types="vite/client" />
 import { getAccessToken } from './auth';
-import { getApiBaseUrl } from './constants';
+import { getHostedZone } from './constants';
+import { getApiUrl, CORE_SERVICES } from './domain-constants';
 
-const API_BASE_URL = getApiBaseUrl();
+const apiHostedZone = getHostedZone();
+const envName = import.meta.env.deploy_env;
+const winnersBaseApiUrl = getApiUrl({
+  envName,
+  service: CORE_SERVICES.WINNERS,
+  hostedZone: apiHostedZone,
+});
+console.log(`Using Winners API URL: ${winnersBaseApiUrl}`);
 
 interface RaffleRun {
   userId: string;
@@ -36,7 +44,7 @@ export async function saveRaffleRun(data: {
       throw new Error('No access token available');
     }
 
-    const response = await fetch(`${API_BASE_URL}/raffle-runs`, {
+    const response = await fetch(`${winnersBaseApiUrl}/runs`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -68,7 +76,7 @@ export async function getRaffleRuns(): Promise<{ success: boolean; runs?: Raffle
       throw new Error('No access token available');
     }
 
-    const response = await fetch(`${API_BASE_URL}/raffle-runs`, {
+    const response = await fetch(`${winnersBaseApiUrl}/runs`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -94,7 +102,7 @@ export async function getRaffleRun(runId: string): Promise<{ success: boolean; r
       throw new Error('No access token available');
     }
 
-    const response = await fetch(`${API_BASE_URL}/raffle-runs/${runId}`, {
+    const response = await fetch(`${winnersBaseApiUrl}/runs/${runId}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

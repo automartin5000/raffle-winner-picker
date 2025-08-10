@@ -3,7 +3,7 @@
  * This file defines the canonical list of deployment environments and their properties
  */
 
-import { buildApiUrl, buildFrontendUrl } from './domain-constants';
+import { buildFrontendUrl } from './domain-constants';
 
 export const DEPLOYMENT_ENVIRONMENTS = {
   // Development environment (PRs, local dev, testing)
@@ -40,12 +40,11 @@ export function getEnvironmentConfig(env: DeploymentEnvironment) {
  * Determine the deployment environment from various sources
  * This logic is shared between CDK, Auth0 management, and frontend
  */
-export function resolveDeploymentEnvironment(options: {
+export function resolveAwsAccount(options: {
   deployEnv?: string;
   isEphemeral?: boolean;
-  hostname?: string;
 }): DeploymentEnvironment {
-  const { deployEnv, isEphemeral, hostname } = options;
+  const { deployEnv, isEphemeral } = options;
 
   // If explicitly ephemeral (PR environment), use dev
   if (isEphemeral) {
@@ -85,23 +84,6 @@ export function isEphemeralEnvironment(env: DeploymentEnvironment): boolean {
   return DEPLOYMENT_ENVIRONMENTS[env].isEphemeral;
 }
 
-/**
- * Derive API base URL from hosted zone and environment
- */
-export function getApiBaseUrl(options: {
-  deploymentEnv?: DeploymentEnvironment;
-  hostedZone: string;
-  envName?: string;
-}): string {
-  const { deploymentEnv, hostedZone, envName } = options;
-
-
-  return buildApiUrl({
-    envName: envName || deploymentEnv || 'dev',
-    hostedZone,
-    isProd: deploymentEnv === 'prod',
-  });
-}
 
 /**
  * Derive frontend URL from hosted zone and environment
@@ -120,6 +102,5 @@ export function getFrontendUrl(options: {
   return buildFrontendUrl({
     envName: envName || deploymentEnv || 'dev',
     hostedZone,
-    isProd: deploymentEnv === 'prod',
   });
 }

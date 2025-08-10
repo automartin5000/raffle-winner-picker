@@ -3,20 +3,20 @@ import { Construct } from "constructs";
 import { ApiStack } from "../lib/api-stack";
 import { FrontendStack } from "../lib/frontend-stack";
 import { type AppStackProps } from "./interfaces";
-import { DEPLOYMENT_ENVIRONMENTS, getAllEnvironments, resolveDeploymentEnvironment } from "../../src/lib/shared-constants";
+import { DEPLOYMENT_ENVIRONMENTS, getAllEnvironments, resolveAwsAccount } from "../../src/lib/shared-constants";
 
 const region = 'us-east-1';
 
 // Create AWS environment configurations based on shared environment definitions
 const awsEnvironments: AppStackProps[] = [];
 
-// Determine the current deployment environment
-const currentDeployEnv = resolveDeploymentEnvironment({
+// Determine the current AWS account
+const currentAwsAccount = resolveAwsAccount({
   deployEnv: process.env.DEPLOY_ENV,
   isEphemeral: process.env.DEPLOY_EPHEMERAL === 'true',
 });
 
-console.log(`Resolved deployment environment: ${currentDeployEnv}`);
+console.log(`Resolved AWS account: ${currentAwsAccount}`);
 
 // Always create both dev and prod static environments for CDK synthesis
 getAllEnvironments().forEach(envKey => {
@@ -41,6 +41,7 @@ if (process.env.DEPLOY_EPHEMERAL === 'true' && process.env.DEPLOY_ENV) {
   const isStaticEnv = getAllEnvironments().includes(process.env.DEPLOY_ENV as any);
   
   if (!isStaticEnv) {
+    console.log(`Creating ephemeral environment for ${process.env.DEPLOY_ENV}`);
     awsEnvironments.push({
       env: {
         account: process.env.NONPROD_AWS_ACCOUNT_ID!,
@@ -48,7 +49,7 @@ if (process.env.DEPLOY_EPHEMERAL === 'true' && process.env.DEPLOY_ENV) {
       },
       envName: process.env.DEPLOY_ENV, // Use PR-specific name (e.g., "pr123")
       hostedZone: process.env.NONPROD_HOSTED_ZONE!,
-      deploymentEnv: currentDeployEnv, // But use "dev" for configuration
+      deploymentEnv: currentAwsAccount,
     });
   }
 }
@@ -65,7 +66,7 @@ class RootApp extends Construct {
         // Create frontend stack with API reference
         new FrontendStack(this, 'Frontend', {
             ...props,
-            api: apiStack.api
+            apiStack,
         });
     }
 }

@@ -133,6 +133,12 @@ project.gitignore.exclude(
   'vite.config.ts.timestamp-*',
   // CDK
   'cdk.context.json', // excluded for security concerns in public repo
+
+  // Playwright
+  'playwright-report',
+  'playwright.config.ts.timestamp-*',
+  'playwright.config.js.timestamp-*',
+  'test-results',
 );
 project.addFields({
   type: 'module',
@@ -147,25 +153,44 @@ project.addFields({
 const getAuth0ClientTask = project.addTask('get-auth0-client', {
   description: 'Get Auth0 SPA client ID for build (no updates)',
   exec: 'bun run scripts/manage-auth0-client.cjs get-for-build',
-  condition: '[ "$DEPLOY_ENV" != "" ]',
+  condition: '[ -n "$DEPLOY_ENV" ]',
 });
 
 const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
   description: 'Setup/update Auth0 SPA client for deployment',
   exec: 'bun run scripts/manage-auth0-client.cjs ensure-client',
-  condition: '[ "$DEPLOY_ENV" != "" ]',
+  condition: '[ -n "$DEPLOY_ENV" ]',
 });
 
 // Use get-for-build during compile to avoid updating clients during PR builds
-project.compileTask.prependSpawn(getAuth0ClientTask);
-
-
+project.compileTask.prependSpawn(setupAuth0ClientTask);
+project.cdkTasks.deploy.prependExec("echo Deploying to environment: $DEPLOY_ENV");
+project.cdkTasks.deploy.prependSpawn(project.compileTask);
 // Svelte/Vite tasks
 project.addTask('dev', { exec: 'vite dev' });
 project.addTask('preview', { exec: 'vite preview' });
 project.addTask('prepare', { exec: 'svelte-kit sync || echo ""' });
 project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json' });
 project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch' });
+project.compileTask.exec('vite build');
+
+// Testing tasks
+project.addTask('test:integration', {
+  exec: 'jest --config jest.config.integration.js --runInBand',
+  description: 'Run API integration tests',
+});
+project.addTask('test:e2e', {
+  exec: 'playwright test',
+  description: 'Run end-to-end browser tests',
+});
+project.addTask('test:e2e:local', {
+  exec: 'BASE_URL=http://localhost:5173 NODE_ENV=development playwright test',
+  description: 'Run end-to-end tests against local dev server',
+});
+project.addTask('test:all', {
+  exec: 'bun run test && bun run test:integration && bun run test:e2e',
+  description: 'Run all tests (unit, integration, and e2e)',
+});
 
 // TODO: Add CDK CLI in projen
 project.addDevDeps('aws-cdk@^2.1022.0');

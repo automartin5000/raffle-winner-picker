@@ -5,21 +5,23 @@
  * used throughout the application. This ensures consistency and makes it easy
  * to update domain patterns in one place.
  */
+export interface ServiceConfig {
+  subdomain: string;
+  name: string;
+};
 
 // =============================================================================
 // DOMAIN STRUCTURE
 // =============================================================================
-
 /**
- * Core domain structure patterns
+ * Core Service Names
  */
-export const DOMAIN_STRUCTURE = {
-  /**
-   * API subdomain pattern for the raffle service
-   * Results in: api.winners.{domain}
-   */
-  API_SUBDOMAIN: 'api.winners',
-} as const;
+export const CORE_SERVICES = {
+  WINNERS: {
+    subdomain: 'api.winners',
+    name: 'Raffle Winners Service',
+  },
+};
 
 // =============================================================================
 // AWS SERVICE ENDPOINTS
@@ -33,7 +35,7 @@ export const AWS_ENDPOINTS = {
    * AWS STS service endpoint for OIDC token exchange
    */
   STS_AUDIENCE: 'sts.amazonaws.com',
-} as const;
+};
 
 // =============================================================================
 // EXTERNAL SERVICE DOMAINS
@@ -53,7 +55,7 @@ export const EXTERNAL_SERVICES = {
    * GitHub service domain
    */
   GITHUB_DOMAIN: 'github.com',
-} as const;
+};
 
 // =============================================================================
 // URL CONSTRUCTION UTILITIES
@@ -64,12 +66,13 @@ export const EXTERNAL_SERVICES = {
  */
 export function buildApiDomain(options: {
   envName: string;
+  service: ServiceConfig;
   hostedZone: string;
-  isProd: boolean;
 }): string {
-  const { envName, hostedZone, isProd } = options;
+  const { envName, hostedZone, service } = options;
+  const isProd = envName === 'prod';
   const envPrefix = isProd ? '' : `${envName}.`;
-  return `${envPrefix}${DOMAIN_STRUCTURE.API_SUBDOMAIN}.${hostedZone}`;
+  return `${envPrefix}${service.subdomain}.${hostedZone}`;
 }
 
 /**
@@ -78,9 +81,9 @@ export function buildApiDomain(options: {
 export function buildFrontendDomain(options: {
   envName: string;
   hostedZone: string;
-  isProd: boolean;
 }): string {
-  const { envName, hostedZone, isProd } = options;
+  const { envName, hostedZone } = options;
+  const isProd = envName === 'prod';
   const envPrefix = isProd ? '' : `${envName}.`;
   return `${envPrefix}${hostedZone}`;
 }
@@ -88,10 +91,10 @@ export function buildFrontendDomain(options: {
 /**
  * Construct full API URL with protocol
  */
-export function buildApiUrl(options: {
+export function getApiUrl(options: {
   envName: string;
   hostedZone: string;
-  isProd: boolean;
+  service: ServiceConfig;
 }): string {
   return `https://${buildApiDomain(options)}`;
 }
@@ -102,7 +105,6 @@ export function buildApiUrl(options: {
 export function buildFrontendUrl(options: {
   envName: string;
   hostedZone: string;
-  isProd: boolean;
 }): string {
   return `https://${buildFrontendDomain(options)}`;
 }

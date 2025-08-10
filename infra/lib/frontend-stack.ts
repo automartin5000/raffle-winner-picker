@@ -7,39 +7,48 @@ import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { AaaaRecord, ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { CloudFrontTarget } from 'aws-cdk-lib/aws-route53-targets';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
-import { RestApi } from 'aws-cdk-lib/aws-apigateway';
 import { Construct } from 'constructs';
 import { AppStackProps } from "../bin/interfaces";
-import { EXTERNAL_SERVICES } from '../../src/lib/domain-constants';
+import { EXTERNAL_SERVICES, buildFrontendDomain } from '../../src/lib/domain-constants';
+import { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+import { ApiStack } from './api-stack';
 
 export const INDEX_FILES_CACHE_CONTROL_SECONDS = 0;
 export const IMMUATABLE_FILES_CACHE_CONTROL_DAYS = 365 * 10;
 
+export interface FrontendStackProps extends AppStackProps {
+  apiStack: ApiStack;
+}
+
 export class FrontendStack extends cdk.Stack {
   private readonly envName: string;
   private readonly fullDomain: string;
-  
-  constructor(scope: Construct, id: string, props: AppStackProps & { api: RestApi }) {
+  private readonly apiStack: ApiStack;
+
+  constructor(scope: Construct, id: string, props: FrontendStackProps) {
         super(scope, id, {
           ...props,
           stackName: `RPW-Frontend-${props.envName}`,
         });
-        this.envName = props.envName;
+    this.envName = props.envName;
+    this.apiStack = props.apiStack;
 
         // Skip hosted zone lookup for local development
         const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
                 domainName: props.hostedZone,
             });
 
-        const subdomainPrefix = props.envName === 'prod' ? '' : `${props.envName}.`;
-        this.fullDomain = `${subdomainPrefix}raffle-picker.${hostedZone.zoneName}`
+        this.fullDomain = buildFrontendDomain({
+            envName: props.envName,
+            hostedZone: hostedZone.zoneName,
+        });
 
         // Create frontend infrastructure  
         const bucket = this.createWebsiteBucket();
         
         // Only create CloudFront and Route53 for real environments
         if (hostedZone) {
-            const distribution = this.createCfDistribution(hostedZone, bucket, props.api);
+            const distribution = this.createCfDistribution(hostedZone, bucket, this.apiStack.winnersApi);
             this.createRoute53Records(hostedZone, distribution);
         }
         
@@ -81,7 +90,7 @@ export class FrontendStack extends cdk.Stack {
         immutableDeploy.node.addDependency(baselineDeploy);
     }
 
-    private createCfDistribution(hostedZone: cdk.aws_route53.IHostedZone, bucket: cdk.aws_s3.Bucket, api: RestApi): cf.Distribution {
+    private createCfDistribution(hostedZone: cdk.aws_route53.IHostedZone, bucket: cdk.aws_s3.Bucket, api: HttpApi): cf.Distribution {
         const rewriteFunction = new cf.Function(this, 'RewriteFunction', {
             code: cf.FunctionCode.fromFile({
                 filePath: path.join(
@@ -114,7 +123,7 @@ export class FrontendStack extends cdk.Stack {
                             },
                             contentSecurityPolicy: {
                                 override: true,
-                                contentSecurityPolicy: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; style-src 'self' 'unsafe-inline' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; img-src 'self' data: ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; connect-src 'self' ${EXTERNAL_SERVICES.AUTH0_DOMAIN} ${api.url}; font-src 'self' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; frame-src ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; object-src 'none'; media-src 'self'; frame-ancestors 'self'; form-action 'self' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; base-uri 'self'; manifest-src 'self'; worker-src 'self'; child-src ${EXTERNAL_SERVICES.AUTH0_DOMAIN};` 
+                                contentSecurityPolicy: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; style-src 'self' 'unsafe-inline' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; img-src 'self' data: ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; connect-src 'self' ${EXTERNAL_SERVICES.AUTH0_DOMAIN} https://${this.apiStack.winnersApiDomain}; font-src 'self' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; frame-src ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; object-src 'none'; media-src 'self'; frame-ancestors 'self'; form-action 'self' ${EXTERNAL_SERVICES.AUTH0_DOMAIN}; base-uri 'self'; manifest-src 'self'; worker-src 'self'; child-src ${EXTERNAL_SERVICES.AUTH0_DOMAIN};` 
                             },
                             referrerPolicy: {
                                 override: true,

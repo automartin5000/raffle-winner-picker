@@ -14,39 +14,27 @@ exports.handler = async (event) => {
     };
 
     try {
-        // Handle preflight requests
-        if (event.httpMethod === 'OPTIONS') {
+        // Handle preflight requests (HTTP API format)
+        if (event.requestContext?.http?.method === 'OPTIONS') {
             return { statusCode: 200, headers, body: '' };
         }
 
-        // Extract user ID from Auth0 JWT (simplified - use proper JWT verification in production)
-        const authHeader = event.headers.Authorization || event.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        // Extract user ID from HTTP API JWT authorizer context
+        // HTTP API with JWT authorizer automatically validates the token
+        // and provides user info in requestContext.authorizer.jwt.claims
+        const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
+        if (!userId) {
             return { 
                 statusCode: 401, 
                 headers, 
-                body: JSON.stringify({ error: 'Unauthorized - Missing or invalid token' }) 
-            };
-        }
-        
-        // In production, verify JWT properly with Auth0 public key
-        // For now, just decode the payload (THIS IS NOT SECURE FOR PRODUCTION)
-        try {
-            const token = authHeader.substring(7);
-            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-            var userId = payload.sub;
-        } catch (error) {
-            return { 
-                statusCode: 401, 
-                headers, 
-                body: JSON.stringify({ error: 'Invalid token format' }) 
+                body: JSON.stringify({ error: 'Unauthorized - No user context' }) 
             };
         }
 
-        const method = event.httpMethod;
-        const path = event.resource;
+        const method = event.requestContext?.http?.method;
+        const path = event.requestContext?.http?.path;
 
-        if (method === 'POST' && path === '/raffle-runs') {
+        if (method === 'POST' && path === '/runs') {
             // Save new raffle run
             const body = JSON.parse(event.body);
             const runId = randomUUID();
@@ -73,7 +61,7 @@ exports.handler = async (event) => {
             };
         }
 
-        if (method === 'GET' && path === '/raffle-runs') {
+        if (method === 'GET' && path === '/runs') {
             // Get all runs for user
             const result = await docClient.send(new QueryCommand({
                 TableName: TABLE_NAME,
@@ -90,9 +78,9 @@ exports.handler = async (event) => {
             };
         }
 
-        if (method === 'GET' && path === '/raffle-runs/{runId}') {
+        if (method === 'GET' && path.startsWith('/runs/')) {
             // Get specific run
-            const runId = event.pathParameters.runId;
+            const runId = event.pathParameters?.runId;
             const result = await docClient.send(new GetCommand({
                 TableName: TABLE_NAME,
                 Key: { userId, runId },

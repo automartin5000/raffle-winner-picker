@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
@@ -8,7 +6,8 @@ const path = require('path');
 const { 
   resolveDeploymentEnvironment, 
   getEnvironmentConfig, 
-  getFrontendUrl
+  getFrontendUrl,
+  DEPLOYMENT_ENVIRONMENTS
 } = require('../lib/environments.cjs');
 
 /**
@@ -27,11 +26,11 @@ const {
  * - AUTH0_SPA_CALLBACK_URL: Manual override for callback URL (optional)
  * 
  * Usage:
- * node scripts/manage-auth0-client.js create
- * node scripts/manage-auth0-client.js read <client_id>
- * node scripts/manage-auth0-client.js update <client_id>
- * node scripts/manage-auth0-client.js delete <client_id>
- * node scripts/manage-auth0-client.js ensure-client
+ * bunx scripts/manage-auth0-client.js create
+ * bunx scripts/manage-auth0-client.js read <client_id>
+ * bunx scripts/manage-auth0-client.js update <client_id>
+ * bunx scripts/manage-auth0-client.js delete <client_id>
+ * bunx scripts/manage-auth0-client.js ensure-client
  */
 
 class Auth0ClientManager {
@@ -39,7 +38,7 @@ class Auth0ClientManager {
     this.domain = process.env.AUTH0_DOMAIN;
     this.clientId = process.env.AUTH0_CLIENT_ID;
     this.clientSecret = process.env.AUTH0_CLIENT_SECRET;
-    this.deployEnv = this.getStaticEnvironment();
+    this.deployEnv = process.env.DEPLOY_ENV;
     this.callbackUrl = this.getCallbackUrl();
     
     if (!this.domain || !this.clientId || !this.clientSecret) {
@@ -94,8 +93,12 @@ class Auth0ClientManager {
    * Get the standardized app name and description from shared config
    */
   getAppName() {
-    const config = getEnvironmentConfig(this.deployEnv);
-    return config.auth0ClientName;
+      const config = getEnvironmentConfig(this.deployEnv);
+      if (!Object.keys(DEPLOYMENT_ENVIRONMENTS).includes(this.deployEnv)) {
+          return `${config.auth0ClientName} - (${this.deployEnv})`;
+      } else {
+          return config.auth0ClientName;
+      }
   }
 
   /**
@@ -376,7 +379,7 @@ class Auth0ClientManager {
    * Write client ID and derived URLs to environment file
    */
   writeClientIdToEnv(clientId) {
-    const envFile = path.join(process.cwd(), '.env.local');
+    const envFile = path.join(process.cwd(), '.env');
     let envContent = '';
     
     // Read existing env file if it exists
@@ -399,24 +402,12 @@ class Auth0ClientManager {
     };
     
     // Update or add the environment-specific client ID
-    const envVarName = `VITE_AUTH0_CLIENT_ID_${this.deployEnv.toUpperCase()}`;
+    const envVarName = `VITE_SPA_AUTH0_CLIENT_ID_${this.deployEnv.toUpperCase()}`;
     updateEnvVar(envVarName, clientId);
     
     // Also add the current environment's client ID as the default
-    updateEnvVar('VITE_AUTH0_CLIENT_ID', clientId);
-    
-    // Add environment metadata for Vite
-    updateEnvVar('VITE_DEPLOY_ENV', this.deployEnv);
-    updateEnvVar('VITE_DEPLOY_EPHEMERAL', process.env.DEPLOY_EPHEMERAL || 'false');
-    
-    // Add hosted zone environment variables for frontend API URL derivation
-    if (process.env.PROD_HOSTED_ZONE) {
-      updateEnvVar('VITE_PROD_HOSTED_ZONE', process.env.PROD_HOSTED_ZONE);
-    }
-    if (process.env.NONPROD_HOSTED_ZONE) {
-      updateEnvVar('VITE_NONPROD_HOSTED_ZONE', process.env.NONPROD_HOSTED_ZONE);
-    }
-    
+    updateEnvVar('VITE_SPA_AUTH0_CLIENT_ID', clientId);
+
     fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
     console.log(`📝 Updated ${envFile} with client ID: ${clientId} (env: ${this.deployEnv})`);
   }
@@ -445,7 +436,7 @@ async function main() {
   const command = args[0];
   
   if (!command) {
-    console.log('Usage: node scripts/manage-auth0-client.cjs <command> [options]');
+    console.log('Usage: bunx scripts/manage-auth0-client.cjs <command> [options]');
     console.log('Commands:');
     console.log('  create                    Create a new SPA client');
     console.log('  read <client_id>         Read client information');
