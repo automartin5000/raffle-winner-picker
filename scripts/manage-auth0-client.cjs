@@ -8,7 +8,7 @@ const {
   getEnvironmentConfig, 
   getFrontendUrl,
   DEPLOYMENT_ENVIRONMENTS
-} = require('../lib/environments.cjs');
+} = require(path.join(__dirname, '../lib/environments.cjs'));
 
 /**
  * Auth0 SPA Client Management Script
