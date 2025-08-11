@@ -8,7 +8,7 @@ const {
   getEnvironmentConfig, 
   getFrontendUrl,
   DEPLOYMENT_ENVIRONMENTS
-} = require(path.resolve(process.cwd(), 'lib/environments.cjs'));
+} = require(path.resolve(process.cwd(), 'shared/environments.js'));
 
 /**
  * Auth0 SPA Client Management Script
