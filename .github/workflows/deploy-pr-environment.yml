@@ -60,22 +60,22 @@ jobs:
         id: get-urls
         run: |-
           # Extract API URL
-          API_URL=$(cat outputs.json | jq -r '.[] | select(.OutputKey == "ApiCustomDomainUrl") | .OutputValue')
+          API_URL=$(cat outputs.json | jq -r '.[]["ApiCustomDomainUrl"] // empty' | head -1)
           if [ -z "$API_URL" ] || [ "$API_URL" == "null" ]; then
             echo "❌ Failed to extract API URL from CDK outputs"
             echo "Available outputs:"
-            cat outputs.json | jq -r '.[].OutputKey'
+            cat outputs.json | jq -r 'to_entries[] | "\(.key): \(.value | keys_unsorted | join(", "))"'
             exit 1
           fi
           echo "✅ Extracted API URL from outputs: $API_URL"
           echo "API_BASE_URL=$API_URL" >> $GITHUB_OUTPUT
 
           # Extract Frontend URL
-          FRONTEND_URL=$(cat outputs.json | jq -r '.[] | select(.OutputKey == "WebsiteUrl") | .OutputValue')
+          FRONTEND_URL=$(cat outputs.json | jq -r '.[]["WebsiteUrl"] // empty' | head -1)
           if [ -z "$FRONTEND_URL" ] || [ "$FRONTEND_URL" == "null" ]; then
             echo "❌ Failed to extract Frontend URL from CDK outputs"
             echo "Available outputs:"
-            cat outputs.json | jq -r '.[].OutputKey'
+            cat outputs.json | jq -r 'to_entries[] | "\(.key): \(.value | keys_unsorted | join(", "))"'
             exit 1
           fi
           echo "✅ Extracted Frontend URL from outputs: $FRONTEND_URL"
