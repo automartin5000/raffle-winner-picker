@@ -728,6 +728,26 @@ class Auth0ClientManager {
    */
   async grantClientApiAccess(clientId, apiIdentifier) {
     try {
+      // First, try to find existing grants for this client
+      const existingGrants = await this.makeRequest('GET', `/client-grants?client_id=${clientId}`);
+      
+      // Check if there's already a grant for this API
+      const existingGrant = existingGrants.find(grant => grant.audience === apiIdentifier);
+      
+      if (existingGrant) {
+        console.log(`ℹ️  Client ${clientId} already has access to API ${apiIdentifier}`);
+        
+        // Update existing grant to ensure scopes are current
+        const updateData = {
+          scope: ['read:raffles', 'write:raffles']
+        };
+        
+        await this.makeRequest('PATCH', `/client-grants/${existingGrant.id}`, updateData);
+        console.log(`✅ Updated API access scopes for client ${clientId}`);
+        return;
+      }
+      
+      // If no existing grant, create a new one
       const grantData = {
         client_id: clientId,
         audience: apiIdentifier,
