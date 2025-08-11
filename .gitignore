@@ -56,10 +56,13 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-!.env.test
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 cdk.context.json
+playwright-report
+playwright.config.ts.timestamp-*
+playwright.config.js.timestamp-*
+test-results
 !/.vscode/settings.json
 !/.github/workflows/deploy-pr-environment.yml
 !/.github/workflows/prod-deploy.yml

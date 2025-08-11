@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { Auth0Client } from '@auth0/auth0-spa-js';
 import { writable } from 'svelte/store';
+import { getAuth0ClientId } from './constants';
 
 interface User {
   sub: string;
@@ -19,7 +20,7 @@ export async function initAuth0() {
   try {
     auth0 = new Auth0Client({
       domain: import.meta.env.VITE_AUTH0_DOMAIN || '',
-      clientId: import.meta.env.VITE_AUTH0_CLIENT_ID || '',
+      clientId: getAuth0ClientId(),
       authorizationParams: {
         redirect_uri: window.location.origin,
         audience: import.meta.env.VITE_AUTH0_AUDIENCE || '',

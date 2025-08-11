@@ -2,6 +2,7 @@ import { awscdk } from "projen";
 import { BuildWorkflow } from "projen/lib/build";
 import { GitHub, GithubWorkflow } from "projen/lib/github";
 import { JobPermission, JobStepOutput } from "projen/lib/github/workflows-model";
+import { BUILD_CONSTANTS } from "./constants";
 
 const RUNNER_TYPE = ["ubuntu-latest"];
 
@@ -66,11 +67,16 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         cancelInProgress: false,
     },
     env: {
-      AWS_CDK_ENV_NAME: "pr${{ github.event.number }}",
+      DEPLOY_ENV: "pr${{ github.event.number }}", // Unified deployment environment identifier
       NONPROD_AWS_ACCOUNT_ID: '${{ secrets.NONPROD_AWS_ACCOUNT_ID }}',
       PROD_AWS_ACCOUNT_ID: '${{ secrets.PROD_AWS_ACCOUNT_ID }}',
       NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
       PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+      // Auth0 environment variables for client management
+      AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+      AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
+      AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
+      DEPLOY_EPHEMERAL: 'true', // Indicate this is an ephemeral PR deployment
     }
   });
 
@@ -117,13 +123,13 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           run: [
             'echo "Stack Changes:" > cdk-diff.txt',
             'echo "" >> cdk-diff.txt',
-            'bunx cdk diff "prod/*" --app cdk.out "$AWS_CDK_ENV_NAME/*" > cdk-diff-raw.txt 2>&1 || true',
+            'bunx cdk diff "prod/*" --app cdk.out "$DEPLOY_ENV/*" > cdk-diff-raw.txt 2>&1 || true',
             '# Obfuscate sensitive information',
             'cat cdk-diff-raw.txt | sed -E "s/[0-9]{12}/XXXX-ACCOUNT-ID-XXXX/g" | ' +
             'sed -E "s/${{ secrets.NONPROD_AWS_ACCOUNT_ID }}/XXXX-NONPROD-ACCOUNT-ID-XXXX/g" | ' +
             'sed -E "s/${{ secrets.PROD_AWS_ACCOUNT_ID }}/XXXX-PROD-ACCOUNT-ID-XXXX/g" | ' +
-            'sed -E "s/${{ secrets.NONPROD_HOSTED_ZONE }}/nonprod.example.com/g" | ' +
-            'sed -E "s/${{ secrets.PROD_HOSTED_ZONE }}/example.com/g" > cdk-diff.txt',
+            `sed -E "s/\\$\\{\\{ secrets.NONPROD_HOSTED_ZONE \\}\\}/${BUILD_CONSTANTS.EXAMPLE_DOMAINS.NONPROD}/g" | ` +
+            `sed -E "s/\\$\\{\\{ secrets.PROD_HOSTED_ZONE \\}\\}/${BUILD_CONSTANTS.EXAMPLE_DOMAINS.PROD}/g" > cdk-diff.txt`,
             'echo "CDK_DIFF_CONTENT<<EOF" >> $GITHUB_OUTPUT',
             'cat cdk-diff.txt >> $GITHUB_OUTPUT',
             'echo "EOF" >> $GITHUB_OUTPUT',
@@ -133,14 +139,33 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         {
           name: "Deploy PR environment",
           id: "deploy",
-          run: "bunx projen deploy \"$AWS_CDK_ENV_NAME/*\" --require-approval never",
+          run: 'bunx projen deploy "$DEPLOY_ENV/*" --require-approval never --outputs-file outputs.json',
         },
         {
-          name: "Get CloudFront URL",
-          id: "get-url",
+          name: "Extract deployment URLs",
+          id: "get-urls",
           run: [
-            'URL=$(cdk --app cdk.out --outputs-file outputs.json deploy --require-approval never 2>/dev/null && cat outputs.json | jq -r \'.[] | select(.CloudFrontUrl) | .CloudFrontUrl\' || echo "Not available yet")',
-            'echo "CLOUDFRONT_URL=$URL" >> $GITHUB_OUTPUT',
+            '# Extract API URL',
+            'API_URL=$(cat outputs.json | jq -r \'.[]["ApiCustomDomainUrl"] // empty\' | head -1)',
+            'if [ -z "$API_URL" ] || [ "$API_URL" == "null" ]; then',
+            '  echo "❌ Failed to extract API URL from CDK outputs"',
+            '  echo "Available outputs:"',
+            '  cat outputs.json | jq -r \'to_entries[] | "\\(.key): \\(.value | keys_unsorted | join(", "))"\'',
+            '  exit 1',
+            'fi',
+            'echo "✅ Extracted API URL from outputs: $API_URL"',
+            'echo "API_BASE_URL=$API_URL" >> $GITHUB_OUTPUT',
+            '',
+            '# Extract Frontend URL',
+            'FRONTEND_URL=$(cat outputs.json | jq -r \'.[]["WebsiteUrl"] // empty\' | head -1)',
+            'if [ -z "$FRONTEND_URL" ] || [ "$FRONTEND_URL" == "null" ]; then',
+            '  echo "❌ Failed to extract Frontend URL from CDK outputs"',
+            '  echo "Available outputs:"',
+            '  cat outputs.json | jq -r \'to_entries[] | "\\(.key): \\(.value | keys_unsorted | join(", "))"\'',
+            '  exit 1',
+            'fi',
+            'echo "✅ Extracted Frontend URL from outputs: $FRONTEND_URL"',
+            'echo "FRONTEND_URL=$FRONTEND_URL" >> $GITHUB_OUTPUT',
           ].join("\n"),
         },
         {
@@ -154,6 +179,39 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           },
         },
         {
+          name: "Setup Integration Testing",
+          id: "setup-integration-testing",
+          run: [
+            'echo "Setting up integration testing environment..."',
+            'bun run scripts/manage-auth0-client.js setup-integration-testing'
+          ].join("\n"),
+        },
+        {
+          name: "Run Integration Tests",
+          id: "integration-tests",
+          env: {
+            API_BASE_URL: "${{ steps.get-urls.outputs.API_BASE_URL }}",
+            AUTH0_DOMAIN: "${{ secrets.AUTH0_DOMAIN }}",
+          },
+          run: [
+            'echo "Running integration tests against PR environment..."',
+            'echo "API URL: $API_BASE_URL"',
+            'echo "Auth0 Domain: $AUTH0_DOMAIN"',
+            'bun run test:integration'
+          ].join("\n"),
+        },
+        {
+          name: "Run E2E Tests", 
+          id: "e2e-tests",
+          run: [
+            'echo "Running E2E tests against PR environment..."',
+            'echo "Frontend URL: ${{ steps.get-urls.outputs.FRONTEND_URL }}"',
+            'export BASE_URL="${{ steps.get-urls.outputs.FRONTEND_URL }}"',
+            'bunx playwright install --with-deps chromium',
+            'bun run test:e2e --project=chromium'
+          ].join("\n"),
+        },
+        {
           name: "Create or update comment",
           uses: "peter-evans/create-or-update-comment@v4",
           with: {
@@ -163,8 +221,13 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
             body: [
               "## 🚀 PR Environment Status",
               "",
-              "**Environment:** `pr${{ github.event.number }}`",
+              "**Environment:** `${{ env.DEPLOY_ENV }}`",
               "**Status:** ${{ steps.deploy.outcome == 'success' && '✅ Deployed' || '❌ Failed' }}",
+              "**URL:** ${{ steps.get-urls.outputs.FRONTEND_URL }}",
+              "",
+              "### 🧪 Test Results",
+              "- **Integration Tests:** ${{ steps.integration-tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }}",
+              "- **E2E Tests:** ${{ steps.e2e-tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }}",
               "",
               "### 📋 CDK Prod Diff",
               "<details>",
@@ -201,6 +264,14 @@ const addProductionDeployWorkflow = (github: GitHub) => {
       runsOn: RUNNER_TYPE,
       if: "github.event.pull_request.merged == true",
       environment: "production",
+      env: {
+        // Auth0 environment variables for client management
+        AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+        AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
+        AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
+        PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        DEPLOY_ENV: 'prod', // Set production environment for Auth0 client creation
+      },
       permissions: {
         contents: JobPermission.READ,
         idToken: JobPermission.WRITE,
@@ -308,7 +379,7 @@ const addProductionDeployWorkflow = (github: GitHub) => {
           uses: "aws-actions/configure-aws-credentials@v4",
           with: {
             "aws-region": "us-east-1",
-            audience: "sts.amazonaws.com",
+            audience: BUILD_CONSTANTS.AWS_STS_AUDIENCE,
             "role-to-assume": "arn:aws:iam::${{ secrets.PROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer",
           },
         },
@@ -326,8 +397,12 @@ const addProductionDeployWorkflow = (github: GitHub) => {
         { name: "Setup Bun", uses: "oven-sh/setup-bun@v2" },
         { name: "Install dependencies", run: "bun install --frozen-lockfile" },
         {
+          name: "Setup Auth0 Production Client", 
+          run: "bun run setup-auth0-client",
+        },
+        {
           name: "Deploy to Production",
-          run: "bun projen deploy 'prod/*' --app cdk.out --require-approval never",
+          run: 'bun projen deploy "$DEPLOY_ENV/*" --app cdk.out --require-approval never',
         },
         {
           name: "Get Production URL",
@@ -497,6 +572,14 @@ const addManualProductionDeployWorkflow = (github: GitHub) => {
       runsOn: RUNNER_TYPE,
       needs: ["find_artifact"],
       environment: "production",
+      env: {
+        // Auth0 environment variables for client management
+        AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+        AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
+        AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
+        PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        DEPLOY_ENV: 'prod', // Set production environment for Auth0 client creation
+      },
       permissions: {
         contents: JobPermission.READ,
         idToken: JobPermission.WRITE,
@@ -515,7 +598,7 @@ const addManualProductionDeployWorkflow = (github: GitHub) => {
           uses: "aws-actions/configure-aws-credentials@v4",
           with: {
             "aws-region": "us-east-1",
-            audience: "sts.amazonaws.com",
+            audience: BUILD_CONSTANTS.AWS_STS_AUDIENCE,
             "role-to-assume": "arn:aws:iam::${{ secrets.PROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer",
           },
         },
@@ -531,6 +614,10 @@ const addManualProductionDeployWorkflow = (github: GitHub) => {
         },
         { name: "Setup Bun", uses: "oven-sh/setup-bun@v2" },
         { name: "Install dependencies", run: "bun install --frozen-lockfile" },
+        {
+          name: "Setup Auth0 Production Client",
+          run: "bun run setup-auth0-client",
+        },
         {
           name: "Deploy to Production",
           run: "bunx cdk deploy 'prod/*' --app cdk.out --require-approval never",
@@ -572,7 +659,7 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
         idToken: JobPermission.WRITE,
       },
       env: {
-        AWS_CDK_ENV_NAME: "pr${{ github.event.number }}",
+        DEPLOY_ENV: "pr${{ github.event.number }}", // Unified deployment environment identifier
         NONPROD_AWS_ACCOUNT_ID: '${{ secrets.NONPROD_AWS_ACCOUNT_ID }}',
         PROD_AWS_ACCOUNT_ID: '${{ secrets.PROD_AWS_ACCOUNT_ID }}',
         NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
@@ -585,7 +672,7 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
           uses: "aws-actions/configure-aws-credentials@v4",
           with: {
             "aws-region": "us-east-1",
-            audience: "sts.amazonaws.com",
+            audience: BUILD_CONSTANTS.AWS_STS_AUDIENCE,
             "role-to-assume": "arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer",
           },
         },
@@ -603,7 +690,7 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
         },
         {
           name: "Destroy PR environment",
-          run: "bunx projen destroy \"$AWS_CDK_ENV_NAME/*\" --force",
+          run: "bunx projen destroy \"$DEPLOY_ENV/*\" --force",
         },
       ],
     },

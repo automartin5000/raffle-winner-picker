@@ -1,6 +1,10 @@
 {
   "dependencies": [
     {
+      "name": "@playwright/test",
+      "type": "build"
+    },
+    {
       "name": "@stylistic/eslint-plugin",
       "version": "^2",
       "type": "build"
@@ -50,6 +54,10 @@
     {
       "name": "aws-cdk",
       "version": "^2.1022.0",
+      "type": "build"
+    },
+    {
+      "name": "dotenv",
       "type": "build"
     },
     {
