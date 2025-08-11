@@ -152,13 +152,13 @@ project.addFields({
 // Auth0 client management tasks
 const getAuth0ClientTask = project.addTask('get-auth0-client', {
   description: 'Get Auth0 SPA client ID for build (no updates)',
-  exec: 'bun run scripts/manage-auth0-client.cjs get-for-build',
+  exec: 'bun run scripts/manage-auth0-client.js get-for-build',
   condition: '[ -n "$DEPLOY_ENV" ]',
 });
 
 const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
   description: 'Setup/update Auth0 SPA client for deployment',
-  exec: 'bun run scripts/manage-auth0-client.cjs ensure-client',
+  exec: 'bun run scripts/manage-auth0-client.js ensure-client',
   condition: '[ -n "$DEPLOY_ENV" ]',
 });
 
