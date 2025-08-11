@@ -139,14 +139,33 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         {
           name: "Deploy PR environment",
           id: "deploy",
-          run: "bunx projen deploy \"$DEPLOY_ENV/*\" --require-approval never",
+          run: 'bunx projen deploy "$DEPLOY_ENV/*" --require-approval never --outputs-file outputs.json',
         },
         {
-          name: "Get CloudFront URL",
-          id: "get-url",
+          name: "Extract deployment URLs",
+          id: "get-urls",
           run: [
-            'URL=$(cdk --app cdk.out --outputs-file outputs.json deploy --require-approval never 2>/dev/null && cat outputs.json | jq -r \'.[] | select(.CloudFrontUrl) | .CloudFrontUrl\' || echo "Not available yet")',
-            'echo "CLOUDFRONT_URL=$URL" >> $GITHUB_OUTPUT',
+            '# Extract API URL',
+            'API_URL=$(cat outputs.json | jq -r \'.[] | select(.OutputKey == "ApiCustomDomainUrl") | .OutputValue\')',
+            'if [ -z "$API_URL" ] || [ "$API_URL" == "null" ]; then',
+            '  echo "❌ Failed to extract API URL from CDK outputs"',
+            '  echo "Available outputs:"',
+            '  cat outputs.json | jq -r \'.[].OutputKey\'',
+            '  exit 1',
+            'fi',
+            'echo "✅ Extracted API URL from outputs: $API_URL"',
+            'echo "API_BASE_URL=$API_URL" >> $GITHUB_OUTPUT',
+            '',
+            '# Extract Frontend URL',
+            'FRONTEND_URL=$(cat outputs.json | jq -r \'.[] | select(.OutputKey == "WebsiteUrl") | .OutputValue\')',
+            'if [ -z "$FRONTEND_URL" ] || [ "$FRONTEND_URL" == "null" ]; then',
+            '  echo "❌ Failed to extract Frontend URL from CDK outputs"',
+            '  echo "Available outputs:"',
+            '  cat outputs.json | jq -r \'.[].OutputKey\'',
+            '  exit 1',
+            'fi',
+            'echo "✅ Extracted Frontend URL from outputs: $FRONTEND_URL"',
+            'echo "FRONTEND_URL=$FRONTEND_URL" >> $GITHUB_OUTPUT',
           ].join("\n"),
         },
         {
@@ -160,25 +179,33 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           },
         },
         {
+          name: "Setup Integration Testing",
+          id: "setup-integration-testing",
+          run: [
+            'echo "Setting up integration testing environment..."',
+            'bun run scripts/manage-auth0-client.js setup-integration-testing'
+          ].join("\n"),
+        },
+        {
           name: "Run Integration Tests",
           id: "integration-tests",
           run: [
             'echo "Running integration tests against PR environment..."',
-            'export API_BASE_URL="https://${{ env.DEPLOY_ENV }}.api.winners.dev.rafflewinnerpicker.com"',
+            'echo "API URL: ${{ steps.get-urls.outputs.API_BASE_URL }}"',
+            'export API_BASE_URL="${{ steps.get-urls.outputs.API_BASE_URL }}"',
             'bun run test:integration'
           ].join("\n"),
-          continueOnError: true,
         },
         {
           name: "Run E2E Tests", 
           id: "e2e-tests",
           run: [
             'echo "Running E2E tests against PR environment..."',
-            'export BASE_URL="https://${{ env.DEPLOY_ENV }}.dev.rafflewinnerpicker.com"',
+            'echo "Frontend URL: ${{ steps.get-urls.outputs.FRONTEND_URL }}"',
+            'export BASE_URL="${{ steps.get-urls.outputs.FRONTEND_URL }}"',
             'bunx playwright install --with-deps chromium',
             'bun run test:e2e --project=chromium'
           ].join("\n"),
-          continueOnError: true,
         },
         {
           name: "Create or update comment",
@@ -192,7 +219,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
               "",
               "**Environment:** `${{ env.DEPLOY_ENV }}`",
               "**Status:** ${{ steps.deploy.outcome == 'success' && '✅ Deployed' || '❌ Failed' }}",
-              "**URL:** https://${{ env.DEPLOY_ENV }}.dev.rafflewinnerpicker.com",
+              "**URL:** ${{ steps.get-urls.outputs.FRONTEND_URL }}",
               "",
               "### 🧪 Test Results",
               "- **Integration Tests:** ${{ steps.integration-tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }}",

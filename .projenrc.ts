@@ -112,6 +112,8 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     'svelte-preprocess',
     'vite-plugin-svelte',
     '@types/uuid',
+    '@playwright/test',
+    'dotenv',
   ],
 });
 project.gitignore.exclude(

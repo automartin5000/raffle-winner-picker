@@ -7,6 +7,7 @@ const {
   resolveDeploymentEnvironment, 
   getEnvironmentConfig, 
   getFrontendUrl,
+  getApiBaseUrl,
   DEPLOYMENT_ENVIRONMENTS
 } = require(path.resolve(process.cwd(), 'shared/environments.js'));
 
@@ -31,6 +32,9 @@ const {
  * bunx scripts/manage-auth0-client.js update <client_id>
  * bunx scripts/manage-auth0-client.js delete <client_id>
  * bunx scripts/manage-auth0-client.js ensure-client
+ * bunx scripts/manage-auth0-client.js ensure-api
+ * bunx scripts/manage-auth0-client.js ensure-test-client
+ * bunx scripts/manage-auth0-client.js setup-integration-testing
  */
 
 class Auth0ClientManager {
@@ -478,6 +482,345 @@ class Auth0ClientManager {
     fs.writeFileSync(envFile, lines.join('\n') + '\n');
     console.log(`📝 Removed client ID ${clientId} from ${envFile}`);
   }
+
+  /**
+   * Create or update Auth0 API resource
+   */
+  async ensureApi() {
+    const apiIdentifier = this.getApiIdentifier();
+    const apiName = this.getApiName();
+    
+    console.log(`🔍 Looking for existing Auth0 API: ${apiIdentifier}`);
+    
+    try {
+      // Check if API already exists
+      const existingApi = await this.makeRequest('GET', `/resource-servers/${encodeURIComponent(apiIdentifier)}`);
+      console.log(`📝 Found existing API: ${existingApi.name}`);
+      
+      // Update the API
+      const updatedApi = await this.updateApi(apiIdentifier);
+      return updatedApi;
+    } catch (error) {
+      if (error.message.includes('404')) {
+        console.log('🆕 No existing API found, creating new one...');
+        return await this.createApi();
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Create a new Auth0 API resource
+   */
+  async createApi() {
+    const apiIdentifier = this.getApiIdentifier();
+    const apiName = this.getApiName();
+    
+    const apiData = {
+      name: apiName,
+      identifier: apiIdentifier,
+      scopes: [
+        {
+          value: 'read:raffles',
+          description: 'Read raffle runs and entries'
+        },
+        {
+          value: 'write:raffles',
+          description: 'Create new raffle runs'
+        }
+      ],
+      signing_alg: 'RS256',
+      token_lifetime: 86400,
+      token_lifetime_for_web: 7200,
+      skip_consent_for_verifiable_first_party_clients: true
+    };
+
+    try {
+      const api = await this.makeRequest('POST', '/resource-servers', apiData);
+      console.log('✅ Successfully created Auth0 API:');
+      console.log(`   API ID: ${api.id}`);
+      console.log(`   Identifier: ${api.identifier}`);
+      console.log(`   Name: ${api.name}`);
+      return api;
+    } catch (error) {
+      console.error('❌ Failed to create Auth0 API:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Update existing Auth0 API resource
+   */
+  async updateApi(apiIdentifier) {
+    const apiName = this.getApiName();
+    
+    const updates = {
+      name: apiName,
+      scopes: [
+        {
+          value: 'read:raffles',
+          description: 'Read raffle runs and entries'
+        },
+        {
+          value: 'write:raffles',
+          description: 'Create new raffle runs'
+        }
+      ],
+      token_lifetime: 86400,
+      token_lifetime_for_web: 7200
+    };
+
+    try {
+      const api = await this.makeRequest('PATCH', `/resource-servers/${encodeURIComponent(apiIdentifier)}`, updates);
+      console.log('✅ Successfully updated Auth0 API:');
+      console.log(`   Identifier: ${api.identifier}`);
+      console.log(`   Name: ${api.name}`);
+      return api;
+    } catch (error) {
+      console.error('❌ Failed to update Auth0 API:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Get API identifier based on environment
+   */
+  getApiIdentifier() {
+    const staticEnv = this.getStaticEnvironment();
+    const apiBaseUrl = getApiBaseUrl({
+      deploymentEnv: staticEnv,
+      hostedZone: staticEnv === 'prod' ? process.env.PROD_HOSTED_ZONE : process.env.NONPROD_HOSTED_ZONE,
+      envName: this.deployEnv // Use actual deployment environment, not static environment
+    });
+    
+    if (apiBaseUrl && !apiBaseUrl.includes('localhost')) {
+      return apiBaseUrl;
+    }
+    
+    // Fallback for localhost/testing - use actual deployment environment
+    return `https://${this.deployEnv}.api.winners.dev.rafflewinnerpicker.com`;
+  }
+
+  /**
+   * Get API name based on environment
+   */
+  getApiName() {
+    const config = getEnvironmentConfig(this.deployEnv);
+    return `Raffle Winner Picker API (${config.name})`;
+  }
+
+  /**
+   * Create or update Machine-to-Machine client for integration testing
+   */
+  async ensureTestClient() {
+    const testClientName = this.getTestClientName();
+    
+    console.log(`🔍 Looking for existing Auth0 test client: ${testClientName}`);
+    
+    const existingClient = await this.findTestClient();
+    
+    if (existingClient) {
+      console.log(`📝 Found existing test client: ${existingClient.client_id}`);
+      const updatedClient = await this.updateTestClient(existingClient.client_id);
+      this.writeTestClientToEnv(updatedClient.client_id, updatedClient.client_secret);
+      return updatedClient;
+    } else {
+      console.log('🆕 No existing test client found, creating new one...');
+      return await this.createTestClient();
+    }
+  }
+
+  /**
+   * Create a new Machine-to-Machine client for integration testing
+   */
+  async createTestClient() {
+    const testClientName = this.getTestClientName();
+    const apiIdentifier = this.getApiIdentifier();
+    
+    const clientData = {
+      name: testClientName,
+      description: `Integration testing client for ${this.getAppDescription()}`,
+      app_type: 'non_interactive', // Machine-to-Machine
+      token_endpoint_auth_method: 'client_secret_post',
+      grant_types: ['client_credentials'],
+      jwt_configuration: {
+        alg: 'RS256'
+      },
+      client_metadata: {
+        environment: this.deployEnv,
+        purpose: 'integration_testing'
+      }
+    };
+
+    try {
+      const client = await this.makeRequest('POST', '/clients', clientData);
+      console.log('✅ Successfully created Auth0 test client:');
+      console.log(`   Client ID: ${client.client_id}`);
+      console.log(`   Name: ${client.name}`);
+      
+      // Grant access to the API
+      await this.grantClientApiAccess(client.client_id, apiIdentifier);
+      
+      // Write credentials to .env file
+      this.writeTestClientToEnv(client.client_id, client.client_secret);
+      
+      return client;
+    } catch (error) {
+      console.error('❌ Failed to create Auth0 test client:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Update existing test client
+   */
+  async updateTestClient(clientId) {
+    const testClientName = this.getTestClientName();
+    const apiIdentifier = this.getApiIdentifier();
+    
+    const updates = {
+      name: testClientName,
+      description: `Integration testing client for ${this.getAppDescription()}`,
+      client_metadata: {
+        environment: this.deployEnv,
+        purpose: 'integration_testing'
+      }
+    };
+
+    try {
+      const client = await this.makeRequest('PATCH', `/clients/${clientId}`, updates);
+      
+      // Ensure API access is granted
+      await this.grantClientApiAccess(clientId, apiIdentifier);
+      
+      console.log('✅ Successfully updated Auth0 test client:');
+      console.log(`   Client ID: ${client.client_id}`);
+      console.log(`   Name: ${client.name}`);
+      return client;
+    } catch (error) {
+      console.error('❌ Failed to update Auth0 test client:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Find existing test client by name pattern
+   */
+  async findTestClient() {
+    try {
+      const clients = await this.makeRequest('GET', '/clients?app_type=non_interactive');
+      const testClientName = this.getTestClientName();
+      
+      return clients.find(client => 
+        client.name === testClientName ||
+        (client.client_metadata?.purpose === 'integration_testing' && 
+         client.client_metadata?.environment === this.deployEnv)
+      );
+    } catch (error) {
+      console.error('❌ Failed to search for existing test clients:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Grant client access to API
+   */
+  async grantClientApiAccess(clientId, apiIdentifier) {
+    try {
+      const grantData = {
+        client_id: clientId,
+        audience: apiIdentifier,
+        scope: ['read:raffles', 'write:raffles']
+      };
+      
+      await this.makeRequest('POST', '/client-grants', grantData);
+      console.log(`✅ Granted API access to client ${clientId}`);
+    } catch (error) {
+      if (error.message.includes('409') || error.message.includes('already exists')) {
+        console.log(`ℹ️  Client ${clientId} already has API access`);
+      } else {
+        console.error('❌ Failed to grant API access:', error.message);
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Get test client name
+   */
+  getTestClientName() {
+    const config = getEnvironmentConfig(this.deployEnv);
+    return `Raffle Winner Picker Integration Tests (${config.name})`;
+  }
+
+  /**
+   * Write test client credentials to .env file
+   */
+  writeTestClientToEnv(clientId, clientSecret) {
+    const envFile = path.join(process.cwd(), '.env');
+    let envContent = '';
+    
+    // Read existing env file if it exists
+    if (fs.existsSync(envFile)) {
+      envContent = fs.readFileSync(envFile, 'utf8');
+    }
+    
+    const lines = envContent.split('\n');
+    
+    // Helper function to update or add environment variable
+    const updateEnvVar = (varName, value) => {
+      const envVarLine = `${varName}=${value}`;
+      const existingLineIndex = lines.findIndex(line => line.startsWith(`${varName}=`));
+      
+      if (existingLineIndex >= 0) {
+        lines[existingLineIndex] = envVarLine;
+      } else {
+        lines.push(envVarLine);
+      }
+    };
+    
+    // Update or add test client credentials
+    updateEnvVar(`AUTH0_TEST_CLIENT_ID_${this.deployEnv.toUpperCase()}`, clientId);
+    updateEnvVar(`AUTH0_TEST_CLIENT_SECRET_${this.deployEnv.toUpperCase()}`, clientSecret);
+    updateEnvVar('AUTH0_TEST_CLIENT_ID', clientId);
+    updateEnvVar('AUTH0_TEST_CLIENT_SECRET', clientSecret);
+    updateEnvVar('AUTH0_TEST_AUDIENCE', this.getApiIdentifier());
+
+    fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
+    console.log(`📝 Updated ${envFile} with test client credentials`);
+  }
+
+  /**
+   * Setup complete integration testing environment
+   */
+  async setupIntegrationTesting() {
+    console.log('🚀 Setting up complete integration testing environment...');
+    
+    try {
+      // 1. Ensure API exists
+      console.log('\n1️⃣ Setting up Auth0 API...');
+      await this.ensureApi();
+      
+      // 2. Ensure SPA client exists
+      console.log('\n2️⃣ Setting up SPA client...');
+      await this.ensureClient();
+      
+      // 3. Ensure test client exists
+      console.log('\n3️⃣ Setting up integration test client...');
+      await this.ensureTestClient();
+      
+      console.log('\n✅ Integration testing environment setup complete!');
+      console.log('📋 Next steps:');
+      console.log('   • Integration tests can now authenticate using client credentials flow');
+      console.log('   • Test credentials have been written to .env file');
+      console.log('   • Run integration tests with: bun run test:integration');
+      
+    } catch (error) {
+      console.error('❌ Failed to setup integration testing environment:', error.message);
+      throw error;
+    }
+  }
 }
 
 // CLI interface
@@ -494,6 +837,9 @@ async function main() {
     console.log('  delete <client_id>       Delete a client');
     console.log('  ensure-client            Create or update client as needed');
     console.log('  get-for-build            Get client ID for build (no updates)');
+    console.log('  ensure-api               Create or update Auth0 API');
+    console.log('  ensure-test-client       Create or update integration test client');
+    console.log('  setup-integration-testing Complete integration testing setup');
     process.exit(1);
   }
 
@@ -530,6 +876,15 @@ async function main() {
         break;
       case 'get-for-build':
         await manager.getClientForBuild();
+        break;
+      case 'ensure-api':
+        await manager.ensureApi();
+        break;
+      case 'ensure-test-client':
+        await manager.ensureTestClient();
+        break;
+      case 'setup-integration-testing':
+        await manager.setupIntegrationTesting();
         break;
       default:
         console.error(`❌ Unknown command: ${command}`);

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { getAuthHeaders } from '../utils/auth';
 
 const API_BASE_URL = process.env.API_BASE_URL || 'https://local.api.winners.dev.rafflewinnerpicker.com';
 
@@ -28,12 +29,10 @@ class ApiClient {
   }
 
   async post(endpoint: string, data: any): Promise<ApiResponse> {
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
+      headers: authHeaders,
       body: JSON.stringify(data),
     });
 
@@ -46,11 +45,10 @@ class ApiClient {
   }
 
   async get(endpoint: string): Promise<ApiResponse> {
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
+      headers: authHeaders,
     });
 
     return {
@@ -88,7 +86,7 @@ describe('Raffle API Integration Tests', () => {
 
       const response = await apiClient.post('/runs', raffleData);
 
-      expect(response.statusCode).toBe(200);
+      expect(response.statusCode).toBe(201);
       expect(response.body).toHaveProperty('runId');
       expect(response.body).toHaveProperty('winners');
       expect(response.body.winners).toHaveLength(2);
@@ -117,7 +115,7 @@ describe('Raffle API Integration Tests', () => {
 
       const response = await apiClient.post('/runs', raffleData);
 
-      expect(response.statusCode).toBe(200);
+      expect(response.statusCode).toBe(201);
       expect(response.body.winners).toHaveLength(1);
       expect(response.body.winners[0].name).toBe('Solo Participant');
       expect(response.body.winners[0].position).toBe(1);
@@ -195,7 +193,7 @@ describe('Raffle API Integration Tests', () => {
 
       const response = await apiClient.post('/runs', raffleData);
 
-      expect(response.statusCode).toBe(200);
+      expect(response.statusCode).toBe(201);
       expect(response.body.winners).toHaveLength(10);
       expect(response.body.participantsCount).toBe(1000);
 

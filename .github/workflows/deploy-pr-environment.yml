@@ -55,12 +55,31 @@ jobs:
           rm cdk-diff-raw.txt
       - name: Deploy PR environment
         id: deploy
-        run: bunx projen deploy "$DEPLOY_ENV/*" --require-approval never
-      - name: Get CloudFront URL
-        id: get-url
+        run: bunx projen deploy "$DEPLOY_ENV/*" --require-approval never --outputs-file outputs.json
+      - name: Extract deployment URLs
+        id: get-urls
         run: |-
-          URL=$(cdk --app cdk.out --outputs-file outputs.json deploy --require-approval never 2>/dev/null && cat outputs.json | jq -r '.[] | select(.CloudFrontUrl) | .CloudFrontUrl' || echo "Not available yet")
-          echo "CLOUDFRONT_URL=$URL" >> $GITHUB_OUTPUT
+          # Extract API URL
+          API_URL=$(cat outputs.json | jq -r '.[] | select(.OutputKey == "ApiCustomDomainUrl") | .OutputValue')
+          if [ -z "$API_URL" ] || [ "$API_URL" == "null" ]; then
+            echo "❌ Failed to extract API URL from CDK outputs"
+            echo "Available outputs:"
+            cat outputs.json | jq -r '.[].OutputKey'
+            exit 1
+          fi
+          echo "✅ Extracted API URL from outputs: $API_URL"
+          echo "API_BASE_URL=$API_URL" >> $GITHUB_OUTPUT
+
+          # Extract Frontend URL
+          FRONTEND_URL=$(cat outputs.json | jq -r '.[] | select(.OutputKey == "WebsiteUrl") | .OutputValue')
+          if [ -z "$FRONTEND_URL" ] || [ "$FRONTEND_URL" == "null" ]; then
+            echo "❌ Failed to extract Frontend URL from CDK outputs"
+            echo "Available outputs:"
+            cat outputs.json | jq -r '.[].OutputKey'
+            exit 1
+          fi
+          echo "✅ Extracted Frontend URL from outputs: $FRONTEND_URL"
+          echo "FRONTEND_URL=$FRONTEND_URL" >> $GITHUB_OUTPUT
       - name: Find existing comment
         id: find-comment
         uses: peter-evans/find-comment@v3
@@ -68,21 +87,26 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: github-actions[bot]
           body-includes: "## 🚀 PR Environment Status"
+      - name: Setup Integration Testing
+        id: setup-integration-testing
+        run: |-
+          echo "Setting up integration testing environment..."
+          bun run scripts/manage-auth0-client.js setup-integration-testing
       - name: Run Integration Tests
         id: integration-tests
         run: |-
           echo "Running integration tests against PR environment..."
-          export API_BASE_URL="https://${{ env.DEPLOY_ENV }}.api.winners.dev.rafflewinnerpicker.com"
+          echo "API URL: ${{ steps.get-urls.outputs.API_BASE_URL }}"
+          export API_BASE_URL="${{ steps.get-urls.outputs.API_BASE_URL }}"
           bun run test:integration
-        continue-on-error: true
       - name: Run E2E Tests
         id: e2e-tests
         run: |-
           echo "Running E2E tests against PR environment..."
-          export BASE_URL="https://${{ env.DEPLOY_ENV }}.dev.rafflewinnerpicker.com"
+          echo "Frontend URL: ${{ steps.get-urls.outputs.FRONTEND_URL }}"
+          export BASE_URL="${{ steps.get-urls.outputs.FRONTEND_URL }}"
           bunx playwright install --with-deps chromium
           bun run test:e2e --project=chromium
-        continue-on-error: true
       - name: Create or update comment
         uses: peter-evans/create-or-update-comment@v4
         with:
@@ -94,7 +118,7 @@ jobs:
 
             **Environment:** `${{ env.DEPLOY_ENV }}`
             **Status:** ${{ steps.deploy.outcome == 'success' && '✅ Deployed' || '❌ Failed' }}
-            **URL:** https://${{ env.DEPLOY_ENV }}.dev.rafflewinnerpicker.com
+            **URL:** ${{ steps.get-urls.outputs.FRONTEND_URL }}
 
             ### 🧪 Test Results
             - **Integration Tests:** ${{ steps.integration-tests.outcome == 'success' && '✅ Passed' || '❌ Failed' }}
