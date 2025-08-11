@@ -189,10 +189,14 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
         {
           name: "Run Integration Tests",
           id: "integration-tests",
+          env: {
+            API_BASE_URL: "${{ steps.get-urls.outputs.API_BASE_URL }}",
+            AUTH0_DOMAIN: "${{ secrets.AUTH0_DOMAIN }}",
+          },
           run: [
             'echo "Running integration tests against PR environment..."',
-            'echo "API URL: ${{ steps.get-urls.outputs.API_BASE_URL }}"',
-            'export API_BASE_URL="${{ steps.get-urls.outputs.API_BASE_URL }}"',
+            'echo "API URL: $API_BASE_URL"',
+            'echo "Auth0 Domain: $AUTH0_DOMAIN"',
             'bun run test:integration'
           ].join("\n"),
         },

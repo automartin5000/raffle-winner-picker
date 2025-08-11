@@ -113,11 +113,11 @@ export class ApiStack extends cdk.Stack {
         // Create JWT Authorizer for Auth0
         const jwtAuthorizer = new HttpJwtAuthorizer(
             'Auth0JWTAuthorizer',
-            `https://${process.env.VITE_AUTH0_DOMAIN || 'dev-7h1ax9uy.us.auth0.com'}/`,
+            `https://${process.env.AUTH0_DOMAIN}/`,
             {
                 authorizerName: 'Auth0JWTAuthorizer',
                 identitySource: ['$request.header.Authorization'],
-                jwtAudience: [process.env.VITE_AUTH0_AUDIENCE || 'https://local2.api.winners.dev.rafflewinnerpicker.com'],
+                jwtAudience: [`https://${this.winnersApiDomain}`],
             }
         );
 

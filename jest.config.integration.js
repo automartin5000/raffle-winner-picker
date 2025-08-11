@@ -7,13 +7,13 @@ config();
 export default {
   preset: 'ts-jest/presets/default-esm',
   extensionsToTreatAsEsm: ['.ts'],
-  globals: {
-    'ts-jest': {
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
       useESM: true,
       tsconfig: 'tsconfig.dev.json'
-    }
+    }],
   },
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   testMatch: [

@@ -7,7 +7,7 @@ describe('API Health Tests', () => {
     const startTime = Date.now();
     
     try {
-      const response = await fetch(`${API_BASE_URL}runs`, {
+      const response = await fetch(`${API_BASE_URL}/runs`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -30,7 +30,7 @@ describe('API Health Tests', () => {
 
   it('should handle CORS preflight requests', async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}runs`, {
+      const response = await fetch(`${API_BASE_URL}/runs`, {
         method: 'OPTIONS',
         headers: {
           'Origin': 'https://example.com',
@@ -56,7 +56,7 @@ describe('API Health Tests', () => {
 
   it('should have proper content-type for JSON responses', async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}runs`, {
+      const response = await fetch(`${API_BASE_URL}/runs`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -79,7 +79,7 @@ describe('API Health Tests', () => {
 
   it('should reject malformed requests appropriately', async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}runs`, {
+      const response = await fetch(`${API_BASE_URL}/runs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ describe('API Health Tests', () => {
 
     for (const endpoint of healthEndpoints) {
       try {
-        const url = endpoint ? `${API_BASE_URL}${endpoint}` : API_BASE_URL;
+        const url = endpoint ? `${API_BASE_URL}/${endpoint}` : API_BASE_URL;
         const response = await fetch(url, {
           method: 'GET',
           headers: {

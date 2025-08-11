@@ -218,7 +218,7 @@ describe('Raffle API Integration Tests', () => {
       
       for (let i = 0; i < 10; i++) {
         const response = await apiClient.post('/runs', raffleData);
-        expect(response.statusCode).toBe(200);
+        expect(response.statusCode).toBe(201);
         
         const winnerNames = response.body.winners.map((w: any) => w.name).sort();
         results.push(winnerNames);
