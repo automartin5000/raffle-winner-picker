@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-const DEPLOYED_APP_URL = 'https://local.dev.rafflewinnerpicker.com';
-const API_BASE_URL = 'https://local.api.winners.dev.rafflewinnerpicker.com';
+const DEPLOYED_APP_URL = process.env.BASE_URL || 'https://local.dev.rafflewinnerpicker.com';
+const API_BASE_URL = process.env.API_BASE_URL || 'https://local.api.winners.dev.rafflewinnerpicker.com';
 
 test.describe('Raffle Winner Picker E2E Tests', () => {
   test.beforeEach(async ({ page }) => {
