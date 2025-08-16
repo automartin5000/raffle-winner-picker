@@ -717,6 +717,13 @@ class Auth0ClientManager {
    */
   async findTestClient() {
     try {
+      // For ephemeral environments (like PR environments), always create new test clients
+      // to ensure we have access to the client_secret
+      if (process.env.DEPLOY_EPHEMERAL === 'true') {
+        console.log(`🔄 Ephemeral environment detected, will create new test client`);
+        return null;
+      }
+      
       const clients = await this.makeRequest('GET', '/clients?app_type=non_interactive');
       const testClientName = this.getTestClientName();
       
