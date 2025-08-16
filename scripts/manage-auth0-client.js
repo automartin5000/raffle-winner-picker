@@ -491,11 +491,16 @@ class Auth0ClientManager {
     const apiName = this.getApiName();
     
     console.log(`🔍 Looking for existing Auth0 API: ${apiIdentifier}`);
+    console.log(`   Expected API Name: ${apiName}`);
     
     try {
       // Check if API already exists
       const existingApi = await this.makeRequest('GET', `/resource-servers/${encodeURIComponent(apiIdentifier)}`);
-      console.log(`📝 Found existing API: ${existingApi.name}`);
+      console.log(`📝 Found existing API:`);
+      console.log(`   Name: ${existingApi.name}`);
+      console.log(`   Identifier: ${existingApi.identifier}`);
+      console.log(`   ID: ${existingApi.id}`);
+      console.log(`   Scopes: ${existingApi.scopes?.map(s => s.value).join(', ') || 'none'}`);
       
       // Update the API
       const updatedApi = await this.updateApi(apiIdentifier);
@@ -505,6 +510,7 @@ class Auth0ClientManager {
         console.log('🆕 No existing API found, creating new one...');
         return await this.createApi();
       } else {
+        console.error(`❌ Error checking for existing API: ${error.message}`);
         throw error;
       }
     }
@@ -728,14 +734,18 @@ class Auth0ClientManager {
    */
   async grantClientApiAccess(clientId, apiIdentifier) {
     try {
+      console.log(`🔍 Checking API access for client ${clientId} to audience ${apiIdentifier}`);
+      
       // First, try to find existing grants for this client
       const existingGrants = await this.makeRequest('GET', `/client-grants?client_id=${clientId}`);
+      console.log(`📋 Found ${existingGrants.length} existing grants for client ${clientId}`);
       
       // Check if there's already a grant for this API
       const existingGrant = existingGrants.find(grant => grant.audience === apiIdentifier);
       
       if (existingGrant) {
         console.log(`ℹ️  Client ${clientId} already has access to API ${apiIdentifier}`);
+        console.log(`   Grant ID: ${existingGrant.id}, Scopes: ${existingGrant.scope}`);
         
         // Update existing grant to ensure scopes are current
         const updateData = {
@@ -748,6 +758,7 @@ class Auth0ClientManager {
       }
       
       // If no existing grant, create a new one
+      console.log(`🆕 Creating new API grant for client ${clientId} to audience ${apiIdentifier}`);
       const grantData = {
         client_id: clientId,
         audience: apiIdentifier,
@@ -756,11 +767,23 @@ class Auth0ClientManager {
       
       await this.makeRequest('POST', '/client-grants', grantData);
       console.log(`✅ Granted API access to client ${clientId}`);
+      
+      // Verify the grant was created
+      const verifyGrants = await this.makeRequest('GET', `/client-grants?client_id=${clientId}`);
+      const newGrant = verifyGrants.find(grant => grant.audience === apiIdentifier);
+      if (newGrant) {
+        console.log(`✅ Verified grant created: ${newGrant.id} for audience ${apiIdentifier}`);
+      } else {
+        console.warn(`⚠️  Grant creation may not have completed immediately`);
+      }
+      
     } catch (error) {
       if (error.message.includes('409') || error.message.includes('already exists')) {
         console.log(`ℹ️  Client ${clientId} already has API access`);
       } else {
         console.error('❌ Failed to grant API access:', error.message);
+        console.error(`   Client ID: ${clientId}`);
+        console.error(`   API Identifier: ${apiIdentifier}`);
         throw error;
       }
     }
