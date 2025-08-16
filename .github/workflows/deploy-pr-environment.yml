@@ -101,6 +101,20 @@ jobs:
           echo "Running integration tests against PR environment..."
           echo "API URL: $API_BASE_URL"
           echo "Auth0 Domain: $AUTH0_DOMAIN"
+
+          # Load Auth0 test credentials from .env file
+          if [ -f .env ]; then
+            export AUTH0_TEST_CLIENT_ID=$(grep "^AUTH0_TEST_CLIENT_ID=" .env | cut -d "=" -f2)
+            export AUTH0_TEST_CLIENT_SECRET=$(grep "^AUTH0_TEST_CLIENT_SECRET=" .env | cut -d "=" -f2)
+            export AUTH0_TEST_AUDIENCE=$(grep "^AUTH0_TEST_AUDIENCE=" .env | cut -d "=" -f2)
+            echo "✅ Loaded Auth0 test credentials from .env file"
+            echo "   Client ID: $AUTH0_TEST_CLIENT_ID"
+            echo "   Audience: $AUTH0_TEST_AUDIENCE"
+          else
+            echo "❌ No .env file found"
+            exit 1
+          fi
+
           bun run test:integration
       - name: Run E2E Tests
         id: e2e-tests
