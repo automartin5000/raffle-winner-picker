@@ -38,6 +38,12 @@ export function getAuth0Credentials(): Auth0ClientCredentials {
 export async function getAccessToken(): Promise<string> {
   const { clientId, clientSecret, audience, domain } = getAuth0Credentials();
 
+  console.log('🔍 Auth0 token request details:');
+  console.log(`   Domain: ${domain}`);
+  console.log(`   Client ID: ${clientId}`);
+  console.log(`   Audience: ${audience}`);
+  console.log(`   Client Secret: ${clientSecret ? '[REDACTED]' : 'MISSING'}`);
+
   const tokenUrl = `https://${domain}/oauth/token`;
   const body = new URLSearchParams({
     grant_type: 'client_credentials',
@@ -47,6 +53,7 @@ export async function getAccessToken(): Promise<string> {
   });
 
   try {
+    console.log(`🌐 Making token request to: ${tokenUrl}`);
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -55,8 +62,11 @@ export async function getAccessToken(): Promise<string> {
       body: body.toString(),
     });
 
+    console.log(`📡 Token response status: ${response.status}`);
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('❌ Token request failed with body:', body.toString());
       throw new Error(`Auth0 token request failed: ${response.status} ${errorText}`);
     }
 
@@ -67,6 +77,9 @@ export async function getAccessToken(): Promise<string> {
     }
 
     console.log('✅ Successfully obtained Auth0 access token');
+    console.log(`   Token type: ${tokenData.token_type}`);
+    console.log(`   Expires in: ${tokenData.expires_in}s`);
+    console.log(`   Scopes: ${tokenData.scope || 'none'}`);
     return tokenData.access_token;
 
   } catch (error) {
