@@ -104,6 +104,8 @@ jobs:
 
           # Load Auth0 test credentials from .env file
           if [ -f .env ]; then
+            echo "📄 Contents of .env file:"
+            cat .env | grep -E "^AUTH0_TEST_" | sed "s/SECRET=.*/SECRET=[REDACTED]/"
             CLIENT_ID=$(grep "^AUTH0_TEST_CLIENT_ID=" .env | cut -d "=" -f2)
             CLIENT_SECRET=$(grep "^AUTH0_TEST_CLIENT_SECRET=" .env | cut -d "=" -f2)
             AUDIENCE=$(grep "^AUTH0_TEST_AUDIENCE=" .env | cut -d "=" -f2)
@@ -111,6 +113,7 @@ jobs:
             echo "   Client ID: $CLIENT_ID"
             echo "   Audience: $AUDIENCE"
             echo "   Client Secret: ${CLIENT_SECRET:+[REDACTED]}"
+            echo "   Client Secret Length: ${#CLIENT_SECRET}"
 
             # Run integration tests with Auth0 credentials
             env AUTH0_TEST_CLIENT_ID="$CLIENT_ID" AUTH0_TEST_CLIENT_SECRET="$CLIENT_SECRET" AUTH0_TEST_AUDIENCE="$AUDIENCE" bun run test:integration
