@@ -104,18 +104,20 @@ jobs:
 
           # Load Auth0 test credentials from .env file
           if [ -f .env ]; then
-            export AUTH0_TEST_CLIENT_ID=$(grep "^AUTH0_TEST_CLIENT_ID=" .env | cut -d "=" -f2)
-            export AUTH0_TEST_CLIENT_SECRET=$(grep "^AUTH0_TEST_CLIENT_SECRET=" .env | cut -d "=" -f2)
-            export AUTH0_TEST_AUDIENCE=$(grep "^AUTH0_TEST_AUDIENCE=" .env | cut -d "=" -f2)
+            CLIENT_ID=$(grep "^AUTH0_TEST_CLIENT_ID=" .env | cut -d "=" -f2)
+            CLIENT_SECRET=$(grep "^AUTH0_TEST_CLIENT_SECRET=" .env | cut -d "=" -f2)
+            AUDIENCE=$(grep "^AUTH0_TEST_AUDIENCE=" .env | cut -d "=" -f2)
             echo "✅ Loaded Auth0 test credentials from .env file"
-            echo "   Client ID: $AUTH0_TEST_CLIENT_ID"
-            echo "   Audience: $AUTH0_TEST_AUDIENCE"
+            echo "   Client ID: $CLIENT_ID"
+            echo "   Audience: $AUDIENCE"
+            echo "   Client Secret: ${CLIENT_SECRET:+[REDACTED]}"
+
+            # Run integration tests with Auth0 credentials
+            env AUTH0_TEST_CLIENT_ID="$CLIENT_ID" AUTH0_TEST_CLIENT_SECRET="$CLIENT_SECRET" AUTH0_TEST_AUDIENCE="$AUDIENCE" bun run test:integration
           else
             echo "❌ No .env file found"
             exit 1
           fi
-
-          bun run test:integration
       - name: Run E2E Tests
         id: e2e-tests
         run: |-
