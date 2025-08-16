@@ -629,7 +629,9 @@ class Auth0ClientManager {
     if (existingClient) {
       console.log(`📝 Found existing test client: ${existingClient.client_id}`);
       const updatedClient = await this.updateTestClient(existingClient.client_id);
-      this.writeTestClientToEnv(updatedClient.client_id, updatedClient.client_secret);
+      // Don't overwrite .env file when updating - client_secret is not returned by Auth0 update API
+      // The credentials should already be in the .env file from when the client was first created
+      console.log(`ℹ️  Skipping .env update for existing client (credentials already exist)`);
       return updatedClient;
     } else {
       console.log('🆕 No existing test client found, creating new one...');
@@ -825,9 +827,13 @@ class Auth0ClientManager {
     
     // Update or add test client credentials
     updateEnvVar(`AUTH0_TEST_CLIENT_ID_${this.deployEnv.toUpperCase()}`, clientId);
-    updateEnvVar(`AUTH0_TEST_CLIENT_SECRET_${this.deployEnv.toUpperCase()}`, clientSecret);
+    if (clientSecret && clientSecret !== 'undefined') {
+      updateEnvVar(`AUTH0_TEST_CLIENT_SECRET_${this.deployEnv.toUpperCase()}`, clientSecret);
+      updateEnvVar('AUTH0_TEST_CLIENT_SECRET', clientSecret);
+    } else {
+      console.log(`⚠️  Skipping client secret update (value is undefined or invalid)`);
+    }
     updateEnvVar('AUTH0_TEST_CLIENT_ID', clientId);
-    updateEnvVar('AUTH0_TEST_CLIENT_SECRET', clientSecret);
     updateEnvVar('AUTH0_TEST_AUDIENCE', this.getApiIdentifier());
 
     fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
