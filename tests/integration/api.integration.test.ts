@@ -322,23 +322,25 @@ describe('Raffle API Integration Tests', () => {
       expect(response.statusCode).toBe(200);
       expect(response.body.runs.length).toBeGreaterThanOrEqual(2);
 
-      // Check if we have at least 2 runs to compare
-      if (response.body.runs.length >= 2) {
-        const firstRun = response.body.runs[0];
-        const secondRun = response.body.runs[1];
-        const firstTime = new Date(firstRun.timestamp).getTime();
-        const secondTime = new Date(secondRun.timestamp).getTime();
+      // Find the specific runs we just created instead of assuming they're the first two
+      const createdFirstRun = response.body.runs.find(run => run.runId === firstRun.body.runId);
+      const createdSecondRun = response.body.runs.find(run => run.runId === secondRun.body.runId);
+      
+      // Both runs should be in the response
+      expect(createdFirstRun).toBeTruthy();
+      expect(createdSecondRun).toBeTruthy();
+      
+      if (createdFirstRun && createdSecondRun) {
+        const firstTime = new Date(createdFirstRun.timestamp).getTime();
+        const secondTime = new Date(createdSecondRun.timestamp).getTime();
         
-        // First run should be newer (higher timestamp) than second run
-        // Allow for some tolerance due to test timing
-        const timeDiff = firstTime - secondTime;
+        // Second run should be newer (higher timestamp) than first run since it was created later
+        const timeDiff = secondTime - firstTime;
         console.log(`Timestamp difference: ${timeDiff}ms`);
-        console.log(`First run: ${firstRun.timestamp}`);
-        console.log(`Second run: ${secondRun.timestamp}`);
+        console.log(`First run: ${createdFirstRun.timestamp} (${createdFirstRun.runId})`);
+        console.log(`Second run: ${createdSecondRun.timestamp} (${createdSecondRun.runId})`);
         
-        expect(firstTime).toBeGreaterThanOrEqual(secondTime - 2000); // Allow 2s tolerance for CI environments
-      } else {
-        console.log('Not enough runs to test ordering');
+        expect(secondTime).toBeGreaterThan(firstTime); // Second run should be newer than first run
       }
     });
 
