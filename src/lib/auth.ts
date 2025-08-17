@@ -1,7 +1,8 @@
 /// <reference types="vite/client" />
 import { Auth0Client } from '@auth0/auth0-spa-js';
 import { writable } from 'svelte/store';
-import { getAuth0ClientId } from './constants';
+import { getAuth0ClientId, getHostedZone } from './constants';
+import { getApiUrl, CORE_SERVICES } from './domain-constants';
 
 interface User {
   sub: string;
@@ -20,12 +21,22 @@ export async function initAuth0() {
   try {
     const domain = import.meta.env.VITE_AUTH0_DOMAIN || '';
     const clientId = getAuth0ClientId();
-    const audience = import.meta.env.VITE_AUTH0_AUDIENCE || '';
+    
+    // Dynamically construct audience from environment instead of static env var
+    const hostedZone = getHostedZone();
+    const envName = import.meta.env.deploy_env;
+    const audience = getApiUrl({
+      envName,
+      service: CORE_SERVICES.WINNERS,
+      hostedZone,
+    });
     
     console.log('🔧 Auth0 Configuration Debug:');
     console.log('   Domain:', domain);
     console.log('   Client ID:', clientId);
-    console.log('   Audience:', audience);
+    console.log('   Environment:', envName);
+    console.log('   Hosted Zone:', hostedZone);
+    console.log('   Audience (API URL):', audience);
     console.log('   Redirect URI:', window.location.origin);
     
     if (!domain) {

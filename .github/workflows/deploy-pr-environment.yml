@@ -128,10 +128,12 @@ jobs:
           fi
       - name: Run E2E Tests
         id: e2e-tests
+        env:
+          BASE_URL: ${{ steps.get-urls.outputs.FRONTEND_URL }}
+          VITE_AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
         run: |-
           echo "Running E2E tests against PR environment..."
           echo "Frontend URL: ${{ steps.get-urls.outputs.FRONTEND_URL }}"
-          export BASE_URL="${{ steps.get-urls.outputs.FRONTEND_URL }}"
           bunx playwright install --with-deps chromium
           bun run test:e2e --project=chromium
       - name: Create or update comment
