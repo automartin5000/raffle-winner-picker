@@ -81,12 +81,12 @@ async function loginProgrammatically(page: Page, baseUrl: string) {
     await page.goto(baseUrl);
     
     // Set up the Auth0 SPA SDK state
-    await page.evaluate(({ accessToken, idToken, user }) => {
+    await page.evaluate(({ accessToken, idToken, user, clientId }) => {
       // Simulate what Auth0 SPA SDK stores
-      const auth0Key = `@@auth0spajs@@::${process.env.VITE_SPA_AUTH0_CLIENT_ID || 'unknown'}::${window.location.origin}::openid profile email`;
+      const auth0Key = `@@auth0spajs@@::${clientId}::${window.location.origin}::openid profile email`;
       const cacheData = {
         body: {
-          client_id: process.env.VITE_SPA_AUTH0_CLIENT_ID,
+          client_id: clientId,
           access_token: accessToken,
           id_token: idToken,
           scope: 'openid profile email',
@@ -104,7 +104,14 @@ async function loginProgrammatically(page: Page, baseUrl: string) {
       // Also set user data
       localStorage.setItem('auth0.user', JSON.stringify(user));
       localStorage.setItem('auth0.isAuthenticated', 'true');
-    }, { accessToken: authData.accessToken, idToken: authData.idToken, user: authData.user });
+      
+      console.log('✅ Auth tokens injected into localStorage');
+    }, { 
+      accessToken: authData.accessToken, 
+      idToken: authData.idToken, 
+      user: authData.user,
+      clientId: clientId
+    });
     
     // Reload to pick up the auth state
     await page.reload();
@@ -122,13 +129,18 @@ async function loginProgrammatically(page: Page, baseUrl: string) {
  * Main login function that tries programmatic auth first, falls back to UI
  */
 export async function loginWithAuth0(page: Page, baseUrl: string) {
+  console.log('🔐 Starting authentication process...');
+  
   // In CI or when we have test credentials, use programmatic auth
   if (process.env.CI || process.env.AUTH0_TEST_USER_EMAIL) {
+    console.log('📋 Using programmatic authentication (CI environment detected)');
     const success = await loginProgrammatically(page, baseUrl);
     if (success) {
       return;
     }
-    console.log('Programmatic auth failed, falling back to UI auth...');
+    console.log('❌ Programmatic auth failed, falling back to UI auth...');
+  } else {
+    console.log('🖱️ Using UI-based authentication (local environment)');
   }
   
   // Fallback to UI-based authentication
@@ -154,6 +166,16 @@ async function loginWithUI(page: Page, baseUrl: string) {
   // Wait for Auth0 login page to load in popup
   await popup.waitForLoadState('networkidle');
   
+  console.log('🔗 Auth popup URL:', popup.url());
+  
+  // Take a screenshot for debugging
+  try {
+    const screenshot = await popup.screenshot();
+    console.log('📸 Auth popup screenshot captured');
+  } catch (e) {
+    console.log('❌ Could not capture popup screenshot:', e.message);
+  }
+  
   // Create or use test account credentials
   const testEmail = process.env.AUTH0_TEST_USER_EMAIL || 'e2etest@example.com';
   const testPassword = process.env.AUTH0_TEST_USER_PASSWORD || 'TestPassword123!';
@@ -167,28 +189,137 @@ async function loginWithUI(page: Page, baseUrl: string) {
     await signInTab.click();
   }
   
-  await popup.fill('input[name="email"]', testEmail);
-  await popup.fill('input[name="password"]', testPassword);
+  // Try multiple selectors for email field
+  const emailSelectors = [
+    'input[name="email"]',
+    'input[type="email"]',
+    'input[placeholder*="email" i]',
+    'input[id*="email" i]',
+    '#username',
+    '#email'
+  ];
   
-  // Click continue/submit button
-  const continueButton = popup.locator('button[type="submit"]').first();
-  await continueButton.click();
+  let emailField;
+  for (const selector of emailSelectors) {
+    try {
+      emailField = popup.locator(selector);
+      if (await emailField.isVisible({ timeout: 2000 })) {
+        await emailField.fill(testEmail);
+        break;
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+  
+  if (!emailField) {
+    throw new Error('Could not find email input field with any known selector');
+  }
+  
+  // Try multiple selectors for password field
+  const passwordSelectors = [
+    'input[name="password"]',
+    'input[type="password"]',
+    'input[placeholder*="password" i]',
+    'input[id*="password" i]',
+    '#password'
+  ];
+  
+  let passwordField;
+  for (const selector of passwordSelectors) {
+    try {
+      passwordField = popup.locator(selector);
+      if (await passwordField.isVisible({ timeout: 2000 })) {
+        await passwordField.fill(testPassword);
+        break;
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+  
+  // Try multiple selectors for submit button
+  const submitSelectors = [
+    'button[type="submit"]',
+    'button[data-action="default"]',
+    'button:has-text("Continue")',
+    'button:has-text("Log In")',
+    'button:has-text("Sign In")',
+    'button:has-text("Submit")',
+    '[data-testid="submit-button"]',
+    '.auth0-lock-submit'
+  ];
+  
+  let submitButton;
+  for (const selector of submitSelectors) {
+    try {
+      submitButton = popup.locator(selector).first();
+      if (await submitButton.isVisible({ timeout: 2000 })) {
+        console.log(`✅ Found submit button with selector: ${selector}`);
+        await submitButton.click();
+        break;
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+  
+  if (!submitButton) {
+    console.log('❌ Could not find submit button with any known selector');
+    // Take a screenshot for debugging
+    try {
+      await popup.screenshot({ path: 'auth-popup-debug.png' });
+      console.log('📸 Debug screenshot saved as auth-popup-debug.png');
+    } catch (e) {
+      console.log('Could not save debug screenshot');
+    }
+    throw new Error('Could not find submit button');
+  }
   
   // Wait for the popup to close (indicating successful auth)
   try {
-    await popup.waitForEvent('close', { timeout: 10000 });
-  } catch {
+    await popup.waitForEvent('close', { timeout: 15000 });
+    console.log('✅ Auth popup closed successfully');
+  } catch (e) {
+    console.log('⚠️ Auth popup did not close, trying to sign up...');
     // If popup doesn't close, auth might have failed, try to sign up
     if (await signUpTab.isVisible()) {
       await signUpTab.click();
-      await popup.fill('input[name="email"]', testEmail);
-      await popup.fill('input[name="password"]', testPassword);
+      
+      // Use the same improved field detection for sign up
+      for (const selector of emailSelectors) {
+        try {
+          const field = popup.locator(selector);
+          if (await field.isVisible({ timeout: 2000 })) {
+            await field.fill(testEmail);
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      for (const selector of passwordSelectors) {
+        try {
+          const field = popup.locator(selector);
+          if (await field.isVisible({ timeout: 2000 })) {
+            await field.fill(testPassword);
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
       
       const signUpButton = popup.locator('button[type="submit"]').first();
       await signUpButton.click();
       
       // Wait for popup to close
-      await popup.waitForEvent('close', { timeout: 10000 });
+      await popup.waitForEvent('close', { timeout: 15000 });
+      console.log('✅ Sign up completed, popup closed');
+    } else {
+      console.log('❌ Could not find sign up option');
+      throw new Error('Authentication failed - popup did not close and no sign up option found');
     }
   }
   
@@ -196,7 +327,8 @@ async function loginWithUI(page: Page, baseUrl: string) {
   await page.waitForLoadState('networkidle');
   
   // Verify we're authenticated by checking for user interface elements
-  await page.waitForSelector('.header-modern', { timeout: 10000 });
+  await page.waitForSelector('.header-modern', { timeout: 15000 });
+  console.log('✅ Authentication completed successfully');
 }
 
 /**
