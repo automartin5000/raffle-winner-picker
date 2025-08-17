@@ -30,8 +30,9 @@ test.describe('Basic Application Flow Tests', () => {
     await page.goto(DEPLOYED_APP_URL);
     await page.waitForLoadState('networkidle');
     
+    // When not authenticated, should show sign-in screen with app logo
     await expect(page.locator('.app-logo')).toBeVisible();
-    await expect(page.getByText(/Fair & Transparent Drawings/i)).toBeVisible();
+    await expect(page.getByText(/create fair, transparent raffles/i)).toBeVisible();
   });
 
   test('should have working sign-in button (redirects to auth)', async ({ page }) => {
