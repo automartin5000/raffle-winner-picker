@@ -18,12 +18,29 @@ let auth0: Auth0Client;
 
 export async function initAuth0() {
   try {
+    const domain = import.meta.env.VITE_AUTH0_DOMAIN || '';
+    const clientId = getAuth0ClientId();
+    const audience = import.meta.env.VITE_AUTH0_AUDIENCE || '';
+    
+    console.log('🔧 Auth0 Configuration Debug:');
+    console.log('   Domain:', domain);
+    console.log('   Client ID:', clientId);
+    console.log('   Audience:', audience);
+    console.log('   Redirect URI:', window.location.origin);
+    
+    if (!domain) {
+      console.error('❌ Auth0 domain is missing! Check VITE_AUTH0_DOMAIN environment variable.');
+    }
+    if (!clientId) {
+      console.error('❌ Auth0 client ID is missing! Check VITE_SPA_AUTH0_CLIENT_ID environment variable.');
+    }
+    
     auth0 = new Auth0Client({
-      domain: import.meta.env.VITE_AUTH0_DOMAIN || '',
-      clientId: getAuth0ClientId(),
+      domain,
+      clientId,
       authorizationParams: {
         redirect_uri: window.location.origin,
-        audience: import.meta.env.VITE_AUTH0_AUDIENCE || '',
+        audience,
       },
     });
 
@@ -53,12 +70,25 @@ export async function initAuth0() {
 
 export async function loginWithPopup() {
   try {
-    await auth0.loginWithPopup();
+    console.log('🔐 Attempting login with popup...');
+    if (!auth0) {
+      console.error('❌ Auth0 client not initialized! Cannot login.');
+      return;
+    }
+    console.log('✅ Auth0 client available, calling loginWithPopup...');
+    try {
+      const result = await auth0.loginWithPopup();
+      console.log('✅ loginWithPopup returned:', result);
+    } catch (popupError) {
+      console.error('❌ loginWithPopup failed:', popupError);
+      throw popupError;
+    }
     isAuthenticated.set(true);
     const userData = await auth0.getUser();
     user.set(userData as User);
+    console.log('✅ Login successful');
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
   }
 }
 

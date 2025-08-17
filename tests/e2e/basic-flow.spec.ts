@@ -41,16 +41,17 @@ test.describe('Basic Application Flow Tests', () => {
     const signInButton = page.getByRole('button', { name: /sign in to continue/i });
     await expect(signInButton).toBeVisible();
     
-    const [newPage] = await Promise.all([
-      page.context().waitForEvent('page'),
+    // Wait for popup instead of new page
+    const [popup] = await Promise.all([
+      page.waitForEvent('popup'),
       signInButton.click()
     ]);
     
-    await newPage.waitForLoadState();
+    await popup.waitForLoadState('networkidle');
     
-    expect(newPage.url()).toContain('auth0.com');
+    expect(popup.url()).toContain('auth0.com');
     
-    await newPage.close();
+    await popup.close();
   });
 
   test('should have proper meta tags and SEO', async ({ page }) => {

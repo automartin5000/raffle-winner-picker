@@ -7,5 +7,6 @@ export default defineConfig({
         "import.meta.env.nonprod_hosted_zone": JSON.stringify(process.env.NONPROD_HOSTED_ZONE),
         "import.meta.env.prod_hosted_zone": JSON.stringify(process.env.PROD_HOSTED_ZONE),
         "import.meta.env.deploy_env": JSON.stringify(process.env.DEPLOY_ENV),
-    }
+    },
+    envPrefix: ['VITE_']  // Explicitly enable VITE_ prefixed env vars
 });

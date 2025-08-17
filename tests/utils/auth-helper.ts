@@ -12,49 +12,52 @@ export async function loginWithAuth0(page: Page, baseUrl: string) {
   await page.goto(baseUrl);
   await page.waitForLoadState('networkidle');
   
-  // Click the sign-in button
+  // Click the sign-in button and wait for popup
   const signInButton = page.getByRole('button', { name: /sign in to continue/i });
-  await signInButton.click();
   
-  // Wait for Auth0 login page to load
-  await page.waitForURL(/auth0\.com/);
-  await page.waitForLoadState('networkidle');
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup'),
+    signInButton.click()
+  ]);
+  
+  // Wait for Auth0 login page to load in popup
+  await popup.waitForLoadState('networkidle');
   
   // Create or use test account credentials
   const testEmail = 'e2etest@example.com';
   const testPassword = 'TestPassword123!';
   
   // Check if we need to sign up first or can sign in
-  const signUpTab = page.locator('text=Sign Up');
-  const signInTab = page.locator('text=Log In');
+  const signUpTab = popup.locator('text=Sign Up');
+  const signInTab = popup.locator('text=Log In');
   
   // Try to sign in first
   if (await signInTab.isVisible()) {
     await signInTab.click();
   }
   
-  await page.fill('input[name="email"]', testEmail);
-  await page.fill('input[name="password"]', testPassword);
+  await popup.fill('input[name="email"]', testEmail);
+  await popup.fill('input[name="password"]', testPassword);
   
   // Click continue/submit button
-  const continueButton = page.locator('button[type="submit"]').first();
+  const continueButton = popup.locator('button[type="submit"]').first();
   await continueButton.click();
   
-  // If sign in fails, try to sign up
+  // Wait for the popup to close (indicating successful auth)
   try {
-    await page.waitForURL(baseUrl, { timeout: 5000 });
+    await popup.waitForEvent('close', { timeout: 10000 });
   } catch {
-    // Sign in failed, try to sign up
+    // If popup doesn't close, auth might have failed, try to sign up
     if (await signUpTab.isVisible()) {
       await signUpTab.click();
-      await page.fill('input[name="email"]', testEmail);
-      await page.fill('input[name="password"]', testPassword);
+      await popup.fill('input[name="email"]', testEmail);
+      await popup.fill('input[name="password"]', testPassword);
       
-      const signUpButton = page.locator('button[type="submit"]').first();
+      const signUpButton = popup.locator('button[type="submit"]').first();
       await signUpButton.click();
       
-      // Wait for redirect back to app
-      await page.waitForURL(baseUrl, { timeout: 10000 });
+      // Wait for popup to close
+      await popup.waitForEvent('close', { timeout: 10000 });
     }
   }
   
