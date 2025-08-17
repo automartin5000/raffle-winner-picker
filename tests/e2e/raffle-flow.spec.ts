@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginWithAuth0 } from '../utils/auth-helper';
 
 const DEPLOYED_APP_URL = process.env.BASE_URL || 'https://local.dev.rafflewinnerpicker.com';
 const API_BASE_URL = process.env.API_BASE_URL || 'https://local.api.winners.dev.rafflewinnerpicker.com';
@@ -9,27 +10,27 @@ test.describe('Raffle Winner Picker E2E Tests', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('should load the homepage and display key elements', async ({ page }) => {
+  test('should load the homepage and display sign-in screen', async ({ page }) => {
     await expect(page).toHaveTitle(/Raffle Winner Picker/i);
     
     await expect(page.getByRole('heading', { name: /raffle winner picker/i })).toBeVisible();
     
-    await expect(page.getByRole('button', { name: /configure raffle/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /start raffle/i })).toBeVisible();
+    // Since we're not authenticated, we should see the sign-in button
+    await expect(page.getByRole('button', { name: /sign in to continue/i })).toBeVisible();
   });
 
-  test('should navigate to configure page', async ({ page }) => {
-    await page.getByRole('button', { name: /configure raffle/i }).click();
-    
-    await expect(page).toHaveURL(/.*\/configure/);
-    await expect(page.getByRole('heading', { name: /configure raffle/i })).toBeVisible();
-    
-    await expect(page.getByText(/upload csv file/i)).toBeVisible();
-    await expect(page.getByText(/select winner count/i)).toBeVisible();
+  test('should show sign-in screen when not authenticated', async ({ page }) => {
+    // For unauthenticated users, we should see the sign-in screen
+    await expect(page.getByRole('button', { name: /sign in to continue/i })).toBeVisible();
+    await expect(page.getByText(/create fair, transparent raffles/i)).toBeVisible();
   });
 
   test('should upload CSV file and configure raffle', async ({ page }) => {
-    await page.getByRole('button', { name: /configure raffle/i }).click();
+    // First authenticate
+    await loginWithAuth0(page, DEPLOYED_APP_URL);
+    
+    // Should now see the upload interface
+    await expect(page.getByText(/Upload Raffle Entries/i)).toBeVisible();
     
     const csvContent = `Name,Email
 John Doe,john@example.com
@@ -44,38 +45,20 @@ Alice Brown,alice@example.com`;
       buffer: Buffer.from(csvContent),
     });
     
-    await page.getByRole('combobox').selectOption('2');
-    
-    await expect(page.getByText(/4 participants loaded/i)).toBeVisible();
-    await expect(page.getByText(/2 winners will be selected/i)).toBeVisible();
-    
-    await page.getByRole('button', { name: /save configuration/i }).click();
-    
-    await expect(page).toHaveURL(/.*\/raffle/);
-    await expect(page.getByRole('heading', { name: /raffle/i })).toBeVisible();
+    // After file upload, should redirect to configure page
+    await expect(page).toHaveURL(/.*\/configure/);
+    await expect(page.getByRole('heading', { name: /configure/i })).toBeVisible();
   });
 
   test('should run raffle and display winners', async ({ page }) => {
-    await page.goto(`${DEPLOYED_APP_URL}/configure`);
+    // First authenticate
+    await loginWithAuth0(page, DEPLOYED_APP_URL);
     
-    const csvContent = `Name,Email
-John Doe,john@example.com
-Jane Smith,jane@example.com
-Bob Johnson,bob@example.com
-Alice Brown,alice@example.com
-Charlie Wilson,charlie@example.com`;
+    // Use sample data for easier testing
+    await page.getByRole('button', { name: /use sample data for demo/i }).click();
     
-    const fileInput = page.locator('input[type="file"]');
-    await fileInput.setInputFiles({
-      name: 'test-participants.csv',
-      mimeType: 'text/csv',
-      buffer: Buffer.from(csvContent),
-    });
-    
-    await page.getByRole('combobox').selectOption('3');
-    await page.getByRole('button', { name: /save configuration/i }).click();
-    
-    await page.waitForURL(/.*\/raffle/);
+    // Should redirect to configure page
+    await page.waitForURL(/.*\/configure/);
     
     const runRaffleButton = page.getByRole('button', { name: /run raffle/i });
     await expect(runRaffleButton).toBeVisible();

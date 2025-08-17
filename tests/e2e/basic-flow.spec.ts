@@ -31,7 +31,7 @@ test.describe('Basic Application Flow Tests', () => {
     await page.waitForLoadState('networkidle');
     
     await expect(page.locator('.app-logo')).toBeVisible();
-    await expect(page.getByText(/fair & transparent drawings/i)).toBeVisible();
+    await expect(page.getByText(/Fair & Transparent Drawings/i)).toBeVisible();
   });
 
   test('should have working sign-in button (redirects to auth)', async ({ page }) => {
