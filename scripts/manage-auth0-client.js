@@ -635,7 +635,32 @@ class Auth0ClientManager {
       return updatedClient;
     } else {
       console.log('🆕 No existing test client found, creating new one...');
-      return await this.createTestClient();
+      try {
+        return await this.createTestClient();
+      } catch (error) {
+        // If we hit tenant limits, try to find any existing test client and reuse it
+        if (error.message.includes('too_many_entities') || error.message.includes('403')) {
+          console.log('⚠️  Hit Auth0 tenant limit, searching for any existing test client to reuse...');
+          const allClients = await this.makeRequest('GET', '/clients?app_type=non_interactive');
+          const anyTestClient = allClients.find(client => 
+            client.client_metadata?.purpose === 'integration_testing'
+          );
+          
+          if (anyTestClient) {
+            console.log(`🔄 Reusing existing test client due to tenant limits: ${anyTestClient.client_id}`);
+            const updatedClient = await this.updateTestClient(anyTestClient.client_id);
+            
+            // Try to write what we can to .env file
+            this.writeTestClientToEnv(anyTestClient.client_id, undefined);
+            console.log(`⚠️  Reused client credentials written to .env (client_secret may be missing)`);
+            console.log(`   If integration tests fail due to missing client_secret, you may need to:`);
+            console.log(`   1. Manually clean up unused Auth0 M2M applications, or`);
+            console.log(`   2. Check if existing credentials work from a previous setup`);
+            return updatedClient;
+          }
+        }
+        throw error;
+      }
     }
   }
 
@@ -717,21 +742,29 @@ class Auth0ClientManager {
    */
   async findTestClient() {
     try {
-      // For ephemeral environments (like PR environments), always create new test clients
-      // to ensure we have access to the client_secret
-      if (process.env.DEPLOY_EPHEMERAL === 'true') {
-        console.log(`🔄 Ephemeral environment detected, will create new test client`);
-        return null;
-      }
-      
       const clients = await this.makeRequest('GET', '/clients?app_type=non_interactive');
       const testClientName = this.getTestClientName();
       
-      return clients.find(client => 
+      // Look for exact name match or environment match
+      const existingClient = clients.find(client => 
         client.name === testClientName ||
         (client.client_metadata?.purpose === 'integration_testing' && 
          client.client_metadata?.environment === this.deployEnv)
       );
+      
+      // For ephemeral environments, prefer creating new clients but fall back to existing if needed
+      if (process.env.DEPLOY_EPHEMERAL === 'true') {
+        if (existingClient) {
+          console.log(`🔄 Ephemeral environment detected, but found existing client: ${existingClient.client_id}`);
+          console.log(`   Will reuse existing client to avoid tenant limits`);
+          return existingClient;
+        } else {
+          console.log(`🔄 Ephemeral environment detected, will create new test client`);
+          return null;
+        }
+      }
+      
+      return existingClient;
     } catch (error) {
       console.error('❌ Failed to search for existing test clients:', error.message);
       throw error;
@@ -848,12 +881,59 @@ class Auth0ClientManager {
   }
 
   /**
+   * Clean up old test clients to free up tenant space
+   */
+  async cleanupOldTestClients() {
+    try {
+      console.log('🧹 Cleaning up old test clients...');
+      
+      const allClients = await this.makeRequest('GET', '/clients?app_type=non_interactive');
+      const testClients = allClients.filter(client => 
+        client.client_metadata?.purpose === 'integration_testing' ||
+        client.name.includes('Integration Tests')
+      );
+      
+      console.log(`   Found ${testClients.length} test clients total`);
+      
+      // Keep the 3 most recent test clients, delete the rest
+      const sortedClients = testClients.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+      const clientsToDelete = sortedClients.slice(3);
+      
+      if (clientsToDelete.length === 0) {
+        console.log('   No old test clients to clean up');
+        return;
+      }
+      
+      console.log(`   Deleting ${clientsToDelete.length} old test clients...`);
+      
+      for (const client of clientsToDelete) {
+        try {
+          await this.makeRequest('DELETE', `/clients/${client.client_id}`);
+          console.log(`   ✅ Deleted client: ${client.name} (${client.client_id})`);
+        } catch (error) {
+          console.log(`   ⚠️  Failed to delete client ${client.client_id}: ${error.message}`);
+        }
+      }
+      
+      console.log(`✅ Cleanup complete: deleted ${clientsToDelete.length} old test clients`);
+      
+    } catch (error) {
+      console.log(`⚠️  Cleanup failed: ${error.message}`);
+      // Don't throw - cleanup is best effort
+    }
+  }
+
+  /**
    * Setup complete integration testing environment
    */
   async setupIntegrationTesting() {
     console.log('🚀 Setting up complete integration testing environment...');
     
     try {
+      // 0. Clean up old test clients to free up tenant space
+      console.log('\n0️⃣ Cleaning up old test clients...');
+      await this.cleanupOldTestClients();
+      
       // 1. Ensure API exists
       console.log('\n1️⃣ Setting up Auth0 API...');
       await this.ensureApi();
@@ -896,6 +976,7 @@ async function main() {
     console.log('  ensure-api               Create or update Auth0 API');
     console.log('  ensure-test-client       Create or update integration test client');
     console.log('  setup-integration-testing Complete integration testing setup');
+    console.log('  cleanup-test-clients     Delete old test clients to free up tenant space');
     process.exit(1);
   }
 
@@ -941,6 +1022,9 @@ async function main() {
         break;
       case 'setup-integration-testing':
         await manager.setupIntegrationTesting();
+        break;
+      case 'cleanup-test-clients':
+        await manager.cleanupOldTestClients();
         break;
       default:
         console.error(`❌ Unknown command: ${command}`);
