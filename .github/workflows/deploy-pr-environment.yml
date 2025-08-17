@@ -20,7 +20,6 @@ env:
   AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
   AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
   DEPLOY_EPHEMERAL: "true"
-  AUTH0_SPA_CALLBACK_URL: https://pr${{ github.event.number }}.${{ secrets.NONPROD_HOSTED_ZONE }}
 jobs:
   deploy_pr:
     name: Deploy PR Environment
@@ -92,51 +91,38 @@ jobs:
         id: setup-integration-testing
         run: |-
           echo "Setting up integration testing environment..."
-          bun run scripts/manage-auth0-client.js setup-integration-testing || {
-            echo "⚠️  Auth0 setup encountered rate limits, but continuing with available credentials"
-            echo "   Will use management API credentials for integration testing"
-          }
+          bun run scripts/manage-auth0-client.js setup-integration-testing
       - name: Run Integration Tests
         id: integration-tests
         env:
           API_BASE_URL: ${{ steps.get-urls.outputs.API_BASE_URL }}
           AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
-          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
-          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
         run: |-
           echo "Running integration tests against PR environment..."
           echo "API URL: $API_BASE_URL"
           echo "Auth0 Domain: $AUTH0_DOMAIN"
 
-          # Extract test audience from .env file or use API_BASE_URL
+          # Load Auth0 test credentials from .env file
           if [ -f .env ]; then
-            echo "📄 .env file exists, extracting audience..."
-            AUDIENCE=$(grep "^AUTH0_TEST_AUDIENCE=" .env | cut -d "=" -f2 || echo "$API_BASE_URL")
-            echo "✅ Using audience: $AUDIENCE"
-          else
-            echo "📄 No .env file, using API_BASE_URL as audience: $API_BASE_URL"
-            AUDIENCE="$API_BASE_URL"
-          fi
+            echo "📄 .env file exists, extracting credentials..."
+            echo "📋 All .env contents:"
+            cat .env
+            echo "📋 AUTH0_TEST lines:"
+            grep "AUTH0_TEST" .env || echo "No AUTH0_TEST lines found"
+            CLIENT_ID=$(grep "^AUTH0_TEST_CLIENT_ID=" .env | cut -d "=" -f2 || echo "MISSING")
+            CLIENT_SECRET=$(grep "^AUTH0_TEST_CLIENT_SECRET=" .env | cut -d "=" -f2 || echo "MISSING")
+            AUDIENCE=$(grep "^AUTH0_TEST_AUDIENCE=" .env | cut -d "=" -f2 || echo "MISSING")
+            echo "✅ Loaded Auth0 test credentials from .env file"
+            echo "   Client ID: $CLIENT_ID"
+            echo "   Audience: $AUDIENCE"
+            echo "   Client Secret: ${CLIENT_SECRET:+[REDACTED]}"
+            echo "   Client Secret Length: ${#CLIENT_SECRET}"
 
-          # Check if dedicated test client credentials exist in .env file
-          if [ -f .env ] && grep -q "^AUTH0_TEST_CLIENT_ID=" .env && grep -q "^AUTH0_TEST_CLIENT_SECRET=" .env; then
-            echo "🔐 Using dedicated test client credentials from .env file"
-            TEST_CLIENT_ID=$(grep "^AUTH0_TEST_CLIENT_ID=" .env | cut -d "=" -f2)
-            TEST_CLIENT_SECRET=$(grep "^AUTH0_TEST_CLIENT_SECRET=" .env | cut -d "=" -f2)
-            echo "   Client ID: $TEST_CLIENT_ID"
-            echo "   Audience: $AUDIENCE"
-            echo "   Client Secret: ${TEST_CLIENT_SECRET:+[REDACTED]}"
-            
-            # Run integration tests with dedicated test client credentials
-            env AUTH0_TEST_CLIENT_ID="$TEST_CLIENT_ID" AUTH0_TEST_CLIENT_SECRET="$TEST_CLIENT_SECRET" AUTH0_TEST_AUDIENCE="$AUDIENCE" bun run test:integration
+            # Run integration tests with Auth0 credentials
+            env AUTH0_TEST_CLIENT_ID="$CLIENT_ID" AUTH0_TEST_CLIENT_SECRET="$CLIENT_SECRET" AUTH0_TEST_AUDIENCE="$AUDIENCE" bun run test:integration
           else
-            echo "🔐 Falling back to Auth0 Management API credentials for integration testing"
-            echo "   Client ID: $AUTH0_CLIENT_ID"
-            echo "   Audience: $AUDIENCE"
-            echo "   Client Secret: ${AUTH0_CLIENT_SECRET:+[REDACTED]}"
-            
-            # Run integration tests with Management API credentials as fallback
-            env AUTH0_TEST_CLIENT_ID="$AUTH0_CLIENT_ID" AUTH0_TEST_CLIENT_SECRET="$AUTH0_CLIENT_SECRET" AUTH0_TEST_AUDIENCE="$AUDIENCE" bun run test:integration
+            echo "❌ No .env file found"
+            exit 1
           fi
       - name: Run E2E Tests
         id: e2e-tests
