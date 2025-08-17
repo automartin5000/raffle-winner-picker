@@ -74,6 +74,8 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
       PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
       // Auth0 environment variables for client management
       AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+      VITE_AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+
       AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
       AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
       DEPLOY_EPHEMERAL: 'true', // Indicate this is an ephemeral PR deployment
@@ -192,6 +194,7 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           env: {
             API_BASE_URL: "${{ steps.get-urls.outputs.API_BASE_URL }}",
             AUTH0_DOMAIN: "${{ secrets.AUTH0_DOMAIN }}",
+            VITE_AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
           },
           run: [
             'echo "Running integration tests against PR environment..."',
@@ -289,6 +292,8 @@ const addProductionDeployWorkflow = (github: GitHub) => {
       env: {
         // Auth0 environment variables for client management
         AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+        VITE_AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+
         AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
         AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
         PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
@@ -597,6 +602,8 @@ const addManualProductionDeployWorkflow = (github: GitHub) => {
       env: {
         // Auth0 environment variables for client management
         AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+        VITE_AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+
         AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
         AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
         PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',

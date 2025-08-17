@@ -46,8 +46,8 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
       PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
       // Auth0 environment variables for client management
-      VITE_AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
       AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+      VITE_AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
       AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
       AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
       DEPLOY_ENV: 'dev', // Set deployment environment for Auth0 client creation
