@@ -272,7 +272,7 @@ class Auth0ClientManager {
       allowed_origins: allowedOrigins,
       oidc_conformant: true,
       token_endpoint_auth_method: 'none',
-      grant_types: ['authorization_code', 'implicit', 'refresh_token'],
+      grant_types: ['authorization_code', 'implicit', 'refresh_token', 'password'],
       jwt_configuration: {
         alg: 'RS256'
       },
@@ -964,6 +964,88 @@ class Auth0ClientManager {
   }
 
   /**
+   * Create or ensure test user exists in Auth0
+   */
+  async ensureTestUser() {
+    const testEmail = process.env.AUTH0_TEST_USER_EMAIL || 'e2etest@example.com';
+    const testPassword = process.env.AUTH0_TEST_USER_PASSWORD || 'TestPassword123!';
+    
+    console.log(`🔍 Looking for existing test user: ${testEmail}`);
+    
+    try {
+      // Search for existing user
+      const users = await this.makeRequest('GET', `/users?q=email:"${testEmail}"`);
+      
+      if (users && users.length > 0) {
+        console.log(`✅ Found existing test user: ${users[0].user_id}`);
+        // Update .env with test user credentials
+        this.writeTestUserToEnv(testEmail, testPassword);
+        return users[0];
+      }
+      
+      console.log('🆕 Creating new test user...');
+      
+      // Create new test user
+      const userData = {
+        email: testEmail,
+        password: testPassword,
+        connection: 'Username-Password-Authentication',
+        email_verified: true,
+        user_metadata: {
+          purpose: 'e2e_testing'
+        },
+        app_metadata: {
+          roles: ['tester']
+        }
+      };
+      
+      const newUser = await this.makeRequest('POST', '/users', userData);
+      console.log(`✅ Created test user: ${newUser.user_id}`);
+      
+      // Update .env with test user credentials
+      this.writeTestUserToEnv(testEmail, testPassword);
+      
+      return newUser;
+    } catch (error) {
+      console.error('❌ Failed to ensure test user:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Write test user credentials to environment file
+   */
+  writeTestUserToEnv(email, password) {
+    const envFile = path.join(process.cwd(), '.env');
+    let envContent = '';
+    
+    // Read existing env file if it exists
+    if (fs.existsSync(envFile)) {
+      envContent = fs.readFileSync(envFile, 'utf8');
+    }
+    
+    const lines = envContent.split('\n');
+    
+    // Helper function to update or add environment variable
+    const updateEnvVar = (varName, value) => {
+      const envVarLine = `${varName}=${value}`;
+      const existingLineIndex = lines.findIndex(line => line.startsWith(`${varName}=`));
+      
+      if (existingLineIndex >= 0) {
+        lines[existingLineIndex] = envVarLine;
+      } else {
+        lines.push(envVarLine);
+      }
+    };
+    
+    updateEnvVar('AUTH0_TEST_USER_EMAIL', email);
+    updateEnvVar('AUTH0_TEST_USER_PASSWORD', password);
+
+    fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
+    console.log(`📝 Updated ${envFile} with test user credentials`);
+  }
+
+  /**
    * Setup complete integration testing environment
    */
   async setupIntegrationTesting() {
@@ -986,8 +1068,12 @@ class Auth0ClientManager {
       console.log('\n3️⃣ Setting up integration test client...');
       await this.ensureTestClient();
       
-      // 4. Verify test client credentials are correct
-      console.log('\n4️⃣ Verifying test client setup...');
+      // 4. Ensure test user exists
+      console.log('\n4️⃣ Setting up test user...');
+      await this.ensureTestUser();
+      
+      // 5. Verify test client credentials are correct
+      console.log('\n5️⃣ Verifying test client setup...');
       console.log(`✅ Integration testing will use dedicated test client: ${this.getTestClientName()}`);
       console.log(`   Client ID written to .env file for test authentication`)
       

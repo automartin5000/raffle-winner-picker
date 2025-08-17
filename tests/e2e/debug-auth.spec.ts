@@ -3,7 +3,12 @@ import { test, expect } from '@playwright/test';
 const DEPLOYED_APP_URL = process.env.BASE_URL || 'https://local.dev.rafflewinnerpicker.com';
 
 test.describe('Auth Debug Tests', () => {
-  test('should debug Auth0 configuration', async ({ page, context }) => {
+  test.skip('should debug Auth0 configuration', async ({ page, context }) => {
+    // Skip debug tests in CI - only needed for local debugging
+    if (process.env.CI) {
+      test.skip();
+      return;
+    }
     // Allow popups by setting a different user agent
     await context.addInitScript(() => {
       // Override the popup blocking

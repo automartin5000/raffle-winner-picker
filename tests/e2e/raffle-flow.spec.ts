@@ -26,6 +26,7 @@ test.describe('Raffle Winner Picker E2E Tests', () => {
   });
 
   test('should upload CSV file and configure raffle', async ({ page }) => {
+    
     // First authenticate
     await loginWithAuth0(page, DEPLOYED_APP_URL);
     
@@ -51,6 +52,7 @@ Alice Brown,alice@example.com`;
   });
 
   test('should run raffle and display winners', async ({ page }) => {
+    
     // First authenticate
     await loginWithAuth0(page, DEPLOYED_APP_URL);
     
@@ -74,6 +76,7 @@ Alice Brown,alice@example.com`;
   });
 
   test('should display run history', async ({ page }) => {
+    
     await page.goto(`${DEPLOYED_APP_URL}/raffle`);
     
     const historySection = page.locator('[data-testid="run-history"]');
@@ -83,6 +86,7 @@ Alice Brown,alice@example.com`;
   });
 
   test('should handle invalid CSV format gracefully', async ({ page }) => {
+    
     await page.goto(`${DEPLOYED_APP_URL}/configure`);
     
     const invalidCsvContent = `Invalid,Format
@@ -99,6 +103,7 @@ No Email Column,Something`;
   });
 
   test('should validate winner count selection', async ({ page }) => {
+    
     await page.goto(`${DEPLOYED_APP_URL}/configure`);
     
     const csvContent = `Name,Email
