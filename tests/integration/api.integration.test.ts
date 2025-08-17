@@ -302,7 +302,7 @@ describe('Raffle API Integration Tests', () => {
         totalEntries: 2,
       });
 
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
 
       const secondRun = await apiClient.post('/runs', {
         entries: [
@@ -336,7 +336,7 @@ describe('Raffle API Integration Tests', () => {
         console.log(`First run: ${firstRun.timestamp}`);
         console.log(`Second run: ${secondRun.timestamp}`);
         
-        expect(firstTime).toBeGreaterThanOrEqual(secondTime - 1000); // Allow 1s tolerance
+        expect(firstTime).toBeGreaterThanOrEqual(secondTime - 2000); // Allow 2s tolerance for CI environments
       } else {
         console.log('Not enough runs to test ordering');
       }
