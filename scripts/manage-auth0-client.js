@@ -741,8 +741,13 @@ class Auth0ClientManager {
       console.log(`   Name: ${client.name}`);
       return client;
     } catch (error) {
-      console.error('❌ Failed to update Auth0 test client:', error.message);
-      throw error;
+      if (error.message.includes('429') || error.message.includes('too_many_requests')) {
+        console.log(`⚠️  Rate limit reached while updating test client, but continuing`);
+        return { client_id: clientId, name: testClientName };
+      } else {
+        console.error('❌ Failed to update Auth0 test client:', error.message);
+        throw error;
+      }
     }
   }
 
@@ -835,6 +840,8 @@ class Auth0ClientManager {
     } catch (error) {
       if (error.message.includes('409') || error.message.includes('already exists')) {
         console.log(`ℹ️  Client ${clientId} already has API access`);
+      } else if (error.message.includes('429') || error.message.includes('too_many_requests')) {
+        console.log(`⚠️  Rate limit reached while granting API access, but continuing (client may already have access)`);
       } else {
         console.error('❌ Failed to grant API access:', error.message);
         console.error(`   Client ID: ${clientId}`);
@@ -982,7 +989,16 @@ class Auth0ClientManager {
       // 4. Grant management client access to API (for CI/CD integration testing)
       console.log('\n4️⃣ Setting up management client API access...');
       const apiIdentifier = this.getApiIdentifier();
-      await this.grantClientApiAccess(this.clientId, apiIdentifier);
+      try {
+        await this.grantClientApiAccess(this.clientId, apiIdentifier);
+      } catch (error) {
+        if (error.message.includes('429') || error.message.includes('too_many_requests')) {
+          console.log(`⚠️  Rate limit reached while setting up management client access, but continuing`);
+          console.log(`   Management client may already have API access or will be granted later`);
+        } else {
+          throw error;
+        }
+      }
       
       console.log('\n✅ Integration testing environment setup complete!');
       console.log('📋 Next steps:');
