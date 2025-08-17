@@ -629,9 +629,18 @@ class Auth0ClientManager {
     if (existingClient) {
       console.log(`📝 Found existing test client: ${existingClient.client_id}`);
       const updatedClient = await this.updateTestClient(existingClient.client_id);
-      // Don't overwrite .env file when updating - client_secret is not returned by Auth0 update API
-      // The credentials should already be in the .env file from when the client was first created
-      console.log(`ℹ️  Skipping .env update for existing client (credentials already exist)`);
+      
+      // Check if credentials actually exist in .env file
+      if (this.hasTestClientCredentials()) {
+        console.log(`ℹ️  Skipping .env update for existing client (credentials already exist)`);
+      } else {
+        console.log(`📝 Writing test client credentials to .env (missing from file)`);
+        // Write credentials without client_secret since Auth0 update API doesn't return it
+        // In CI/CD environments, the secret should be provided via environment variables
+        this.writeTestClientToEnv(existingClient.client_id, undefined);
+        console.log(`⚠️  Note: client_secret not written (not returned by Auth0 update API)`);
+        console.log(`   If integration tests fail, ensure AUTH0_TEST_CLIENT_SECRET is provided via environment`);
+      }
       return updatedClient;
     } else {
       console.log('🆕 No existing test client found, creating new one...');
@@ -752,12 +761,16 @@ class Auth0ClientManager {
          client.client_metadata?.environment === this.deployEnv)
       );
       
-      // For ephemeral environments, prefer creating new clients but fall back to existing if needed
+      // For ephemeral environments, try to create new clients if we don't have credentials
       if (process.env.DEPLOY_EPHEMERAL === 'true') {
-        if (existingClient) {
-          console.log(`🔄 Ephemeral environment detected, but found existing client: ${existingClient.client_id}`);
-          console.log(`   Will reuse existing client to avoid tenant limits`);
+        if (existingClient && this.hasTestClientCredentials()) {
+          console.log(`🔄 Ephemeral environment detected, but found existing client with credentials: ${existingClient.client_id}`);
+          console.log(`   Will reuse existing client since credentials are available`);
           return existingClient;
+        } else if (existingClient) {
+          console.log(`🔄 Ephemeral environment detected, found existing client but missing credentials: ${existingClient.client_id}`);
+          console.log(`   Will try to create new client to get fresh credentials`);
+          return null;
         } else {
           console.log(`🔄 Ephemeral environment detected, will create new test client`);
           return null;
@@ -837,6 +850,26 @@ class Auth0ClientManager {
   getTestClientName() {
     const config = getEnvironmentConfig(this.deployEnv);
     return `Raffle Winner Picker Integration Tests (${config.name})`;
+  }
+
+  /**
+   * Check if test client credentials exist in .env file
+   */
+  hasTestClientCredentials() {
+    const envFile = path.join(process.cwd(), '.env');
+    
+    if (!fs.existsSync(envFile)) {
+      return false;
+    }
+    
+    const envContent = fs.readFileSync(envFile, 'utf8');
+    const lines = envContent.split('\n');
+    
+    const hasClientId = lines.some(line => line.startsWith('AUTH0_TEST_CLIENT_ID='));
+    const hasClientSecret = lines.some(line => line.startsWith('AUTH0_TEST_CLIENT_SECRET='));
+    const hasAudience = lines.some(line => line.startsWith('AUTH0_TEST_AUDIENCE='));
+    
+    return hasClientId && hasClientSecret && hasAudience;
   }
 
   /**
