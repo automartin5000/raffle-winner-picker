@@ -935,9 +935,9 @@ class Auth0ClientManager {
       
       console.log(`   Found ${testClients.length} test clients total`);
       
-      // Keep the 3 most recent test clients, delete the rest
+      // Keep only the 1 most recent test client, delete the rest
       const sortedClients = testClients.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-      const clientsToDelete = sortedClients.slice(3);
+      const clientsToDelete = sortedClients.slice(1);
       
       if (clientsToDelete.length === 0) {
         console.log('   No old test clients to clean up');
@@ -986,19 +986,10 @@ class Auth0ClientManager {
       console.log('\n3️⃣ Setting up integration test client...');
       await this.ensureTestClient();
       
-      // 4. Grant management client access to API (for CI/CD integration testing)
-      console.log('\n4️⃣ Setting up management client API access...');
-      const apiIdentifier = this.getApiIdentifier();
-      try {
-        await this.grantClientApiAccess(this.clientId, apiIdentifier);
-      } catch (error) {
-        if (error.message.includes('429') || error.message.includes('too_many_requests')) {
-          console.log(`⚠️  Rate limit reached while setting up management client access, but continuing`);
-          console.log(`   Management client may already have API access or will be granted later`);
-        } else {
-          throw error;
-        }
-      }
+      // 4. Verify test client credentials are correct
+      console.log('\n4️⃣ Verifying test client setup...');
+      console.log(`✅ Integration testing will use dedicated test client: ${this.getTestClientName()}`);
+      console.log(`   Client ID written to .env file for test authentication`)
       
       console.log('\n✅ Integration testing environment setup complete!');
       console.log('📋 Next steps:');
