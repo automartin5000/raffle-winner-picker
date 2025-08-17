@@ -979,6 +979,11 @@ class Auth0ClientManager {
       console.log('\n3️⃣ Setting up integration test client...');
       await this.ensureTestClient();
       
+      // 4. Grant management client access to API (for CI/CD integration testing)
+      console.log('\n4️⃣ Setting up management client API access...');
+      const apiIdentifier = this.getApiIdentifier();
+      await this.grantClientApiAccess(this.clientId, apiIdentifier);
+      
       console.log('\n✅ Integration testing environment setup complete!');
       console.log('📋 Next steps:');
       console.log('   • Integration tests can now authenticate using client credentials flow');
