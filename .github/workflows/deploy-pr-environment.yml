@@ -160,13 +160,13 @@ jobs:
 
           # Run only basic smoke tests first, then full suite
           echo "Running basic smoke tests first..."
-          if ! bun run test:e2e --project=chromium tests/e2e/basic-flow.spec.ts; then
+          if ! bunx playwright test --project=chromium tests/e2e/basic-flow.spec.ts; then
             echo "❌ Basic tests failed, skipping remaining tests"
             exit 1
           fi
 
           echo "Basic tests passed, running full E2E suite..."
-          bun run test:e2e --project=chromium
+          bunx playwright test --project=chromium
       - name: Create or update comment
         uses: peter-evans/create-or-update-comment@v4
         with:
