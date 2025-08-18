@@ -229,6 +229,13 @@ jobs:
       id-token: write
       actions: read
     environment: production
+    env:
+      AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+      VITE_AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+      AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+      AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+      PROD_HOSTED_ZONE: ${{ secrets.PROD_HOSTED_ZONE }}
+      DEPLOY_ENV: prod
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -251,6 +258,8 @@ jobs:
         uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      - name: Setup Auth0 Production Client
+        run: bun run setup-auth0-client
       - name: Deploy to Production
         run: bunx cdk deploy 'prod/*' --app cdk.out --require-approval never
       - name: Get Production URL

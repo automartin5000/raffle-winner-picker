@@ -91,6 +91,9 @@
       "description": "Only compile",
       "steps": [
         {
+          "spawn": "setup-auth0-client"
+        },
+        {
           "exec": "vite build"
         }
       ]
@@ -108,6 +111,12 @@
       "name": "deploy",
       "description": "Deploys your CDK app to the AWS cloud",
       "steps": [
+        {
+          "spawn": "compile"
+        },
+        {
+          "exec": "echo Deploying to environment: $DEPLOY_ENV"
+        },
         {
           "exec": "cdk deploy",
           "receiveArgs": true
@@ -166,6 +175,16 @@
         }
       ]
     },
+    "get-auth0-client": {
+      "name": "get-auth0-client",
+      "description": "Get Auth0 SPA client ID for build (no updates)",
+      "steps": [
+        {
+          "exec": "bun run scripts/manage-auth0-client.js get-for-build"
+        }
+      ],
+      "condition": "[ -n \"$DEPLOY_ENV\" ]"
+    },
     "install": {
       "name": "install",
       "description": "Install project dependencies and update lockfile (non-frozen)",
@@ -217,6 +236,16 @@
         }
       ]
     },
+    "setup-auth0-client": {
+      "name": "setup-auth0-client",
+      "description": "Setup/update Auth0 SPA client for deployment",
+      "steps": [
+        {
+          "exec": "bun run scripts/manage-auth0-client.js ensure-client"
+        }
+      ],
+      "condition": "[ -n \"$DEPLOY_ENV\" ]"
+    },
     "synth": {
       "name": "synth",
       "description": "Synthesizes your cdk app into cdk.out",
@@ -245,6 +274,42 @@
         },
         {
           "spawn": "eslint"
+        }
+      ]
+    },
+    "test:all": {
+      "name": "test:all",
+      "description": "Run all tests (unit, integration, and e2e)",
+      "steps": [
+        {
+          "exec": "bun run test && bun run test:integration && bun run test:e2e"
+        }
+      ]
+    },
+    "test:e2e": {
+      "name": "test:e2e",
+      "description": "Run end-to-end browser tests",
+      "steps": [
+        {
+          "exec": "playwright test"
+        }
+      ]
+    },
+    "test:e2e:local": {
+      "name": "test:e2e:local",
+      "description": "Run end-to-end tests against local dev server",
+      "steps": [
+        {
+          "exec": "BASE_URL=http://localhost:5173 NODE_ENV=development playwright test"
+        }
+      ]
+    },
+    "test:integration": {
+      "name": "test:integration",
+      "description": "Run API integration tests",
+      "steps": [
+        {
+          "exec": "jest --config jest.config.integration.js --runInBand"
         }
       ]
     },

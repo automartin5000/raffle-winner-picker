@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Config Test</title>
+</head>
+<body>
+    <h1>Auth Config Test</h1>
+    <div id="output"></div>
+    <script type="module">
+        // Check environment variables are available
+        console.log('Environment check:');
+        console.log('VITE_AUTH0_DOMAIN:', import.meta.env.VITE_AUTH0_DOMAIN);
+        console.log('VITE_SPA_AUTH0_CLIENT_ID:', import.meta.env.VITE_SPA_AUTH0_CLIENT_ID);
+        console.log('VITE_AUTH0_AUDIENCE:', import.meta.env.VITE_AUTH0_AUDIENCE);
+        
+        document.getElementById('output').innerHTML = `
+            <p>VITE_AUTH0_DOMAIN: ${import.meta.env.VITE_AUTH0_DOMAIN || 'MISSING'}</p>
+            <p>VITE_SPA_AUTH0_CLIENT_ID: ${import.meta.env.VITE_SPA_AUTH0_CLIENT_ID || 'MISSING'}</p>
+            <p>VITE_AUTH0_AUDIENCE: ${import.meta.env.VITE_AUTH0_AUDIENCE || 'MISSING'}</p>
+        `;
+    </script>
+</body>
+</html>

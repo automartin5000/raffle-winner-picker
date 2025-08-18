@@ -1,6 +1,7 @@
 import { awscdk } from 'projen';
 import { JobPermission } from 'projen/lib/github/workflows-model';
 import { NodePackageManager, TypescriptConfigExtends, TypeScriptModuleResolution } from 'projen/lib/javascript';
+import { BUILD_CONSTANTS } from './projen-config/constants';
 import { generateGitHubActions } from './projen-config/github-actions';
 
 const buildWorkflowCallConfig = {
@@ -34,7 +35,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
         uses: 'aws-actions/configure-aws-credentials@v4',
         with: {
           'aws-region': 'us-east-1',
-          'audience': 'sts.amazonaws.com',
+          'audience': BUILD_CONSTANTS.AWS_STS_AUDIENCE,
           'role-to-assume': 'arn:aws:iam::${{ secrets.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer',
         },
       },
@@ -44,6 +45,12 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       PROD_AWS_ACCOUNT_ID: '${{ secrets.PROD_AWS_ACCOUNT_ID }}',
       NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
       PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+      // Auth0 environment variables for client management
+      AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+      VITE_AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+      AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
+      AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
+      DEPLOY_ENV: 'dev', // Set deployment environment for Auth0 client creation
     },
     workflowTriggers: {
       push: {
@@ -58,7 +65,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   licensed: false,
   vscode: true,
   packageManager: NodePackageManager.BUN,
-  // TODO: Extract Svelete config to separate project
+  // TODO: Extract Svelte config to separate project
   tsconfig: {
     extends: TypescriptConfigExtends.fromPaths(['./.svelte-kit/tsconfig.json']),
     compilerOptions: {
@@ -106,6 +113,8 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     'svelte-preprocess',
     'vite-plugin-svelte',
     '@types/uuid',
+    '@playwright/test',
+    'dotenv',
   ],
 });
 project.gitignore.exclude(
@@ -121,12 +130,18 @@ project.gitignore.exclude(
   '.env',
   '.env.*',
   '!.env.example',
-  '!.env.test',
+
   // Vite
   'vite.config.js.timestamp-*',
   'vite.config.ts.timestamp-*',
   // CDK
   'cdk.context.json', // excluded for security concerns in public repo
+
+  // Playwright
+  'playwright-report',
+  'playwright.config.ts.timestamp-*',
+  'playwright.config.js.timestamp-*',
+  'test-results',
 );
 project.addFields({
   type: 'module',
@@ -137,13 +152,48 @@ project.addFields({
     },
   },
 });
+// Auth0 client management tasks
+const getAuth0ClientTask = project.addTask('get-auth0-client', {
+  description: 'Get Auth0 SPA client ID for build (no updates)',
+  exec: 'bun run scripts/manage-auth0-client.js get-for-build',
+  condition: '[ -n "$DEPLOY_ENV" ]',
+});
+
+const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
+  description: 'Setup/update Auth0 SPA client for deployment',
+  exec: 'bun run scripts/manage-auth0-client.js ensure-client',
+  condition: '[ -n "$DEPLOY_ENV" ]',
+});
+
+// Use get-for-build during compile to avoid updating clients during PR builds
+project.compileTask.prependSpawn(setupAuth0ClientTask);
+project.cdkTasks.deploy.prependExec('echo Deploying to environment: $DEPLOY_ENV');
+project.cdkTasks.deploy.prependSpawn(project.compileTask);
 // Svelte/Vite tasks
 project.addTask('dev', { exec: 'vite dev' });
-project.compileTask.reset('vite build');
 project.addTask('preview', { exec: 'vite preview' });
 project.addTask('prepare', { exec: 'svelte-kit sync || echo ""' });
 project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json' });
 project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch' });
+project.compileTask.exec('vite build');
+
+// Testing tasks
+project.addTask('test:integration', {
+  exec: 'jest --config jest.config.integration.js --runInBand',
+  description: 'Run API integration tests',
+});
+project.addTask('test:e2e', {
+  exec: 'playwright test',
+  description: 'Run end-to-end browser tests',
+});
+project.addTask('test:e2e:local', {
+  exec: 'BASE_URL=http://localhost:5173 NODE_ENV=development playwright test',
+  description: 'Run end-to-end tests against local dev server',
+});
+project.addTask('test:all', {
+  exec: 'bun run test && bun run test:integration && bun run test:e2e',
+  description: 'Run all tests (unit, integration, and e2e)',
+});
 
 // TODO: Add CDK CLI in projen
 project.addDevDeps('aws-cdk@^2.1022.0');

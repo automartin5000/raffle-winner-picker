@@ -182,19 +182,19 @@
   /* Computer Terminal Housing */
   .computer-terminal {
     perspective: 1000px;
-    margin: 2rem auto;
+    margin: 0 auto;
   }
   
   /* Monitor Bezel - Cream colored like old terminals */
   .monitor-bezel {
     background: linear-gradient(145deg, #f5f5dc, #e6e6d0);
-    border: 3px solid #d4d4aa;
-    border-radius: 12px;
-    padding: 1.5rem;
+    border: 2px solid #d4d4aa;
+    border-radius: 8px;
+    padding: 0.75rem;
     box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.3),
-      inset 0 2px 4px rgba(255, 255, 255, 0.3),
-      inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+      0 4px 16px rgba(0, 0, 0, 0.2),
+      inset 0 1px 2px rgba(255, 255, 255, 0.3),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.1);
     position: relative;
   }
   
@@ -213,17 +213,17 @@
   /* CRT Screen - Deep black with slight curve - Square aspect ratio */
   .crt-screen {
     background: #000;
-    border: 4px solid #1a1a1a;
-    border-radius: 8px;
+    border: 2px solid #1a1a1a;
+    border-radius: 6px;
     position: relative;
     overflow: hidden;
-    height: 480px;
+    height: 300px;
     width: 100%;
     aspect-ratio: 1;
     box-shadow: 
-      inset 0 0 50px rgba(0, 0, 0, 0.5),
-      inset 0 0 20px rgba(0, 255, 0, 0.1);
-    transform: perspective(800px) rotateX(2deg);
+      inset 0 0 25px rgba(0, 0, 0, 0.5),
+      inset 0 0 10px rgba(0, 255, 0, 0.1);
+    transform: perspective(400px) rotateX(1deg);
   }
   
   /* Scanlines Effect */
@@ -251,32 +251,33 @@
   
   /* Terminal Display */
   .terminal-display {
-    padding: 1.5rem;
+    padding: 0.75rem;
     height: 100%;
     background: 
       radial-gradient(ellipse at center, rgba(0, 255, 0, 0.02) 0%, rgba(0, 0, 0, 0.9) 100%),
       linear-gradient(90deg, transparent 98%, rgba(0, 255, 0, 0.03) 100%);
-    background-size: 100% 100%, 2px 2px;
+    background-size: 100% 100%, 1px 1px;
     color: #00ff00;
     font-family: 'Courier New', 'Monaco', monospace;
     position: relative;
     display: flex;
     flex-direction: column;
+    font-size: 0.75rem;
   }
   
   /* Terminal Header */
   .terminal-header {
     border-bottom: 1px solid #003300;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
   }
   
   /* Terminal Output */
   .terminal-output {
     flex: 0 0 auto;
-    max-height: 120px;
+    max-height: 60px;
     overflow-y: auto;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
   }
   
   .terminal-output::-webkit-scrollbar {
@@ -312,15 +313,15 @@
   
   /* Selection Box */
   .selection-box {
-    border: 2px solid #00ff00;
-    border-radius: 4px;
-    padding: 1.5rem;
+    border: 1px solid #00ff00;
+    border-radius: 3px;
+    padding: 0.75rem;
     text-align: center;
     background: rgba(0, 255, 0, 0.05);
     box-shadow: 
-      0 0 20px rgba(0, 255, 0, 0.3),
-      inset 0 0 10px rgba(0, 255, 0, 0.1);
-    min-height: 80px;
+      0 0 10px rgba(0, 255, 0, 0.3),
+      inset 0 0 5px rgba(0, 255, 0, 0.1);
+    min-height: 50px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -328,7 +329,7 @@
   }
   
   .selection-text {
-    min-height: 40px;
+    min-height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -350,14 +351,14 @@
   
   /* Monitor Stand */
   .monitor-stand {
-    width: 120px;
-    height: 60px;
+    width: 80px;
+    height: 30px;
     background: linear-gradient(145deg, #d4d4aa, #c4c49a);
     margin: 0 auto;
-    border-radius: 0 0 8px 8px;
-    border: 2px solid #b4b48a;
+    border-radius: 0 0 6px 6px;
+    border: 1px solid #b4b48a;
     border-top: none;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
   
   /* Glow Effects */

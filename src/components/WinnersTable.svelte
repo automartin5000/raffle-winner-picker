@@ -6,7 +6,6 @@
     email?: string;
   }> = [];
   
-  export let isComplete = false;
 
   function formatTime(timestamp: string): string {
     return new Date(timestamp).toLocaleTimeString();
@@ -33,137 +32,196 @@
   }
 </script>
 
-<div class="bg-gradient-to-b from-white to-gray-50 rounded-xl shadow-2xl p-6 h-full border border-gray-200">
-  <!-- Header -->
-  <div class="flex items-center justify-between mb-6">
-    <div class="flex items-center space-x-3">
-      <div class="text-3xl">🏆</div>
-      <div>
-        <h2 class="text-2xl font-bold text-gray-800">WINNERS</h2>
-        {#if winners.length > 0}
-          <div class="text-sm text-gray-600">{winners.length} selected</div>
-        {/if}
-      </div>
+<div class="winners-table">
+  <!-- Compact Header -->
+  <div class="winners-header">
+    <div class="winners-title">
+      <span class="winners-icon">🏆</span>
+      <span class="winners-text">Winners ({winners.length})</span>
     </div>
     
     {#if winners.length > 0}
-      <button
-        on:click={downloadWinners}
-        class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center space-x-2"
-      >
-        <span>📥</span>
-        <span>Export</span>
+      <button class="export-btn" on:click={downloadWinners}>
+        📥
       </button>
     {/if}
   </div>
 
   {#if winners.length === 0}
-    <!-- Empty State -->
-    <div class="text-center py-12">
-      <div class="text-6xl mb-4 opacity-50">🎯</div>
-      <div class="text-xl font-medium text-gray-400 mb-2">No Winners Yet</div>
-      <p class="text-gray-500">Winners will appear here as they are drawn</p>
+    <!-- Compact Empty State -->
+    <div class="empty-state">
+      <div class="empty-icon">🎯</div>
+      <div class="empty-text">Winners will appear here</div>
     </div>
   {:else}
-    <!-- Winners List -->
-    <div class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
+    <!-- Compact Winners List -->
+    <div class="winners-list">
       {#each winners as winner, index}
-        <div class="winner-card group relative overflow-hidden"
-             style="animation: slideIn 0.5s ease-out {index * 0.1}s both">
-          
-          <!-- Background Pattern -->
-          <div class="absolute inset-0 bg-gradient-to-r from-yellow-50 via-green-50 to-blue-50 opacity-60"></div>
-          
-          <!-- Content -->
-          <div class="relative flex items-center p-4 rounded-xl border-2 border-gradient shadow-lg bg-white/80 backdrop-blur-sm">
-            <!-- Winner Number Badge -->
-            <div class="flex-shrink-0 relative mr-4">
-              <div class="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
-                <span class="text-white font-bold text-lg">{index + 1}</span>
-              </div>
-              <div class="absolute -top-1 -right-1 text-lg animate-bounce">🎉</div>
-            </div>
-            
-            <!-- Winner Details -->
-            <div class="flex-grow">
-              <div class="font-bold text-lg text-gray-800 mb-1">{winner.name}</div>
-              {#if winner.email}
-                <div class="text-sm text-gray-600 mb-1">✉️ {winner.email}</div>
-              {/if}
-              {#if winner.prize}
-                <div class="inline-flex items-center bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full border border-purple-200">
-                  🏅 {winner.prize}
-                </div>
-              {/if}
-            </div>
-            
-            <!-- Time and Celebration -->
-            <div class="flex-shrink-0 text-right">
-              <div class="text-xs text-gray-500 mb-1">{formatTime(winner.timestamp)}</div>
-              <div class="text-3xl animate-pulse">🌟</div>
-            </div>
+        <div class="winner-item">
+          <div class="winner-number">{index + 1}</div>
+          <div class="winner-details">
+            <div class="winner-name">{winner.name}</div>
+            {#if winner.prize}
+              <div class="winner-prize">{winner.prize}</div>
+            {/if}
           </div>
         </div>
       {/each}
     </div>
   {/if}
 
-  <!-- Completion Celebration -->
-  {#if isComplete && winners.length > 0}
-    <div class="mt-6 p-6 bg-gradient-to-r from-green-100 via-blue-100 to-purple-100 border-2 border-green-300 rounded-xl text-center animate-pulse">
-      <div class="text-4xl mb-3">🎊✨🎊</div>
-      <div class="font-bold text-xl text-green-800 mb-1">RAFFLE COMPLETE!</div>
-      <div class="text-green-700">
-        Congratulations to all {winners.length} winner{winners.length !== 1 ? 's' : ''}!
-      </div>
-    </div>
-  {/if}
 </div>
 
 <style>
-  .winner-card {
-    position: relative;
-  }
-  
-  .winner-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    padding: 2px;
-    background: linear-gradient(45deg, #fbbf24, #10b981, #3b82f6, #8b5cf6);
-    border-radius: 12px;
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask-composite: xor;
-    -webkit-mask-composite: xor;
+  .winners-table {
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    border: 1px solid #e1e5e9;
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    min-height: 0;
   }
 
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
+  .winners-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
   }
-  
-  .custom-scrollbar::-webkit-scrollbar-track {
+
+  .winners-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .winners-icon {
+    font-size: 1rem;
+  }
+
+  .winners-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .export-btn {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    border: none;
+    padding: 0.375rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.2);
+  }
+
+  .export-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+  }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem 0;
+  }
+
+  .empty-icon {
+    font-size: 2rem;
+    opacity: 0.5;
+  }
+
+  .empty-text {
+    font-size: 0.875rem;
+    color: #64748b;
+    text-align: center;
+  }
+
+  .winners-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+  }
+
+  .winners-list::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  .winners-list::-webkit-scrollbar-track {
     background: #f1f5f9;
-    border-radius: 3px;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
-    border-radius: 3px;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(to bottom, #1d4ed8, #1e40af);
+    border-radius: 2px;
   }
 
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .winners-list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
   }
+
+  .winner-item {
+    background: linear-gradient(145deg, #f8fafc, #ffffff);
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.2s ease;
+  }
+
+  .winner-item:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+  }
+
+  .winner-number {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .winner-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .winner-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .winner-prize {
+    font-size: 0.75rem;
+    color: #7c3aed;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
 </style>
 
