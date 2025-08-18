@@ -9,14 +9,14 @@ import {
  */
 export function getAuth0ClientId(): string {
   const currentHostname = window.location.hostname;
-  
+
   // Determine if we're in production based on hostname
   const isNonProd = currentHostname.endsWith(import.meta.env.VITE_NONPROD_HOSTED_ZONE);
   const isProduction = !isNonProd && currentHostname.endsWith(import.meta.env.VITE_PROD_HOSTED_ZONE);
-  
+
   let clientId = '';
   let environment = 'unknown';
-  
+
   if (isProduction) {
     clientId = import.meta.env.VITE_AUTH0_CLIENT_ID_PROD || '';
     environment = 'production';
@@ -25,12 +25,12 @@ export function getAuth0ClientId(): string {
     environment = 'development';
   } else {
     // Fallback to the generic SPA client ID (for localhost or unknown domains)
-    clientId = import.meta.env.VITE_SPA_AUTH0_CLIENT_ID || 
+    clientId = import.meta.env.VITE_SPA_AUTH0_CLIENT_ID ||
                import.meta.env.VITE_AUTH0_CLIENT_ID || '';
     environment = 'localhost/fallback';
   }
-  
-  console.log(`🔐 Auth0 Environment Detection:`);
+
+  console.log('🔐 Auth0 Environment Detection:');
   console.log(`   Hostname: ${currentHostname}`);
   console.log(`   Environment: ${environment}`);
   console.log(`   Client ID: ${clientId ? clientId.substring(0, 8) + '...' : 'MISSING'}`);
