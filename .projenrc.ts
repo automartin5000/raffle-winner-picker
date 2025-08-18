@@ -160,8 +160,8 @@ const getAuth0ClientTask = project.addTask('get-auth0-client', {
 });
 
 const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
-  description: 'Setup/update Auth0 SPA client for deployment',
-  exec: 'bun run scripts/manage-auth0-client.js ensure-client',
+  description: 'Setup/update Auth0 SPA client IDs for all environments',
+  exec: 'bun run scripts/manage-auth0-client.js ensure-all-env-clients',
   condition: '[ -n "$DEPLOY_ENV" ]',
 });
 

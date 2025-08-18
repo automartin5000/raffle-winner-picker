@@ -5,16 +5,46 @@ import {
 
 /**
  * Get the Auth0 client ID for the current environment
+ * Dynamically selects between dev and prod client IDs based on the current hostname
  */
 export function getAuth0ClientId(): string {
-  const spaAuth0ClientId = import.meta.env.VITE_SPA_AUTH0_CLIENT_ID || '';
-  console.log(`Using Auth0 client ID: ${spaAuth0ClientId || 'MISSING'}`);
+  const currentHostname = window.location.hostname;
+  
+  // Determine if we're in production based on hostname
+  const isNonProd = currentHostname.endsWith(import.meta.env.VITE_NONPROD_HOSTED_ZONE);
+  const isProduction = !isNonProd && currentHostname.endsWith(import.meta.env.VITE_PROD_HOSTED_ZONE);
+  
+  let clientId = '';
+  let environment = 'unknown';
+  
+  if (isProduction) {
+    clientId = import.meta.env.VITE_AUTH0_CLIENT_ID_PROD || '';
+    environment = 'production';
+  } else if (isNonProd) {
+    clientId = import.meta.env.VITE_AUTH0_CLIENT_ID_DEV || '';
+    environment = 'development';
+  } else {
+    // Fallback to the generic SPA client ID (for localhost or unknown domains)
+    clientId = import.meta.env.VITE_SPA_AUTH0_CLIENT_ID || 
+               import.meta.env.VITE_AUTH0_CLIENT_ID || '';
+    environment = 'localhost/fallback';
+  }
+  
+  console.log(`🔐 Auth0 Environment Detection:`);
+  console.log(`   Hostname: ${currentHostname}`);
+  console.log(`   Environment: ${environment}`);
+  console.log(`   Client ID: ${clientId ? clientId.substring(0, 8) + '...' : 'MISSING'}`);
 
-  if (!spaAuth0ClientId) {
-    console.error('❌ VITE_SPA_AUTH0_CLIENT_ID is not set!');
+  if (!clientId) {
+    console.error('❌ Auth0 client ID is missing for environment:', environment);
+    console.error('   Available env vars:', {
+      VITE_AUTH0_CLIENT_ID_PROD: import.meta.env.VITE_AUTH0_CLIENT_ID_PROD ? 'SET' : 'MISSING',
+      VITE_AUTH0_CLIENT_ID_DEV: import.meta.env.VITE_AUTH0_CLIENT_ID_DEV ? 'SET' : 'MISSING',
+      VITE_SPA_AUTH0_CLIENT_ID: import.meta.env.VITE_SPA_AUTH0_CLIENT_ID ? 'SET' : 'MISSING',
+    });
   }
 
-  return spaAuth0ClientId;
+  return clientId;
 }
 
 /**
