@@ -9,7 +9,7 @@ import {
 export function getAuth0ClientId(): string {
   const spaAuth0ClientId = import.meta.env.VITE_SPA_AUTH0_CLIENT_ID || '';
   console.log(`Using Auth0 client ID: ${spaAuth0ClientId || 'MISSING'}`);
-  
+
   if (!spaAuth0ClientId) {
     console.error('❌ VITE_SPA_AUTH0_CLIENT_ID is not set!');
   }

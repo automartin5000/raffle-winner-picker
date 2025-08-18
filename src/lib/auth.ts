@@ -21,7 +21,7 @@ export async function initAuth0() {
   try {
     const domain = import.meta.env.VITE_AUTH0_DOMAIN || '';
     const clientId = getAuth0ClientId();
-    
+
     // Dynamically construct audience from environment instead of static env var
     const hostedZone = getHostedZone();
     const envName = import.meta.env.deploy_env;
@@ -30,7 +30,7 @@ export async function initAuth0() {
       service: CORE_SERVICES.WINNERS,
       hostedZone,
     });
-    
+
     console.log('🔧 Auth0 Configuration Debug:');
     console.log('   Domain:', domain);
     console.log('   Client ID:', clientId);
@@ -38,14 +38,14 @@ export async function initAuth0() {
     console.log('   Hosted Zone:', hostedZone);
     console.log('   Audience (API URL):', audience);
     console.log('   Redirect URI:', window.location.origin);
-    
+
     if (!domain) {
       console.error('❌ Auth0 domain is missing! Check VITE_AUTH0_DOMAIN environment variable.');
     }
     if (!clientId) {
       console.error('❌ Auth0 client ID is missing! Check VITE_SPA_AUTH0_CLIENT_ID environment variable.');
     }
-    
+
     auth0 = new Auth0Client({
       domain,
       clientId,
