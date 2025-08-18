@@ -25,8 +25,46 @@ runs:
         aws-region: us-east-1
         audience: sts.amazonaws.com
         role-to-assume: arn:aws:iam::${{ env.NONPROD_AWS_ACCOUNT_ID }}:role/github-actions-deployer
+    - name: Setup Auth0 Client IDs for Build
+      run: |
+        echo "Setting up Auth0 client IDs for all environments before build..."
+        # This ensures both PROD and DEV client IDs are available for the build
+        bun run scripts/manage-auth0-client.js ensure-all-env-clients
+        
+        # Source the .env file to make client IDs available for the build
+        if [ -f .env ]; then
+          echo "📋 Sourcing .env file for build environment variables..."
+          set -a  # automatically export all variables
+          source .env
+          set +a  # stop automatically exporting
+          echo "✅ Environment variables loaded for build:"
+          echo "   VITE_AUTH0_CLIENT_ID_PROD: ${VITE_AUTH0_CLIENT_ID_PROD:+[SET]}"
+          echo "   VITE_AUTH0_CLIENT_ID_DEV: ${VITE_AUTH0_CLIENT_ID_DEV:+[SET]}"
+          echo "   VITE_PROD_HOSTED_ZONE: ${VITE_PROD_HOSTED_ZONE}"
+          echo "   VITE_NONPROD_HOSTED_ZONE: ${VITE_NONPROD_HOSTED_ZONE}"
+        else
+          echo "❌ No .env file found"
+        fi
+      shell: bash
+      env:
+        # Auth0 environment variables for client management
+        AUTH0_DOMAIN: ${{ env.AUTH0_DOMAIN }}
+        AUTH0_CLIENT_ID: ${{ env.AUTH0_CLIENT_ID }}
+        AUTH0_CLIENT_SECRET: ${{ env.AUTH0_CLIENT_SECRET }}
+        DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
+        PROD_HOSTED_ZONE: ${{ env.PROD_HOSTED_ZONE }}
+        NONPROD_HOSTED_ZONE: ${{ env.NONPROD_HOSTED_ZONE }}
+        VITE_PROD_HOSTED_ZONE: ${{ env.VITE_PROD_HOSTED_ZONE }}
+        VITE_NONPROD_HOSTED_ZONE: ${{ env.VITE_NONPROD_HOSTED_ZONE }}
     - name: build
-      run: bunx projen build
+      run: |
+        # Source the .env file again to ensure all Auth0 client IDs are available for the build
+        if [ -f .env ]; then
+          set -a
+          source .env
+          set +a
+        fi
+        bunx projen build
       shell: bash
       env:
         # Auth0 environment variables for client management
