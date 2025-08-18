@@ -331,6 +331,9 @@ const addProductionDeployWorkflow = (github: GitHub) => {
         AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
         AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
         PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
+        VITE_PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        VITE_NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
         DEPLOY_ENV: 'prod', // Set production environment for Auth0 client creation
       },
       permissions: {
@@ -460,6 +463,31 @@ const addProductionDeployWorkflow = (github: GitHub) => {
         {
           name: "Setup Auth0 Production Client", 
           run: "bun run setup-auth0-client",
+        },
+        {
+          name: "Rebuild Frontend with Production Auth0 Client IDs",
+          run: [
+            '# Source the .env file to make Auth0 client IDs available for the build',
+            'if [ -f .env ]; then',
+            '  echo "📋 Sourcing .env file for build environment variables..."',
+            '  set -a  # automatically export all variables',
+            '  source .env',
+            '  set +a  # stop automatically exporting',
+            '  echo "✅ Environment variables loaded from .env"',
+            '  echo "   VITE_AUTH0_CLIENT_ID_PROD: ${VITE_AUTH0_CLIENT_ID_PROD:+[SET]}"',
+            '  echo "   VITE_AUTH0_CLIENT_ID_DEV: ${VITE_AUTH0_CLIENT_ID_DEV:+[SET]}"',
+            '  echo "   VITE_PROD_HOSTED_ZONE: ${VITE_PROD_HOSTED_ZONE}"',
+            '  echo "   VITE_NONPROD_HOSTED_ZONE: ${VITE_NONPROD_HOSTED_ZONE}"',
+            '',
+            '  # Rebuild the frontend with production Auth0 client IDs',
+            '  echo "🔄 Rebuilding frontend with production Auth0 client IDs..."',
+            '  DEPLOY_ENV=prod vite build',
+            '  echo "✅ Frontend rebuilt for production"',
+            'else',
+            '  echo "❌ No .env file found"',
+            '  exit 1',
+            'fi'
+          ].join('\n'),
         },
         {
           name: "Deploy to Production",
@@ -641,6 +669,9 @@ const addManualProductionDeployWorkflow = (github: GitHub) => {
         AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
         AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
         PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
+        VITE_PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        VITE_NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
         DEPLOY_ENV: 'prod', // Set production environment for Auth0 client creation
       },
       permissions: {
@@ -680,6 +711,31 @@ const addManualProductionDeployWorkflow = (github: GitHub) => {
         {
           name: "Setup Auth0 Production Client",
           run: "bun run setup-auth0-client",
+        },
+        {
+          name: "Rebuild Frontend with Production Auth0 Client IDs",
+          run: [
+            '# Source the .env file to make Auth0 client IDs available for the build',
+            'if [ -f .env ]; then',
+            '  echo "📋 Sourcing .env file for build environment variables..."',
+            '  set -a  # automatically export all variables',
+            '  source .env',
+            '  set +a  # stop automatically exporting',
+            '  echo "✅ Environment variables loaded from .env"',
+            '  echo "   VITE_AUTH0_CLIENT_ID_PROD: ${VITE_AUTH0_CLIENT_ID_PROD:+[SET]}"',
+            '  echo "   VITE_AUTH0_CLIENT_ID_DEV: ${VITE_AUTH0_CLIENT_ID_DEV:+[SET]}"',
+            '  echo "   VITE_PROD_HOSTED_ZONE: ${VITE_PROD_HOSTED_ZONE}"',
+            '  echo "   VITE_NONPROD_HOSTED_ZONE: ${VITE_NONPROD_HOSTED_ZONE}"',
+            '',
+            '  # Rebuild the frontend with production Auth0 client IDs',
+            '  echo "🔄 Rebuilding frontend with production Auth0 client IDs..."',
+            '  DEPLOY_ENV=prod vite build',
+            '  echo "✅ Frontend rebuilt for production"',
+            'else',
+            '  echo "❌ No .env file found"',
+            '  exit 1',
+            'fi'
+          ].join('\n'),
         },
         {
           name: "Deploy to Production",
