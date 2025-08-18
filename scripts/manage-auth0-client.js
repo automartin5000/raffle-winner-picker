@@ -1088,6 +1088,71 @@ class Auth0ClientManager {
       throw error;
     }
   }
+
+  /**
+   * Ensure both production and development client IDs are available in environment
+   * This allows the frontend to switch dynamically between client IDs based on hostname
+   */
+  async ensureAllEnvironmentClientIds() {
+    console.log('🔄 Setting up client IDs for all environments...');
+    
+    const originalEnv = this.deployEnv;
+    const envFile = path.join(process.cwd(), '.env');
+    let envContent = '';
+    
+    // Read existing env file if it exists
+    if (fs.existsSync(envFile)) {
+      envContent = fs.readFileSync(envFile, 'utf8');
+    }
+    
+    const lines = envContent.split('\n');
+    
+    // Helper function to update or add environment variable
+    const updateEnvVar = (varName, value) => {
+      const envVarLine = `${varName}=${value}`;
+      const existingLineIndex = lines.findIndex(line => line.startsWith(`${varName}=`));
+      
+      if (existingLineIndex >= 0) {
+        lines[existingLineIndex] = envVarLine;
+      } else {
+        lines.push(envVarLine);
+      }
+    };
+
+    try {
+      // Get or create PROD client ID
+      console.log('📋 Setting up production client ID...');
+      this.deployEnv = 'prod';
+      const prodClient = await this.ensureClient();
+      updateEnvVar('VITE_AUTH0_CLIENT_ID_PROD', prodClient.client_id);
+      
+      // Get or create DEV client ID  
+      console.log('📋 Setting up development client ID...');
+      this.deployEnv = 'dev';
+      const devClient = await this.ensureClient();
+      updateEnvVar('VITE_AUTH0_CLIENT_ID_DEV', devClient.client_id);
+      
+      // Set the current environment's client ID as default
+      this.deployEnv = originalEnv;
+      const currentClientId = originalEnv === 'prod' ? prodClient.client_id : devClient.client_id;
+      updateEnvVar('VITE_SPA_AUTH0_CLIENT_ID', currentClientId);
+      
+      // Write updated environment file
+      fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
+      
+      console.log('✅ All environment client IDs configured:');
+      console.log(`   PROD Client ID: ${prodClient.client_id}`);
+      console.log(`   DEV Client ID: ${devClient.client_id}`);
+      console.log(`   Current (${originalEnv}) Client ID: ${currentClientId}`);
+      
+    } catch (error) {
+      console.error('❌ Failed to setup all environment client IDs:', error.message);
+      throw error;
+    } finally {
+      // Restore original environment
+      this.deployEnv = originalEnv;
+    }
+  }
 }
 
 // CLI interface
@@ -1107,6 +1172,7 @@ async function main() {
     console.log('  ensure-api               Create or update Auth0 API');
     console.log('  ensure-test-client       Create or update integration test client');
     console.log('  setup-integration-testing Complete integration testing setup');
+    console.log('  ensure-all-env-clients   Set up client IDs for all environments (prod + dev)');
     console.log('  cleanup-test-clients     Delete old test clients to free up tenant space');
     process.exit(1);
   }
@@ -1153,6 +1219,9 @@ async function main() {
         break;
       case 'setup-integration-testing':
         await manager.setupIntegrationTesting();
+        break;
+      case 'ensure-all-env-clients':
+        await manager.ensureAllEnvironmentClientIds();
         break;
       case 'cleanup-test-clients':
         await manager.cleanupOldTestClients();

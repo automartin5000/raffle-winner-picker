@@ -238,10 +238,10 @@
     },
     "setup-auth0-client": {
       "name": "setup-auth0-client",
-      "description": "Setup/update Auth0 SPA client for deployment",
+      "description": "Setup/update Auth0 SPA client IDs for all environments",
       "steps": [
         {
-          "exec": "bun run scripts/manage-auth0-client.js ensure-client"
+          "exec": "bun run scripts/manage-auth0-client.js ensure-all-env-clients"
         }
       ],
       "condition": "[ -n \"$DEPLOY_ENV\" ]"
