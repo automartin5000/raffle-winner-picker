@@ -99,7 +99,7 @@ export class ApiStack extends cdk.Stack {
             );
         }
 
-        const api = new HttpApi(this, 'RaffleApi', {
+        const api = new HttpApi(this, 'RaffleHttpApi', {
             disableExecuteApiEndpoint: true,
             description: 'HTTP API for Raffle Winner Picker application',
             corsPreflight: {
