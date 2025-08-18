@@ -331,6 +331,9 @@ const addProductionDeployWorkflow = (github: GitHub) => {
         AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
         AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
         PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
+        VITE_PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        VITE_NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
         DEPLOY_ENV: 'prod', // Set production environment for Auth0 client creation
       },
       permissions: {
@@ -641,6 +644,9 @@ const addManualProductionDeployWorkflow = (github: GitHub) => {
         AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
         AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
         PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
+        VITE_PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        VITE_NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
         DEPLOY_ENV: 'prod', // Set production environment for Auth0 client creation
       },
       permissions: {
