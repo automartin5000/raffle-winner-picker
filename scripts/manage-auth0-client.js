@@ -597,22 +597,24 @@ class Auth0ClientManager {
     const apiBaseUrl = getApiBaseUrl({
       deploymentEnv: staticEnv,
       hostedZone: staticEnv === 'prod' ? process.env.PROD_HOSTED_ZONE : process.env.NONPROD_HOSTED_ZONE,
-      envName: this.deployEnv // Use actual deployment environment, not static environment
+      envName: staticEnv // Use static environment to reuse APIs across PRs
     });
     
     if (apiBaseUrl && !apiBaseUrl.includes('localhost')) {
       return apiBaseUrl;
     }
     
-    // Fallback for localhost/testing - use actual deployment environment
-    return `https://${this.deployEnv}.api.winners.dev.rafflewinnerpicker.com`;
+    // Fallback for localhost/testing - use static environment to reuse APIs
+    return `https://${staticEnv}.api.winners.dev.rafflewinnerpicker.com`;
   }
 
   /**
    * Get API name based on environment
    */
   getApiName() {
-    const config = getEnvironmentConfig(this.deployEnv);
+    // Use static environment to reuse APIs across PRs
+    const staticEnv = this.getStaticEnvironment();
+    const config = getEnvironmentConfig(staticEnv);
     return `Raffle Winner Picker API (${config.name})`;
   }
 
@@ -855,7 +857,9 @@ class Auth0ClientManager {
    * Get test client name
    */
   getTestClientName() {
-    const config = getEnvironmentConfig(this.deployEnv);
+    // Use static environment to reuse test clients across PRs
+    const staticEnv = this.getStaticEnvironment();
+    const config = getEnvironmentConfig(staticEnv);
     return `Raffle Winner Picker Integration Tests (${config.name})`;
   }
 
