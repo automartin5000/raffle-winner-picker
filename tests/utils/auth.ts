@@ -7,12 +7,20 @@ interface Auth0TokenResponse {
   scope?: string;
 }
 
+interface CachedToken {
+  token: string;
+  expiresAt: number;
+}
+
 interface Auth0ClientCredentials {
   clientId: string;
   clientSecret: string;
   audience: string;
   domain: string;
 }
+
+// Token cache to avoid unnecessary Auth0 requests
+let tokenCache: CachedToken | null = null;
 
 /**
  * Get Auth0 client credentials from environment variables
@@ -34,8 +42,15 @@ export function getAuth0Credentials(): Auth0ClientCredentials {
 
 /**
  * Obtain access token using Auth0 client credentials flow
+ * Caches tokens to avoid unnecessary requests within the same test run
  */
 export async function getAccessToken(): Promise<string> {
+  // Check if we have a valid cached token
+  if (tokenCache && Date.now() < tokenCache.expiresAt) {
+    console.log('♻️ Using cached Auth0 access token');
+    return tokenCache.token;
+  }
+
   const { clientId, clientSecret, audience, domain } = getAuth0Credentials();
 
   console.log('🔍 Auth0 token request details:');
@@ -76,10 +91,21 @@ export async function getAccessToken(): Promise<string> {
       throw new Error('No access token received from Auth0');
     }
 
-    console.log('✅ Successfully obtained Auth0 access token');
+    // Cache the token with a 5-minute buffer before expiration
+    const bufferSeconds = 300; // 5 minutes
+    const expiresAt = Date.now() + ((tokenData.expires_in - bufferSeconds) * 1000);
+    
+    tokenCache = {
+      token: tokenData.access_token,
+      expiresAt: expiresAt
+    };
+
+    console.log('✅ Successfully obtained and cached Auth0 access token');
     console.log(`   Token type: ${tokenData.token_type}`);
     console.log(`   Expires in: ${tokenData.expires_in}s`);
+    console.log(`   Cached until: ${new Date(expiresAt).toISOString()}`);
     console.log(`   Scopes: ${tokenData.scope || 'none'}`);
+    
     return tokenData.access_token;
 
   } catch (error) {
@@ -99,4 +125,12 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
+}
+
+/**
+ * Clear the token cache (useful for testing or forcing a fresh token)
+ */
+export function clearTokenCache(): void {
+  tokenCache = null;
+  console.log('🗑️ Auth0 token cache cleared');
 }
