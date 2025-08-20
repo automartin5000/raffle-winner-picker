@@ -505,11 +505,6 @@ class Auth0ClientManager {
       // Update the API
       const updatedApi = await this.updateApi(apiIdentifier);
       
-      // In CI environments, also ensure an API resource exists for the actual deployment URL
-      if (process.env.API_BASE_URL && process.env.API_BASE_URL !== apiIdentifier) {
-        console.log(`🔗 CI environment detected, ensuring API resource for deployment URL...`);
-        await this.ensureDeploymentApi();
-      }
       
       return updatedApi;
     } catch (error) {
@@ -517,11 +512,6 @@ class Auth0ClientManager {
         console.log('🆕 No existing API found, creating new one...');
         const createdApi = await this.createApi();
         
-        // In CI environments, also ensure an API resource exists for the actual deployment URL
-        if (process.env.API_BASE_URL && process.env.API_BASE_URL !== this.getApiIdentifier()) {
-          console.log(`🔗 CI environment detected, ensuring API resource for deployment URL...`);
-          await this.ensureDeploymentApi();
-        }
         
         return createdApi;
       } else {
@@ -833,11 +823,6 @@ class Auth0ClientManager {
       // Grant access to the API
       await this.grantClientApiAccess(client.client_id, apiIdentifier);
       
-      // Also grant access to deployment API if in CI environment
-      if (process.env.API_BASE_URL && process.env.API_BASE_URL !== apiIdentifier) {
-        console.log(`🔗 Also granting access to deployment API: ${process.env.API_BASE_URL}`);
-        await this.grantClientApiAccess(client.client_id, process.env.API_BASE_URL);
-      }
       
       // Write credentials to .env file
       this.writeTestClientToEnv(client.client_id, client.client_secret);
@@ -871,11 +856,6 @@ class Auth0ClientManager {
       // Ensure API access is granted
       await this.grantClientApiAccess(clientId, apiIdentifier);
       
-      // Also grant access to deployment API if in CI environment
-      if (process.env.API_BASE_URL && process.env.API_BASE_URL !== apiIdentifier) {
-        console.log(`🔗 Also granting access to deployment API: ${process.env.API_BASE_URL}`);
-        await this.grantClientApiAccess(clientId, process.env.API_BASE_URL);
-      }
       
       console.log('✅ Successfully updated Auth0 test client:');
       console.log(`   Client ID: ${client.client_id}`);
@@ -1059,16 +1039,16 @@ class Auth0ClientManager {
     updateEnvVar('AUTH0_TEST_CLIENT_ID', clientId);
     
     // Get the correct audience URL for integration tests
-    // In CI environments, use the actual API URL if provided
-    // Otherwise fall back to the static API identifier for reuse
-    const audienceUrl = process.env.API_BASE_URL || this.getApiIdentifier();
+    // Always use the static API identifier to avoid Auth0 tenant limits
+    // The Lambda function should accept tokens with this audience regardless of the access URL
+    const audienceUrl = this.getApiIdentifier();
     updateEnvVar('AUTH0_TEST_AUDIENCE', audienceUrl);
     
     console.log(`🔍 Setting Auth0 test audience to: ${audienceUrl}`);
     if (process.env.API_BASE_URL) {
-      console.log(`   Using actual API URL from environment (CI mode)`);
+      console.log(`   CI mode: Static audience for token validation, tests will call ${process.env.API_BASE_URL}`);
     } else {
-      console.log(`   Using static API identifier for local development`);
+      console.log(`   Local mode: Using static API identifier`);
     }
 
     fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
