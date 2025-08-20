@@ -504,13 +504,65 @@ class Auth0ClientManager {
       
       // Update the API
       const updatedApi = await this.updateApi(apiIdentifier);
+      
+      // In CI environments, also ensure an API resource exists for the actual deployment URL
+      if (process.env.API_BASE_URL && process.env.API_BASE_URL !== apiIdentifier) {
+        console.log(`🔗 CI environment detected, ensuring API resource for deployment URL...`);
+        await this.ensureDeploymentApi();
+      }
+      
       return updatedApi;
     } catch (error) {
       if (error.message.includes('404')) {
         console.log('🆕 No existing API found, creating new one...');
-        return await this.createApi();
+        const createdApi = await this.createApi();
+        
+        // In CI environments, also ensure an API resource exists for the actual deployment URL
+        if (process.env.API_BASE_URL && process.env.API_BASE_URL !== this.getApiIdentifier()) {
+          console.log(`🔗 CI environment detected, ensuring API resource for deployment URL...`);
+          await this.ensureDeploymentApi();
+        }
+        
+        return createdApi;
       } else {
         console.error(`❌ Error checking for existing API: ${error.message}`);
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Ensure an Auth0 API resource exists for the actual deployment URL
+   * This is needed in CI environments where the deployment URL differs from the static API identifier
+   */
+  async ensureDeploymentApi() {
+    const deploymentUrl = process.env.API_BASE_URL;
+    if (!deploymentUrl) {
+      console.log(`ℹ️  No API_BASE_URL provided, skipping deployment API creation`);
+      return;
+    }
+
+    const deploymentApiName = `${this.getApiName()} (Deployment)`;
+    
+    console.log(`🔍 Looking for existing deployment API: ${deploymentUrl}`);
+    console.log(`   Expected API Name: ${deploymentApiName}`);
+    
+    try {
+      // Check if deployment API already exists
+      const existingApi = await this.makeRequest('GET', `/resource-servers/${encodeURIComponent(deploymentUrl)}`);
+      console.log(`📝 Found existing deployment API:`);
+      console.log(`   Name: ${existingApi.name}`);
+      console.log(`   Identifier: ${existingApi.identifier}`);
+      
+      // Update the deployment API
+      await this.updateDeploymentApi(deploymentUrl, deploymentApiName);
+      return existingApi;
+    } catch (error) {
+      if (error.message.includes('404')) {
+        console.log('🆕 No existing deployment API found, creating new one...');
+        return await this.createDeploymentApi(deploymentUrl, deploymentApiName);
+      } else {
+        console.error(`❌ Error checking for existing deployment API: ${error.message}`);
         throw error;
       }
     }
@@ -585,6 +637,74 @@ class Auth0ClientManager {
       return api;
     } catch (error) {
       console.error('❌ Failed to update Auth0 API:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Create Auth0 API resource for actual deployment URL
+   */
+  async createDeploymentApi(deploymentUrl, deploymentApiName) {
+    const apiData = {
+      name: deploymentApiName,
+      identifier: deploymentUrl,
+      scopes: [
+        {
+          value: 'read:raffles',
+          description: 'Read raffle runs and entries'
+        },
+        {
+          value: 'write:raffles',
+          description: 'Create new raffle runs'
+        }
+      ],
+      signing_alg: 'RS256',
+      token_lifetime: 86400,
+      token_lifetime_for_web: 7200,
+      skip_consent_for_verifiable_first_party_clients: true
+    };
+
+    try {
+      const api = await this.makeRequest('POST', '/resource-servers', apiData);
+      console.log('✅ Successfully created deployment Auth0 API:');
+      console.log(`   API ID: ${api.id}`);
+      console.log(`   Identifier: ${api.identifier}`);
+      console.log(`   Name: ${api.name}`);
+      return api;
+    } catch (error) {
+      console.error('❌ Failed to create deployment Auth0 API:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Update existing deployment Auth0 API resource
+   */
+  async updateDeploymentApi(deploymentUrl, deploymentApiName) {
+    const updates = {
+      name: deploymentApiName,
+      scopes: [
+        {
+          value: 'read:raffles',
+          description: 'Read raffle runs and entries'
+        },
+        {
+          value: 'write:raffles',
+          description: 'Create new raffle runs'
+        }
+      ],
+      token_lifetime: 86400,
+      token_lifetime_for_web: 7200
+    };
+
+    try {
+      const api = await this.makeRequest('PATCH', `/resource-servers/${encodeURIComponent(deploymentUrl)}`, updates);
+      console.log('✅ Successfully updated deployment Auth0 API:');
+      console.log(`   Identifier: ${api.identifier}`);
+      console.log(`   Name: ${api.name}`);
+      return api;
+    } catch (error) {
+      console.error('❌ Failed to update deployment Auth0 API:', error.message);
       throw error;
     }
   }
@@ -713,6 +833,12 @@ class Auth0ClientManager {
       // Grant access to the API
       await this.grantClientApiAccess(client.client_id, apiIdentifier);
       
+      // Also grant access to deployment API if in CI environment
+      if (process.env.API_BASE_URL && process.env.API_BASE_URL !== apiIdentifier) {
+        console.log(`🔗 Also granting access to deployment API: ${process.env.API_BASE_URL}`);
+        await this.grantClientApiAccess(client.client_id, process.env.API_BASE_URL);
+      }
+      
       // Write credentials to .env file
       this.writeTestClientToEnv(client.client_id, client.client_secret);
       
@@ -744,6 +870,12 @@ class Auth0ClientManager {
       
       // Ensure API access is granted
       await this.grantClientApiAccess(clientId, apiIdentifier);
+      
+      // Also grant access to deployment API if in CI environment
+      if (process.env.API_BASE_URL && process.env.API_BASE_URL !== apiIdentifier) {
+        console.log(`🔗 Also granting access to deployment API: ${process.env.API_BASE_URL}`);
+        await this.grantClientApiAccess(clientId, process.env.API_BASE_URL);
+      }
       
       console.log('✅ Successfully updated Auth0 test client:');
       console.log(`   Client ID: ${client.client_id}`);
