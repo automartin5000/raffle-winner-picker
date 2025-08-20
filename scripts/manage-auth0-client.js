@@ -633,8 +633,15 @@ class Auth0ClientManager {
       const updatedClient = await this.updateTestClient(existingClient.client_id);
       
       // Check if credentials actually exist in .env file
-      if (this.hasTestClientCredentials()) {
+      const hasCredentials = this.hasTestClientCredentials();
+      const hasApiBaseUrl = process.env.API_BASE_URL;
+      
+      if (hasCredentials && !hasApiBaseUrl) {
         console.log(`ℹ️  Skipping .env update for existing client (credentials already exist)`);
+      } else if (hasCredentials && hasApiBaseUrl) {
+        console.log(`📝 Updating audience in .env for CI environment (API_BASE_URL provided)`);
+        this.writeTestClientToEnv(existingClient.client_id, undefined);
+        console.log(`⚠️  Note: client_secret not updated (using existing value)`);
       } else {
         console.log(`📝 Writing test client credentials to .env (missing from file)`);
         // Write credentials without client_secret since Auth0 update API doesn't return it
@@ -918,7 +925,19 @@ class Auth0ClientManager {
       console.log(`⚠️  Skipping client secret update (value is undefined or invalid)`);
     }
     updateEnvVar('AUTH0_TEST_CLIENT_ID', clientId);
-    updateEnvVar('AUTH0_TEST_AUDIENCE', this.getApiIdentifier());
+    
+    // Get the correct audience URL for integration tests
+    // In CI environments, use the actual API URL if provided
+    // Otherwise fall back to the static API identifier for reuse
+    const audienceUrl = process.env.API_BASE_URL || this.getApiIdentifier();
+    updateEnvVar('AUTH0_TEST_AUDIENCE', audienceUrl);
+    
+    console.log(`🔍 Setting Auth0 test audience to: ${audienceUrl}`);
+    if (process.env.API_BASE_URL) {
+      console.log(`   Using actual API URL from environment (CI mode)`);
+    } else {
+      console.log(`   Using static API identifier for local development`);
+    }
 
     fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
     console.log(`📝 Updated ${envFile} with test client credentials`);
