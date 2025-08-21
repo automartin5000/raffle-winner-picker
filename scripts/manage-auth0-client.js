@@ -504,13 +504,55 @@ class Auth0ClientManager {
       
       // Update the API
       const updatedApi = await this.updateApi(apiIdentifier);
+      
+      
       return updatedApi;
     } catch (error) {
       if (error.message.includes('404')) {
         console.log('🆕 No existing API found, creating new one...');
-        return await this.createApi();
+        const createdApi = await this.createApi();
+        
+        
+        return createdApi;
       } else {
         console.error(`❌ Error checking for existing API: ${error.message}`);
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Ensure an Auth0 API resource exists for the actual deployment URL
+   * This is needed in CI environments where the deployment URL differs from the static API identifier
+   */
+  async ensureDeploymentApi() {
+    const deploymentUrl = process.env.API_BASE_URL;
+    if (!deploymentUrl) {
+      console.log(`ℹ️  No API_BASE_URL provided, skipping deployment API creation`);
+      return;
+    }
+
+    const deploymentApiName = `${this.getApiName()} (Deployment)`;
+    
+    console.log(`🔍 Looking for existing deployment API: ${deploymentUrl}`);
+    console.log(`   Expected API Name: ${deploymentApiName}`);
+    
+    try {
+      // Check if deployment API already exists
+      const existingApi = await this.makeRequest('GET', `/resource-servers/${encodeURIComponent(deploymentUrl)}`);
+      console.log(`📝 Found existing deployment API:`);
+      console.log(`   Name: ${existingApi.name}`);
+      console.log(`   Identifier: ${existingApi.identifier}`);
+      
+      // Update the deployment API
+      await this.updateDeploymentApi(deploymentUrl, deploymentApiName);
+      return existingApi;
+    } catch (error) {
+      if (error.message.includes('404')) {
+        console.log('🆕 No existing deployment API found, creating new one...');
+        return await this.createDeploymentApi(deploymentUrl, deploymentApiName);
+      } else {
+        console.error(`❌ Error checking for existing deployment API: ${error.message}`);
         throw error;
       }
     }
@@ -590,6 +632,74 @@ class Auth0ClientManager {
   }
 
   /**
+   * Create Auth0 API resource for actual deployment URL
+   */
+  async createDeploymentApi(deploymentUrl, deploymentApiName) {
+    const apiData = {
+      name: deploymentApiName,
+      identifier: deploymentUrl,
+      scopes: [
+        {
+          value: 'read:raffles',
+          description: 'Read raffle runs and entries'
+        },
+        {
+          value: 'write:raffles',
+          description: 'Create new raffle runs'
+        }
+      ],
+      signing_alg: 'RS256',
+      token_lifetime: 86400,
+      token_lifetime_for_web: 7200,
+      skip_consent_for_verifiable_first_party_clients: true
+    };
+
+    try {
+      const api = await this.makeRequest('POST', '/resource-servers', apiData);
+      console.log('✅ Successfully created deployment Auth0 API:');
+      console.log(`   API ID: ${api.id}`);
+      console.log(`   Identifier: ${api.identifier}`);
+      console.log(`   Name: ${api.name}`);
+      return api;
+    } catch (error) {
+      console.error('❌ Failed to create deployment Auth0 API:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Update existing deployment Auth0 API resource
+   */
+  async updateDeploymentApi(deploymentUrl, deploymentApiName) {
+    const updates = {
+      name: deploymentApiName,
+      scopes: [
+        {
+          value: 'read:raffles',
+          description: 'Read raffle runs and entries'
+        },
+        {
+          value: 'write:raffles',
+          description: 'Create new raffle runs'
+        }
+      ],
+      token_lifetime: 86400,
+      token_lifetime_for_web: 7200
+    };
+
+    try {
+      const api = await this.makeRequest('PATCH', `/resource-servers/${encodeURIComponent(deploymentUrl)}`, updates);
+      console.log('✅ Successfully updated deployment Auth0 API:');
+      console.log(`   Identifier: ${api.identifier}`);
+      console.log(`   Name: ${api.name}`);
+      return api;
+    } catch (error) {
+      console.error('❌ Failed to update deployment Auth0 API:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Get API identifier based on environment
    */
   getApiIdentifier() {
@@ -597,22 +707,24 @@ class Auth0ClientManager {
     const apiBaseUrl = getApiBaseUrl({
       deploymentEnv: staticEnv,
       hostedZone: staticEnv === 'prod' ? process.env.PROD_HOSTED_ZONE : process.env.NONPROD_HOSTED_ZONE,
-      envName: this.deployEnv // Use actual deployment environment, not static environment
+      envName: staticEnv // Use static environment to reuse APIs across PRs
     });
     
     if (apiBaseUrl && !apiBaseUrl.includes('localhost')) {
       return apiBaseUrl;
     }
     
-    // Fallback for localhost/testing - use actual deployment environment
-    return `https://${this.deployEnv}.api.winners.dev.rafflewinnerpicker.com`;
+    // Fallback for localhost/testing - use static environment to reuse APIs
+    return `https://${staticEnv}.api.winners.dev.rafflewinnerpicker.com`;
   }
 
   /**
    * Get API name based on environment
    */
   getApiName() {
-    const config = getEnvironmentConfig(this.deployEnv);
+    // Use static environment to reuse APIs across PRs
+    const staticEnv = this.getStaticEnvironment();
+    const config = getEnvironmentConfig(staticEnv);
     return `Raffle Winner Picker API (${config.name})`;
   }
 
@@ -631,8 +743,15 @@ class Auth0ClientManager {
       const updatedClient = await this.updateTestClient(existingClient.client_id);
       
       // Check if credentials actually exist in .env file
-      if (this.hasTestClientCredentials()) {
+      const hasCredentials = this.hasTestClientCredentials();
+      const hasApiBaseUrl = process.env.API_BASE_URL;
+      
+      if (hasCredentials && !hasApiBaseUrl) {
         console.log(`ℹ️  Skipping .env update for existing client (credentials already exist)`);
+      } else if (hasCredentials && hasApiBaseUrl) {
+        console.log(`📝 Updating audience in .env for CI environment (API_BASE_URL provided)`);
+        this.writeTestClientToEnv(existingClient.client_id, undefined);
+        console.log(`⚠️  Note: client_secret not updated (using existing value)`);
       } else {
         console.log(`📝 Writing test client credentials to .env (missing from file)`);
         // Write credentials without client_secret since Auth0 update API doesn't return it
@@ -704,6 +823,7 @@ class Auth0ClientManager {
       // Grant access to the API
       await this.grantClientApiAccess(client.client_id, apiIdentifier);
       
+      
       // Write credentials to .env file
       this.writeTestClientToEnv(client.client_id, client.client_secret);
       
@@ -735,6 +855,7 @@ class Auth0ClientManager {
       
       // Ensure API access is granted
       await this.grantClientApiAccess(clientId, apiIdentifier);
+      
       
       console.log('✅ Successfully updated Auth0 test client:');
       console.log(`   Client ID: ${client.client_id}`);
@@ -855,7 +976,9 @@ class Auth0ClientManager {
    * Get test client name
    */
   getTestClientName() {
-    const config = getEnvironmentConfig(this.deployEnv);
+    // Use static environment to reuse test clients across PRs
+    const staticEnv = this.getStaticEnvironment();
+    const config = getEnvironmentConfig(staticEnv);
     return `Raffle Winner Picker Integration Tests (${config.name})`;
   }
 
@@ -914,7 +1037,19 @@ class Auth0ClientManager {
       console.log(`⚠️  Skipping client secret update (value is undefined or invalid)`);
     }
     updateEnvVar('AUTH0_TEST_CLIENT_ID', clientId);
-    updateEnvVar('AUTH0_TEST_AUDIENCE', this.getApiIdentifier());
+    
+    // Get the correct audience URL for integration tests
+    // Always use the static API identifier to avoid Auth0 tenant limits
+    // The Lambda function should accept tokens with this audience regardless of the access URL
+    const audienceUrl = this.getApiIdentifier();
+    updateEnvVar('AUTH0_TEST_AUDIENCE', audienceUrl);
+    
+    console.log(`🔍 Setting Auth0 test audience to: ${audienceUrl}`);
+    if (process.env.API_BASE_URL) {
+      console.log(`   CI mode: Static audience for token validation, tests will call ${process.env.API_BASE_URL}`);
+    } else {
+      console.log(`   Local mode: Using static API identifier`);
+    }
 
     fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
     console.log(`📝 Updated ${envFile} with test client credentials`);
