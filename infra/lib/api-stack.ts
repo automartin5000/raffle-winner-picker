@@ -111,13 +111,28 @@ export class ApiStack extends cdk.Stack {
         });
 
         // Create JWT Authorizer for Auth0
+        // Configure multiple audiences to support both actual deployment URLs and static environment audiences
+        const allowedAudiences = [
+            // Actual deployment URL (for direct calls)
+            this.winnersApiDomain,
+            // Static environment audience (for reused Auth0 API resources in CI)
+            buildApiDomain({
+                envName: 'dev', // Static 'dev' environment for CI/test resources
+                service: CORE_SERVICES.WINNERS,
+                hostedZone: this.hostedZone.zoneName,
+            }),
+        ];
+        
+        // Remove duplicates in case they're the same (for dev environment)
+        const uniqueAudiences = [...new Set(allowedAudiences)].map(aud => `https://${aud}`);
+        
         const jwtAuthorizer = new HttpJwtAuthorizer(
             'Auth0JWTAuthorizer',
             `https://${process.env.AUTH0_DOMAIN}/`,
             {
                 authorizerName: 'Auth0JWTAuthorizer',
                 identitySource: ['$request.header.Authorization'],
-                jwtAudience: [`https://${this.winnersApiDomain}`],
+                jwtAudience: uniqueAudiences,
             }
         );
 

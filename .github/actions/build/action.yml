@@ -31,12 +31,22 @@ runs:
         # This ensures both PROD and DEV client IDs are available for the build
         bun run scripts/manage-auth0-client.js ensure-all-env-clients
         
+        # Set up hosted zone environment variables for frontend build
+        echo "📋 Setting up hosted zone environment variables..."
+        export VITE_PROD_HOSTED_ZONE="${PROD_HOSTED_ZONE}"
+        export VITE_NONPROD_HOSTED_ZONE="${NONPROD_HOSTED_ZONE}"
+        
         # Source the .env file to make client IDs available for the build
         if [ -f .env ]; then
           echo "📋 Sourcing .env file for build environment variables..."
           set -a  # automatically export all variables
           source .env
           set +a  # stop automatically exporting
+          
+          # Override with hosted zones from secrets since they're more authoritative
+          export VITE_PROD_HOSTED_ZONE="${PROD_HOSTED_ZONE}"
+          export VITE_NONPROD_HOSTED_ZONE="${NONPROD_HOSTED_ZONE}"
+          
           echo "✅ Environment variables loaded for build:"
           echo "   VITE_AUTH0_CLIENT_ID_PROD: ${VITE_AUTH0_CLIENT_ID_PROD:+[SET]}"
           echo "   VITE_AUTH0_CLIENT_ID_DEV: ${VITE_AUTH0_CLIENT_ID_DEV:+[SET]}"

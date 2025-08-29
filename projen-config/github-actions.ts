@@ -189,6 +189,20 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           ].join("\n"),
         },
         {
+          name: "Update Auth0 Client with PR Environment URL",
+          id: "update-auth0-client", 
+          env: {
+            AUTH0_ADDITIONAL_CALLBACK_URLS: "${{ steps.get-urls.outputs.FRONTEND_URL }}",
+          },
+          run: [
+            'echo "Adding PR environment URL to Auth0 client callback URLs..."',
+            'echo "PR Frontend URL: ${{ steps.get-urls.outputs.FRONTEND_URL }}"',
+            'echo "Waiting 10 seconds to avoid Auth0 rate limits..."',
+            'sleep 10',
+            'bun run scripts/manage-auth0-client.js ensure-client'
+          ].join("\n"),
+        },
+        {
           name: "Run Integration Tests",
           id: "integration-tests",
           env: {
