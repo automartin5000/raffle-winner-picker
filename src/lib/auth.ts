@@ -22,12 +22,35 @@ export async function initAuth0() {
     const domain = import.meta.env.VITE_AUTH0_DOMAIN || '';
     const clientId = getAuth0ClientId();
 
-    // Dynamically construct audience from environment instead of static env var
+    // Dynamically construct audience from the current URL's hostname
     const hostedZone = getHostedZone();
-    const envName = import.meta.env.VITE_DEPLOY_ENV;
-
-    // For local development, use the dev API audience since that's what exists in Auth0
-    const apiEnvName = envName === 'local' ? 'dev' : envName;
+    const currentHostname = window.location.hostname;
+    
+    // Determine environment from hostname, not from build-time variable
+    let apiEnvName: string;
+    
+    console.log('🔍 Environment Detection Debug:');
+    console.log('   VITE_NONPROD_HOSTED_ZONE:', import.meta.env.VITE_NONPROD_HOSTED_ZONE);
+    console.log('   VITE_PROD_HOSTED_ZONE:', import.meta.env.VITE_PROD_HOSTED_ZONE);
+    
+    if (currentHostname === 'localhost' || currentHostname === '127.0.0.1') {
+      // For local development, use dev API
+      apiEnvName = 'dev';
+      console.log('   → Detected: localhost (using dev API)');
+    } else if (currentHostname.endsWith(import.meta.env.VITE_NONPROD_HOSTED_ZONE)) {
+      // Non-production domains (dev.rafflewinnerpicker.com, pr123.dev.rafflewinnerpicker.com)
+      apiEnvName = 'dev';
+      console.log('   → Detected: nonprod domain (using dev API)');
+    } else if (currentHostname.endsWith(import.meta.env.VITE_PROD_HOSTED_ZONE)) {
+      // Production domain (rafflewinnerpicker.com)
+      apiEnvName = 'prod';
+      console.log('   → Detected: prod domain (using prod API)');
+    } else {
+      // Fallback to dev for unknown domains
+      apiEnvName = 'dev';
+      console.log('   → Detected: unknown domain (fallback to dev API)');
+    }
+    
     const audience = getApiUrl({
       envName: apiEnvName,
       service: CORE_SERVICES.WINNERS,
@@ -37,7 +60,8 @@ export async function initAuth0() {
     console.log('🔧 Auth0 Configuration Debug:');
     console.log('   Domain:', domain);
     console.log('   Client ID:', clientId);
-    console.log('   Environment:', envName);
+    console.log('   Current Hostname:', currentHostname);
+    console.log('   API Environment:', apiEnvName);
     console.log('   Hosted Zone:', hostedZone);
     console.log('   Audience (API URL):', audience);
     console.log('   Redirect URI:', window.location.origin);
