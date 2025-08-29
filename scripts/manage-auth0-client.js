@@ -1258,17 +1258,20 @@ class Auth0ClientManager {
       // Get or create PROD client ID
       console.log('📋 Setting up production client ID...');
       this.deployEnv = 'prod';
+      this.appName = this.getAppName(); // Refresh app name for prod environment
       const prodClient = await this.ensureClient();
       updateEnvVar('VITE_AUTH0_CLIENT_ID_PROD', prodClient.client_id);
       
       // Get or create DEV client ID  
       console.log('📋 Setting up development client ID...');
       this.deployEnv = 'dev';
+      this.appName = this.getAppName(); // Refresh app name for dev environment
       const devClient = await this.ensureClient();
       updateEnvVar('VITE_AUTH0_CLIENT_ID_DEV', devClient.client_id);
       
       // Set the current environment's client ID as default
       this.deployEnv = originalEnv;
+      this.appName = this.getAppName(); // Restore original app name
       const currentClientId = originalEnv === 'prod' ? prodClient.client_id : devClient.client_id;
       updateEnvVar('VITE_SPA_AUTH0_CLIENT_ID', currentClientId);
       
@@ -1286,6 +1289,7 @@ class Auth0ClientManager {
     } finally {
       // Restore original environment
       this.deployEnv = originalEnv;
+      this.appName = this.getAppName(); // Restore original app name
     }
   }
 }
