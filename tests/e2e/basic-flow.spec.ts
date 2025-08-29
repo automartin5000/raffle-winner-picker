@@ -55,19 +55,39 @@ test.describe('Basic Application Flow Tests', () => {
           // Wait for popup to navigate to Auth0 (or timeout after 10 seconds)
           await popup.waitForURL(url => {
             const urlString = typeof url === 'string' ? url : url.toString();
-            const containsAuth0 = urlString.includes('auth0.com');
-            if (containsAuth0) {
+            let isAuth0Domain = false;
+            try {
+              const parsedUrl = new URL(urlString);
+              // Check if hostname ends with auth0.com (proper domain validation)
+              isAuth0Domain = parsedUrl.hostname.endsWith('.auth0.com') || parsedUrl.hostname === 'auth0.com';
+            } catch {
+              // If URL parsing fails, it's definitely not a valid Auth0 URL
+              isAuth0Domain = false;
+            }
+            
+            if (isAuth0Domain) {
               auth0UrlDetected = true;
               popupNavigatedToAuth0 = true;
               console.log('✅ Popup successfully navigated to Auth0:', urlString);
             }
-            return containsAuth0;
+            return isAuth0Domain;
           }, { timeout: 10000 });
         } catch (error) {
           // Check final URL even if waitForURL times out
           const finalUrl = popup.url();
           console.log('Popup final URL after timeout/error:', finalUrl);
-          if (finalUrl.includes('auth0.com')) {
+          
+          let isAuth0Domain = false;
+          try {
+            const parsedUrl = new URL(finalUrl);
+            // Check if hostname ends with auth0.com (proper domain validation)
+            isAuth0Domain = parsedUrl.hostname.endsWith('.auth0.com') || parsedUrl.hostname === 'auth0.com';
+          } catch {
+            // If URL parsing fails, it's definitely not a valid Auth0 URL
+            isAuth0Domain = false;
+          }
+          
+          if (isAuth0Domain) {
             auth0UrlDetected = true;
             popupNavigatedToAuth0 = true;
             console.log('✅ Popup did navigate to Auth0 (detected in final URL)');
