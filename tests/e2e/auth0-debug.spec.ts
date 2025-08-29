@@ -48,13 +48,11 @@ test.describe('Auth0 Configuration Debug', () => {
   test('should show Auth0 client selection in browser console', async ({ page }) => {
     const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
     
-    // Capture all console logs related to Auth0
-    const authLogs: string[] = [];
+    // Capture ALL console logs to see what's happening
+    const allLogs: string[] = [];
     page.on('console', msg => {
       const text = msg.text();
-      if (text.includes('Auth0') || text.includes('Client ID') || text.includes('Environment Detection')) {
-        authLogs.push(text);
-      }
+      allLogs.push(`${msg.type()}: ${text}`);
     });
     
     await page.goto(BASE_URL);
@@ -67,17 +65,17 @@ test.describe('Auth0 Configuration Debug', () => {
       await page.waitForTimeout(1000);
     }
     
-    console.log('=== Auth0 Client Selection Debug ===');
-    authLogs.forEach(log => console.log(log));
-    console.log('====================================');
+    console.log('=== ALL Browser Console Logs ===');
+    allLogs.forEach(log => console.log(log));
+    console.log('=================================');
     
     // Check if Auth0 logs show environment detection
-    const hasEnvironmentDetection = authLogs.some(log => 
-      log.includes('Environment Detection') || log.includes('Client ID')
+    const hasAuth0Logs = allLogs.some(log => 
+      log.includes('Auth0') || log.includes('Client ID') || log.includes('Environment Detection')
     );
     
-    // Log whether we found environment detection logs
-    console.log('Found Auth0 environment detection logs:', hasEnvironmentDetection);
+    // Log whether we found Auth0 logs
+    console.log('Found Auth0 related logs:', hasAuth0Logs);
     
     expect(true).toBe(true);
   });
