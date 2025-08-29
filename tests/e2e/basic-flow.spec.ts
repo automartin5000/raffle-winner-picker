@@ -43,21 +43,39 @@ test.describe('Basic Application Flow Tests', () => {
     await expect(signInButton).toBeVisible();
     
     // Test that the sign-in button triggers auth flow
-    // Instead of waiting for popup to load (which can be flaky), just verify it opens
     let popupOpened = false;
-    let popupUrl = '';
+    let auth0UrlDetected = false;
+    let popupNavigatedToAuth0 = false;
     
     const [popup] = await Promise.all([
       page.waitForEvent('popup').then(async (popup) => {
         popupOpened = true;
+        
         try {
-          // Give popup a brief moment to start loading
-          await popup.waitForLoadState('domcontentloaded', { timeout: 5000 });
-          popupUrl = popup.url();
+          // Wait for popup to navigate to Auth0 (or timeout after 10 seconds)
+          await popup.waitForURL(url => {
+            const urlString = typeof url === 'string' ? url : url.toString();
+            const containsAuth0 = urlString.includes('auth0.com');
+            if (containsAuth0) {
+              auth0UrlDetected = true;
+              popupNavigatedToAuth0 = true;
+              console.log('✅ Popup successfully navigated to Auth0:', urlString);
+            }
+            return containsAuth0;
+          }, { timeout: 10000 });
         } catch (error) {
-          // If popup closes immediately or fails to load, that's still a sign it opened
-          console.log('Popup opened but closed quickly or failed to load:', error.message);
+          // Check final URL even if waitForURL times out
+          const finalUrl = popup.url();
+          console.log('Popup final URL after timeout/error:', finalUrl);
+          if (finalUrl.includes('auth0.com')) {
+            auth0UrlDetected = true;
+            popupNavigatedToAuth0 = true;
+            console.log('✅ Popup did navigate to Auth0 (detected in final URL)');
+          } else {
+            console.log('❌ Popup did not navigate to Auth0. Error:', error.message);
+          }
         }
+        
         return popup;
       }),
       signInButton.click()
@@ -66,12 +84,8 @@ test.describe('Basic Application Flow Tests', () => {
     // Verify that the popup was opened (indicating auth flow was triggered)
     expect(popupOpened).toBe(true);
     
-    // If we captured the URL and it contains auth0.com, that's ideal
-    // But if the popup closed immediately, we still consider the test passed
-    // since the main goal is to verify the sign-in button triggers the auth flow
-    if (popupUrl) {
-      expect(popupUrl).toContain('auth0.com');
-    }
+    // Verify that the popup navigated to Auth0 (indicating proper auth configuration)
+    expect(popupNavigatedToAuth0).toBe(true);
     
     // Clean up if popup is still open
     if (!popup.isClosed()) {
