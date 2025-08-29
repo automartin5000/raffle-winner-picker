@@ -45,6 +45,9 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       PROD_AWS_ACCOUNT_ID: '${{ secrets.PROD_AWS_ACCOUNT_ID }}',
       NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
       PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+      // Frontend environment variables for environment detection
+      VITE_NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
+      VITE_PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
       // Auth0 environment variables for client management
       AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
       VITE_AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
