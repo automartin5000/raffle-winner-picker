@@ -25,7 +25,7 @@ export async function initAuth0() {
     // Dynamically construct audience from environment instead of static env var
     const hostedZone = getHostedZone();
     const envName = import.meta.env.VITE_DEPLOY_ENV;
-    
+
     // For local development, use the dev API audience since that's what exists in Auth0
     const apiEnvName = envName === 'local' ? 'dev' : envName;
     const audience = getApiUrl({
