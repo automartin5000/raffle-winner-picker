@@ -66,7 +66,7 @@ export async function initAuth0() {
       hostedZone,
     });
 
-    console.log('🔧 Auth0 Configuration Debug:');
+    console.log('🔧 Auth0 Configuration Debug (with fix):');
     console.log('   Domain:', domain);
     console.log('   Client ID:', clientId);
     console.log('   Current Hostname:', currentHostname);
