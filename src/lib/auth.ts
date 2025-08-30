@@ -32,6 +32,10 @@ export async function initAuth0() {
     console.log('🔍 Environment Detection Debug:');
     console.log('   VITE_NONPROD_HOSTED_ZONE:', import.meta.env.VITE_NONPROD_HOSTED_ZONE);
     console.log('   VITE_PROD_HOSTED_ZONE:', import.meta.env.VITE_PROD_HOSTED_ZONE);
+    console.log('   All VITE env vars:', Object.keys(import.meta.env).filter(k => k.startsWith('VITE_')).reduce((acc, key) => {
+      acc[key] = import.meta.env[key];
+      return acc;
+    }, {}));
     
     if (currentHostname === 'localhost' || currentHostname === '127.0.0.1') {
       // For local development, use local API environment
