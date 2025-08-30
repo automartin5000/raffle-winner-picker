@@ -11,8 +11,8 @@ export function getAuth0ClientId(): string {
   const currentHostname = window.location.hostname;
 
   // Determine if we're in production based on hostname
-  const isNonProd = currentHostname.endsWith(import.meta.env.VITE_NONPROD_HOSTED_ZONE);
-  const isProduction = !isNonProd && currentHostname.endsWith(import.meta.env.VITE_PROD_HOSTED_ZONE);
+  const isNonProd = currentHostname.endsWith(import.meta.env.nonprod_hosted_zone);
+  const isProduction = !isNonProd && currentHostname.endsWith(import.meta.env.prod_hosted_zone);
 
   let clientId = '';
   let environment = 'unknown';
@@ -55,11 +55,11 @@ export function getHostedZone(): string {
   // Match against non-production hosted zone or production
   // We match against the non-production hosted zone first
   // because it is a subdomain of the production hosted zone
-  const isNonProd = currentHostname.endsWith(import.meta.env.VITE_NONPROD_HOSTED_ZONE);
+  const isNonProd = currentHostname.endsWith(import.meta.env.nonprod_hosted_zone);
   console.log('Running in environment:', isNonProd ? 'non-production' : 'production');
   const hostedZone = isNonProd
-    ? import.meta.env.VITE_NONPROD_HOSTED_ZONE
-    : import.meta.env.VITE_PROD_HOSTED_ZONE;
+    ? import.meta.env.nonprod_hosted_zone
+    : import.meta.env.prod_hosted_zone;
 
   return hostedZone;
 

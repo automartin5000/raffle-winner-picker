@@ -30,9 +30,11 @@ export async function initAuth0() {
     let apiEnvName: string;
     
     console.log('🔍 Environment Detection Debug:');
+    console.log('   nonprod_hosted_zone:', import.meta.env.nonprod_hosted_zone);
+    console.log('   prod_hosted_zone:', import.meta.env.prod_hosted_zone);
     console.log('   VITE_NONPROD_HOSTED_ZONE:', import.meta.env.VITE_NONPROD_HOSTED_ZONE);
     console.log('   VITE_PROD_HOSTED_ZONE:', import.meta.env.VITE_PROD_HOSTED_ZONE);
-    console.log('   All VITE env vars:', Object.keys(import.meta.env).filter(k => k.startsWith('VITE_')).reduce((acc, key) => {
+    console.log('   All env vars:', Object.keys(import.meta.env).reduce((acc, key) => {
       acc[key] = import.meta.env[key];
       return acc;
     }, {}));
@@ -41,14 +43,14 @@ export async function initAuth0() {
       // For local development, use local API environment
       apiEnvName = 'local';
       console.log('   → Detected: localhost (using local API)');
-    } else if (currentHostname.endsWith(import.meta.env.VITE_NONPROD_HOSTED_ZONE)) {
+    } else if (currentHostname.endsWith(import.meta.env.nonprod_hosted_zone)) {
       // Non-production domains - extract the environment prefix
       // Examples: pr26.dev.rafflewinnerpicker.com → pr26, dev.rafflewinnerpicker.com → dev
-      const nonprodHostedZone = import.meta.env.VITE_NONPROD_HOSTED_ZONE;
+      const nonprodHostedZone = import.meta.env.nonprod_hosted_zone;
       const prefix = currentHostname.replace(`.${nonprodHostedZone}`, '');
       apiEnvName = prefix || 'dev'; // fallback to 'dev' if no prefix
       console.log(`   → Detected: nonprod domain (using ${apiEnvName} API)`);
-    } else if (currentHostname.endsWith(import.meta.env.VITE_PROD_HOSTED_ZONE)) {
+    } else if (currentHostname.endsWith(import.meta.env.prod_hosted_zone)) {
       // Production domain (rafflewinnerpicker.com)
       apiEnvName = 'prod';
       console.log('   → Detected: prod domain (using prod API)');
