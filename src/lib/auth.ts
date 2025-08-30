@@ -34,13 +34,16 @@ export async function initAuth0() {
     console.log('   VITE_PROD_HOSTED_ZONE:', import.meta.env.VITE_PROD_HOSTED_ZONE);
     
     if (currentHostname === 'localhost' || currentHostname === '127.0.0.1') {
-      // For local development, use dev API
-      apiEnvName = 'dev';
-      console.log('   → Detected: localhost (using dev API)');
+      // For local development, use local API environment
+      apiEnvName = 'local';
+      console.log('   → Detected: localhost (using local API)');
     } else if (currentHostname.endsWith(import.meta.env.VITE_NONPROD_HOSTED_ZONE)) {
-      // Non-production domains (dev.rafflewinnerpicker.com, pr123.dev.rafflewinnerpicker.com)
-      apiEnvName = 'dev';
-      console.log('   → Detected: nonprod domain (using dev API)');
+      // Non-production domains - extract the environment prefix
+      // Examples: pr26.dev.rafflewinnerpicker.com → pr26, dev.rafflewinnerpicker.com → dev
+      const nonprodHostedZone = import.meta.env.VITE_NONPROD_HOSTED_ZONE;
+      const prefix = currentHostname.replace(`.${nonprodHostedZone}`, '');
+      apiEnvName = prefix || 'dev'; // fallback to 'dev' if no prefix
+      console.log(`   → Detected: nonprod domain (using ${apiEnvName} API)`);
     } else if (currentHostname.endsWith(import.meta.env.VITE_PROD_HOSTED_ZONE)) {
       // Production domain (rafflewinnerpicker.com)
       apiEnvName = 'prod';
