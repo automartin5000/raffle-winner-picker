@@ -69,6 +69,13 @@ test.describe('Basic Application Flow Tests', () => {
               auth0UrlDetected = true;
               popupNavigatedToAuth0 = true;
               console.log('✅ Popup successfully navigated to Auth0:', urlString);
+              
+              // Validate that the audience URL is properly formed
+              const url = new URL(urlString);
+              const audienceParam = url.searchParams.get('audience');
+              if (audienceParam && audienceParam.includes('undefined')) {
+                throw new Error(`❌ Auth0 audience URL is malformed: ${audienceParam}`);
+              }
             }
             return isAuth0Domain;
           }, { timeout: 10000 });
@@ -91,6 +98,18 @@ test.describe('Basic Application Flow Tests', () => {
             auth0UrlDetected = true;
             popupNavigatedToAuth0 = true;
             console.log('✅ Popup did navigate to Auth0 (detected in final URL)');
+            
+            // Validate that the audience URL is properly formed
+            try {
+              const url = new URL(finalUrl);
+              const audienceParam = url.searchParams.get('audience');
+              if (audienceParam && audienceParam.includes('undefined')) {
+                throw new Error(`❌ Auth0 audience URL is malformed: ${audienceParam}`);
+              }
+            } catch (validationError) {
+              console.log('❌ Audience validation failed:', validationError.message);
+              throw validationError;
+            }
           } else {
             console.log('❌ Popup did not navigate to Auth0. Error:', error.message);
           }

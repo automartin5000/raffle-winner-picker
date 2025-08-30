@@ -22,22 +22,55 @@ export async function initAuth0() {
     const domain = import.meta.env.VITE_AUTH0_DOMAIN || '';
     const clientId = getAuth0ClientId();
 
-    // Dynamically construct audience from environment instead of static env var
+    // Dynamically construct audience from the current URL's hostname
     const hostedZone = getHostedZone();
-    const envName = import.meta.env.VITE_DEPLOY_ENV;
+    const currentHostname = window.location.hostname;
 
-    // For local development, use the dev API audience since that's what exists in Auth0
-    const apiEnvName = envName === 'local' ? 'dev' : envName;
+    // Determine environment from hostname, not from build-time variable
+    let apiEnvName: string;
+
+    console.log('🔍 Environment Detection Debug:');
+    console.log('   nonprod_hosted_zone:', import.meta.env.nonprod_hosted_zone);
+    console.log('   prod_hosted_zone:', import.meta.env.prod_hosted_zone);
+    console.log('   VITE_NONPROD_HOSTED_ZONE:', import.meta.env.VITE_NONPROD_HOSTED_ZONE);
+    console.log('   VITE_PROD_HOSTED_ZONE:', import.meta.env.VITE_PROD_HOSTED_ZONE);
+    console.log('   All env vars:', Object.keys(import.meta.env).reduce((acc, key) => {
+      acc[key] = import.meta.env[key];
+      return acc;
+    }, {}));
+
+    if (currentHostname === 'localhost' || currentHostname === '127.0.0.1') {
+      // For local development, use local API environment
+      apiEnvName = 'local';
+      console.log('   → Detected: localhost (using local API)');
+    } else if (currentHostname.endsWith(import.meta.env.nonprod_hosted_zone)) {
+      // Non-production domains - extract the environment prefix
+      // Examples: pr26.dev.rafflewinnerpicker.com → pr26, dev.rafflewinnerpicker.com → dev
+      const nonprodHostedZone = import.meta.env.nonprod_hosted_zone;
+      const prefix = currentHostname.replace(`.${nonprodHostedZone}`, '');
+      apiEnvName = prefix || 'dev'; // fallback to 'dev' if no prefix
+      console.log(`   → Detected: nonprod domain (using ${apiEnvName} API)`);
+    } else if (currentHostname.endsWith(import.meta.env.prod_hosted_zone)) {
+      // Production domain (rafflewinnerpicker.com)
+      apiEnvName = 'prod';
+      console.log('   → Detected: prod domain (using prod API)');
+    } else {
+      // Fallback to dev for unknown domains
+      apiEnvName = 'dev';
+      console.log('   → Detected: unknown domain (fallback to dev API)');
+    }
+
     const audience = getApiUrl({
       envName: apiEnvName,
       service: CORE_SERVICES.WINNERS,
       hostedZone,
     });
 
-    console.log('🔧 Auth0 Configuration Debug:');
+    console.log('🔧 Auth0 Configuration Debug (with fix):');
     console.log('   Domain:', domain);
     console.log('   Client ID:', clientId);
-    console.log('   Environment:', envName);
+    console.log('   Current Hostname:', currentHostname);
+    console.log('   API Environment:', apiEnvName);
     console.log('   Hosted Zone:', hostedZone);
     console.log('   Audience (API URL):', audience);
     console.log('   Redirect URI:', window.location.origin);
