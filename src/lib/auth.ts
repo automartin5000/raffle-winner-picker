@@ -25,10 +25,10 @@ export async function initAuth0() {
     // Dynamically construct audience from the current URL's hostname
     const hostedZone = getHostedZone();
     const currentHostname = window.location.hostname;
-    
+
     // Determine environment from hostname, not from build-time variable
     let apiEnvName: string;
-    
+
     console.log('🔍 Environment Detection Debug:');
     console.log('   nonprod_hosted_zone:', import.meta.env.nonprod_hosted_zone);
     console.log('   prod_hosted_zone:', import.meta.env.prod_hosted_zone);
@@ -38,7 +38,7 @@ export async function initAuth0() {
       acc[key] = import.meta.env[key];
       return acc;
     }, {}));
-    
+
     if (currentHostname === 'localhost' || currentHostname === '127.0.0.1') {
       // For local development, use local API environment
       apiEnvName = 'local';
@@ -59,7 +59,7 @@ export async function initAuth0() {
       apiEnvName = 'dev';
       console.log('   → Detected: unknown domain (fallback to dev API)');
     }
-    
+
     const audience = getApiUrl({
       envName: apiEnvName,
       service: CORE_SERVICES.WINNERS,
