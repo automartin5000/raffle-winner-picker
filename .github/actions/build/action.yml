@@ -83,6 +83,9 @@ runs:
         AUTH0_CLIENT_SECRET: ${{ env.AUTH0_CLIENT_SECRET }}
         AUTH0_SPA_CALLBACK_URL: ${{ env.AUTH0_SPA_CALLBACK_URL }}
         DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
+        # VITE environment variables for frontend build
+        VITE_PROD_HOSTED_ZONE: ${{ env.VITE_PROD_HOSTED_ZONE }}
+        VITE_NONPROD_HOSTED_ZONE: ${{ env.VITE_NONPROD_HOSTED_ZONE }}
     - name: Upload CDK artifacts
       id: upload_cdk_artifact
       uses: actions/upload-artifact@v4
