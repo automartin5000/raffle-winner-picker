@@ -1353,6 +1353,9 @@ async function main() {
       case 'ensure-api':
         await manager.ensureApi();
         break;
+      case 'ensureDeploymentApi':
+        await manager.ensureDeploymentApi();
+        break;
       case 'ensure-test-client':
         await manager.ensureTestClient();
         break;
