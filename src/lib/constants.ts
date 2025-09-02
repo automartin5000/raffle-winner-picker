@@ -34,6 +34,11 @@ export function getAuth0ClientId(): string {
   console.log(`   Hostname: ${currentHostname}`);
   console.log(`   Environment: ${environment}`);
   console.log(`   Client ID: ${clientId ? clientId.substring(0, 8) + '...' : 'MISSING'}`);
+  console.log('   Domain Checks:');
+  console.log(`     isNonProd: ${isNonProd}`);
+  console.log(`     isProduction: ${isProduction}`);
+  console.log(`     nonprod_hosted_zone: ${import.meta.env.nonprod_hosted_zone}`);
+  console.log(`     prod_hosted_zone: ${import.meta.env.prod_hosted_zone}`);
 
   if (!clientId) {
     console.error('❌ Auth0 client ID is missing for environment:', environment);
