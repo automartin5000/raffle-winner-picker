@@ -17,6 +17,22 @@ export const isLoading = writable(true);
 
 let auth0: Auth0Client;
 
+function getApiEnvironmentFromHostname(): string {
+  const currentHostname = window.location.hostname;
+
+  if (currentHostname === 'localhost' || currentHostname === '127.0.0.1') {
+    return 'local';
+  } else if (currentHostname.endsWith(import.meta.env.nonprod_hosted_zone)) {
+    const nonprodHostedZone = import.meta.env.nonprod_hosted_zone;
+    const prefix = currentHostname.replace(`.${nonprodHostedZone}`, '');
+    return prefix || 'dev';
+  } else if (currentHostname.endsWith(import.meta.env.prod_hosted_zone)) {
+    return 'prod';
+  } else {
+    return 'dev';
+  }
+}
+
 export async function initAuth0() {
   try {
     const domain = import.meta.env.VITE_AUTH0_DOMAIN || '';
@@ -89,6 +105,9 @@ export async function initAuth0() {
         redirect_uri: window.location.origin,
         audience,
       },
+      // Enable popup mode with proper configuration
+      cacheLocation: 'localstorage',
+      useRefreshTokens: true,
     });
 
     auth0Client.set(auth0);
@@ -123,17 +142,50 @@ export async function loginWithPopup() {
       return;
     }
     console.log('✅ Auth0 client available, calling loginWithPopup...');
+
+    // Configure popup options explicitly
+    const popupOptions = {
+      authorizationParams: {
+        audience: getApiUrl({
+          envName: getApiEnvironmentFromHostname(),
+          service: CORE_SERVICES.WINNERS,
+          hostedZone: getHostedZone(),
+        }),
+        scope: 'openid profile email',
+      },
+    };
+
+    console.log('🔧 Popup options:', popupOptions);
+
     try {
-      const result = await auth0.loginWithPopup();
+      const result = await auth0.loginWithPopup(popupOptions);
       console.log('✅ loginWithPopup returned:', result);
     } catch (popupError) {
       console.error('❌ loginWithPopup failed:', popupError);
+
+      // Check if it's a popup blocked error or user cancelled
+      if (popupError.message?.includes('popup_blocked')) {
+        console.error('❌ Popup was blocked by browser. Please allow popups for this site.');
+      } else if (popupError.message?.includes('cancelled') || popupError.message?.includes('user_cancelled')) {
+        console.log('ℹ️ User cancelled the authentication popup');
+      }
+
       throw popupError;
     }
-    isAuthenticated.set(true);
-    const userData = await auth0.getUser();
-    user.set(userData as User);
-    console.log('✅ Login successful');
+
+    // Verify authentication worked
+    const authenticated = await auth0.isAuthenticated();
+    console.log('🔍 Authentication check after popup:', authenticated);
+
+    isAuthenticated.set(authenticated);
+
+    if (authenticated) {
+      const userData = await auth0.getUser();
+      user.set(userData as User);
+      console.log('✅ Login successful, user data:', userData);
+    } else {
+      console.error('❌ Authentication failed - user not authenticated after popup');
+    }
   } catch (error) {
     console.error('❌ Login error:', error);
   }
