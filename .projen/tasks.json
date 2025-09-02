@@ -180,7 +180,7 @@
       "description": "Get Auth0 SPA client ID for build (no updates)",
       "steps": [
         {
-          "exec": "bun run scripts/manage-auth0-client.js get-for-build"
+          "exec": "bun run scripts/manage-auth0-client.ts get-for-build"
         }
       ],
       "condition": "[ -n \"$DEPLOY_ENV\" ]"
@@ -241,7 +241,7 @@
       "description": "Setup/update Auth0 SPA client IDs for all environments",
       "steps": [
         {
-          "exec": "bun run scripts/manage-auth0-client.js ensure-all-env-clients"
+          "exec": "bun run scripts/manage-auth0-client.ts ensure-all-env-clients"
         }
       ],
       "condition": "[ -n \"$DEPLOY_ENV\" ]"

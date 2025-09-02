@@ -1,15 +1,51 @@
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
+import * as https from 'https';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Import shared environment configuration
-const { 
+import { 
   resolveDeploymentEnvironment, 
   getEnvironmentConfig, 
   getFrontendUrl,
   getApiBaseUrl,
   DEPLOYMENT_ENVIRONMENTS
-} = require(path.resolve(process.cwd(), 'shared/environments.js'));
+} from '../shared/environments.js';
+
+// Type definitions for Auth0 API responses
+interface Auth0Client {
+  client_id: string;
+  name: string;
+  app_type: string;
+  callbacks?: string[];
+  allowed_logout_urls?: string[];
+  web_origins?: string[];
+  allowed_origins?: string[];
+  client_metadata?: Record<string, any>;
+  updated_at?: string;
+  client_secret?: string;
+}
+
+interface Auth0API {
+  id: string;
+  name: string;
+  identifier: string;
+  scopes?: Array<{ value: string; description: string }>;
+}
+
+interface Auth0Grant {
+  id: string;
+  audience: string;
+  client_id: string;
+  scope: string[];
+}
+
+interface Auth0User {
+  user_id: string;
+  email: string;
+  email_verified?: boolean;
+  user_metadata?: Record<string, any>;
+  app_metadata?: Record<string, any>;
+}
 
 /**
  * Auth0 SPA Client Management Script
@@ -27,22 +63,30 @@ const {
  * - AUTH0_SPA_CALLBACK_URL: Manual override for callback URL (optional)
  * 
  * Usage:
- * bunx scripts/manage-auth0-client.js create
- * bunx scripts/manage-auth0-client.js read <client_id>
- * bunx scripts/manage-auth0-client.js update <client_id>
- * bunx scripts/manage-auth0-client.js delete <client_id>
- * bunx scripts/manage-auth0-client.js ensure-client
- * bunx scripts/manage-auth0-client.js ensure-api
- * bunx scripts/manage-auth0-client.js ensure-test-client
- * bunx scripts/manage-auth0-client.js setup-integration-testing
+ * bunx scripts/manage-auth0-client.ts create
+ * bunx scripts/manage-auth0-client.ts read <client_id>
+ * bunx scripts/manage-auth0-client.ts update <client_id>
+ * bunx scripts/manage-auth0-client.ts delete <client_id>
+ * bunx scripts/manage-auth0-client.ts ensure-client
+ * bunx scripts/manage-auth0-client.ts ensure-api
+ * bunx scripts/manage-auth0-client.ts ensure-test-client
+ * bunx scripts/manage-auth0-client.ts setup-integration-testing
  */
 
-class Auth0ClientManager {
+export class Auth0ClientManager {
+  public readonly domain: string;
+  public readonly clientId: string;
+  public readonly clientSecret: string;
+  public readonly deployEnv: string;
+  public readonly callbackUrl: string | null;
+  public accessToken: string | null;
+  public readonly appName: string;
+
   constructor() {
-    this.domain = process.env.AUTH0_DOMAIN;
-    this.clientId = process.env.AUTH0_CLIENT_ID;
-    this.clientSecret = process.env.AUTH0_CLIENT_SECRET;
-    this.deployEnv = process.env.DEPLOY_ENV;
+    this.domain = process.env.AUTH0_DOMAIN!;
+    this.clientId = process.env.AUTH0_CLIENT_ID!;
+    this.clientSecret = process.env.AUTH0_CLIENT_SECRET!;
+    this.deployEnv = process.env.DEPLOY_ENV || 'dev';
     this.callbackUrl = this.getCallbackUrl();
     
     if (!this.domain || !this.clientId || !this.clientSecret) {
@@ -68,7 +112,7 @@ class Auth0ClientManager {
   /**
    * Get callback URL from hosted zone environment variables
    */
-  getCallbackUrl() {
+  getCallbackUrl(): string | null {
     // Manual override takes precedence (for testing/custom setups)
     if (process.env.AUTH0_SPA_CALLBACK_URL) {
       return process.env.AUTH0_SPA_CALLBACK_URL;
@@ -96,7 +140,7 @@ class Auth0ClientManager {
   /**
    * Get all callback URLs including additional ones from environment
    */
-  getAllCallbackUrls() {
+  getAllCallbackUrls(): string[] {
     const urls = [];
     
     // Add primary callback URL
@@ -119,7 +163,7 @@ class Auth0ClientManager {
   /**
    * Get all allowed origins from callback URLs
    */
-  getAllowedOrigins() {
+  getAllowedOrigins(): string[] {
     const urls = this.getAllCallbackUrls();
     const origins = [];
 
@@ -1342,7 +1386,7 @@ async function main() {
   const command = args[0];
   
   if (!command) {
-    console.log('Usage: bunx scripts/manage-auth0-client.cjs <command> [options]');
+    console.log('Usage: bunx scripts/manage-auth0-client.ts <command> [options]');
     console.log('Commands:');
     console.log('  create                    Create a new SPA client');
     console.log('  read <client_id>         Read client information');
@@ -1420,8 +1464,10 @@ async function main() {
   }
 }
 
-if (require.main === module) {
+// Run the CLI if this script is executed directly (when not imported for testing)
+// Use CommonJS check for compatibility with both Jest and direct execution
+if (typeof require !== 'undefined' && require.main === module && typeof jest === 'undefined') {
   main();
 }
 
-module.exports = Auth0ClientManager;
+export default Auth0ClientManager;

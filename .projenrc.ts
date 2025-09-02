@@ -44,7 +44,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
         run: [
           'echo "Setting up Auth0 client IDs for all environments before build..."',
           '# This ensures both PROD and DEV client IDs are available for the build',
-          'bun run scripts/manage-auth0-client.js ensure-all-env-clients',
+          'bun run scripts/manage-auth0-client.ts ensure-all-env-clients',
           '',
           '# Set up hosted zone environment variables for frontend build',
           'echo "📋 Setting up hosted zone environment variables..."',
@@ -132,6 +132,22 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     },
     include: ['src/**/*'],
   },
+  jestOptions: {
+    jestConfig: {
+      preset: 'ts-jest/presets/default-esm',
+      extensionsToTreatAsEsm: ['.ts'],
+      transform: {
+        '^.+\\.ts$': ['ts-jest', {
+          useESM: true,
+          tsconfig: 'tsconfig.dev.json',
+        }],
+      },
+      moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1',
+      },
+      testEnvironment: 'node',
+    },
+  },
   deps: [
     'csv-parser',
     '@auth0/auth0-spa-js',
@@ -202,13 +218,13 @@ project.addFields({
 // Auth0 client management tasks
 const getAuth0ClientTask = project.addTask('get-auth0-client', {
   description: 'Get Auth0 SPA client ID for build (no updates)',
-  exec: 'bun run scripts/manage-auth0-client.js get-for-build',
+  exec: 'bun run scripts/manage-auth0-client.ts get-for-build',
   condition: '[ -n "$DEPLOY_ENV" ]',
 });
 
 const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
   description: 'Setup/update Auth0 SPA client IDs for all environments',
-  exec: 'bun run scripts/manage-auth0-client.js ensure-all-env-clients',
+  exec: 'bun run scripts/manage-auth0-client.ts ensure-all-env-clients',
   condition: '[ -n "$DEPLOY_ENV" ]',
 });
 

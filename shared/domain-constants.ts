@@ -1,10 +1,17 @@
 /**
- * Domain and Service Constants (CommonJS)
+ * Domain and Service Constants (TypeScript)
  * 
  * This file contains all domain patterns, service endpoints, and URL structures
  * used throughout the application. This ensures consistency and makes it easy
  * to update domain patterns in one place.
  */
+
+// Type definitions
+interface DomainBuildOptions {
+  envName: string;
+  hostedZone: string;
+  isProd: boolean;
+}
 
 // =============================================================================
 // DOMAIN STRUCTURE
@@ -62,7 +69,7 @@ const EXTERNAL_SERVICES = {
 /**
  * Construct API domain from environment and hosted zone
  */
-function buildApiDomain(options) {
+export function buildApiDomain(options: DomainBuildOptions): string {
   const { envName, hostedZone, isProd } = options;
   const envPrefix = isProd ? '' : `${envName}.`;
   return `${envPrefix}${DOMAIN_STRUCTURE.API_SUBDOMAIN}.${hostedZone}`;
@@ -71,7 +78,7 @@ function buildApiDomain(options) {
 /**
  * Construct frontend domain from environment and hosted zone  
  */
-function buildFrontendDomain(options) {
+export function buildFrontendDomain(options: DomainBuildOptions): string {
   const { envName, hostedZone, isProd } = options;
   const envPrefix = isProd ? '' : `${envName}.`;
   return `${envPrefix}${hostedZone}`;
@@ -80,23 +87,19 @@ function buildFrontendDomain(options) {
 /**
  * Construct full API URL with protocol
  */
-function buildApiUrl(options) {
+export function buildApiUrl(options: DomainBuildOptions): string {
   return `https://${buildApiDomain(options)}`;
 }
 
 /**
  * Construct full frontend URL with protocol
  */
-function buildFrontendUrl(options) {
+export function buildFrontendUrl(options: DomainBuildOptions): string {
   return `https://${buildFrontendDomain(options)}`;
 }
 
-module.exports = {
-  DOMAIN_STRUCTURE,
-  AWS_ENDPOINTS,
-  EXTERNAL_SERVICES,
-  buildApiDomain,
-  buildFrontendDomain,
-  buildApiUrl,
-  buildFrontendUrl,
-};
+// Export constants
+export { DOMAIN_STRUCTURE, AWS_ENDPOINTS, EXTERNAL_SERVICES };
+
+// Export types
+export type { DomainBuildOptions };

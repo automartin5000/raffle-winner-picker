@@ -1,14 +1,41 @@
 /**
- * CommonJS environment constants for Node.js scripts
+ * TypeScript environment constants for Node.js scripts
  * Kept in sync with src/lib/shared-constants.ts
  */
 
-const { 
+import { 
   buildApiUrl, 
   buildFrontendUrl 
-} = require('./domain-constants.js');
+} from './domain-constants.js';
 
-const DEPLOYMENT_ENVIRONMENTS = {
+// Type definitions
+interface DeploymentEnvironment {
+  name: string;
+  description: string;
+  auth0ClientName: string;
+  auth0Description: string;
+  isProd: boolean;
+  isEphemeral: boolean;
+}
+
+interface ResolveEnvironmentOptions {
+  deployEnv?: string;
+  isEphemeral?: boolean;
+}
+
+interface ApiBaseUrlOptions {
+  deploymentEnv?: string;
+  hostedZone?: string;
+  envName?: string;
+}
+
+interface FrontendUrlOptions {
+  deploymentEnv?: string;
+  hostedZone?: string;
+  envName?: string;
+}
+
+const DEPLOYMENT_ENVIRONMENTS: Record<string, DeploymentEnvironment> = {
   // Development environment (PRs, local dev, testing)
   dev: {
     name: 'Development',
@@ -33,7 +60,7 @@ const DEPLOYMENT_ENVIRONMENTS = {
 /**
  * Get environment configuration by key
  */
-function getEnvironmentConfig(env) {
+export function getEnvironmentConfig(env: string): DeploymentEnvironment {
   return DEPLOYMENT_ENVIRONMENTS[env] ?? DEPLOYMENT_ENVIRONMENTS['dev'];
 }
 
@@ -41,7 +68,7 @@ function getEnvironmentConfig(env) {
  * Determine the deployment environment from various sources
  * This logic is shared between CDK, Auth0 management, and frontend
  */
-function resolveDeploymentEnvironment(options) {
+export function resolveDeploymentEnvironment(options?: ResolveEnvironmentOptions): string {
   const { deployEnv, isEphemeral } = options || {};
   
   // If explicitly ephemeral (PR environment), use dev
@@ -66,28 +93,28 @@ function resolveDeploymentEnvironment(options) {
 /**
  * Get all environment keys
  */
-function getAllEnvironments() {
+export function getAllEnvironments(): string[] {
   return Object.keys(DEPLOYMENT_ENVIRONMENTS);
 }
 
 /**
  * Check if environment is production
  */
-function isProductionEnvironment(env) {
-  return DEPLOYMENT_ENVIRONMENTS[env].isProd;
+export function isProductionEnvironment(env: string): boolean {
+  return DEPLOYMENT_ENVIRONMENTS[env]?.isProd ?? false;
 }
 
 /**
  * Check if environment is ephemeral (temporary/PR-based)
  */
-function isEphemeralEnvironment(env) {
-  return DEPLOYMENT_ENVIRONMENTS[env].isEphemeral;
+export function isEphemeralEnvironment(env: string): boolean {
+  return DEPLOYMENT_ENVIRONMENTS[env]?.isEphemeral ?? true;
 }
 
 /**
  * Derive API base URL from hosted zone and environment
  */
-function getApiBaseUrl(options) {
+export function getApiBaseUrl(options?: ApiBaseUrlOptions): string {
   const { deploymentEnv, hostedZone, envName } = options || {};
   
   if (!hostedZone) {
@@ -104,7 +131,7 @@ function getApiBaseUrl(options) {
 /**
  * Derive frontend URL from hosted zone and environment
  */
-function getFrontendUrl(options) {
+export function getFrontendUrl(options?: FrontendUrlOptions): string {
   const { deploymentEnv, hostedZone, envName } = options || {};
   
   if (!hostedZone) {
@@ -118,13 +145,13 @@ function getFrontendUrl(options) {
   });
 }
 
-module.exports = {
-  DEPLOYMENT_ENVIRONMENTS,
-  getEnvironmentConfig,
-  resolveDeploymentEnvironment,
-  getAllEnvironments,
-  isProductionEnvironment,
-  isEphemeralEnvironment,
-  getApiBaseUrl,
-  getFrontendUrl,
+// Export the main constant
+export { DEPLOYMENT_ENVIRONMENTS };
+
+// Export types for consumers
+export type { 
+  DeploymentEnvironment, 
+  ResolveEnvironmentOptions, 
+  ApiBaseUrlOptions, 
+  FrontendUrlOptions 
 };
