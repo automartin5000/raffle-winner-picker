@@ -45,35 +45,22 @@ export async function initAuth0() {
     // Determine environment from hostname, not from build-time variable
     let apiEnvName: string;
 
-    console.log('🔍 Environment Detection Debug:');
-    console.log('   nonprod_hosted_zone:', import.meta.env.nonprod_hosted_zone);
-    console.log('   prod_hosted_zone:', import.meta.env.prod_hosted_zone);
-    console.log('   VITE_NONPROD_HOSTED_ZONE:', import.meta.env.VITE_NONPROD_HOSTED_ZONE);
-    console.log('   VITE_PROD_HOSTED_ZONE:', import.meta.env.VITE_PROD_HOSTED_ZONE);
-    console.log('   All env vars:', Object.keys(import.meta.env).reduce((acc, key) => {
-      acc[key] = import.meta.env[key];
-      return acc;
-    }, {}));
 
     if (currentHostname === 'localhost' || currentHostname === '127.0.0.1') {
       // For local development, use local API environment
       apiEnvName = 'local';
-      console.log('   → Detected: localhost (using local API)');
     } else if (currentHostname.endsWith(import.meta.env.nonprod_hosted_zone)) {
       // Non-production domains - extract the environment prefix
       // Examples: pr26.dev.rafflewinnerpicker.com → pr26, dev.rafflewinnerpicker.com → dev
       const nonprodHostedZone = import.meta.env.nonprod_hosted_zone;
       const prefix = currentHostname.replace(`.${nonprodHostedZone}`, '');
       apiEnvName = prefix || 'dev'; // fallback to 'dev' if no prefix
-      console.log(`   → Detected: nonprod domain (using ${apiEnvName} API)`);
     } else if (currentHostname.endsWith(import.meta.env.prod_hosted_zone)) {
       // Production domain (rafflewinnerpicker.com)
       apiEnvName = 'prod';
-      console.log('   → Detected: prod domain (using prod API)');
     } else {
       // Fallback to dev for unknown domains
       apiEnvName = 'dev';
-      console.log('   → Detected: unknown domain (fallback to dev API)');
     }
 
     const audience = getApiUrl({
@@ -82,20 +69,12 @@ export async function initAuth0() {
       hostedZone,
     });
 
-    console.log('🔧 Auth0 Configuration Debug (with fix):');
-    console.log('   Domain:', domain);
-    console.log('   Client ID:', clientId);
-    console.log('   Current Hostname:', currentHostname);
-    console.log('   API Environment:', apiEnvName);
-    console.log('   Hosted Zone:', hostedZone);
-    console.log('   Audience (API URL):', audience);
-    console.log('   Redirect URI:', window.location.origin);
-
+    // Auth0 configuration validation
     if (!domain) {
       console.error('❌ Auth0 domain is missing! Check VITE_AUTH0_DOMAIN environment variable.');
     }
     if (!clientId) {
-      console.error('❌ Auth0 client ID is missing! Check VITE_SPA_AUTH0_CLIENT_ID environment variable.');
+      console.error('❌ Auth0 client ID is missing! Check Auth0 client configuration.');
     }
 
     auth0 = new Auth0Client({
@@ -143,7 +122,6 @@ export async function loginWithPopup() {
       console.error('❌ Auth0 client not initialized! Cannot login.');
       return;
     }
-    console.log('✅ Auth0 client available, calling loginWithPopup...');
 
     // Configure popup options explicitly
     const popupOptions = {
@@ -164,11 +142,9 @@ export async function loginWithPopup() {
       },
     };
 
-    console.log('🔧 Popup options:', popupOptions);
 
     try {
-      const result = await auth0.loginWithPopup(popupOptions);
-      console.log('✅ loginWithPopup returned:', result);
+      await auth0.loginWithPopup(popupOptions);
     } catch (popupError) {
       console.error('❌ loginWithPopup failed:', popupError);
 
@@ -183,8 +159,6 @@ export async function loginWithPopup() {
 
       // Check if it's a "Service not found" error - this means PR-specific API doesn't exist
       if (popupError.message?.includes('Service not found')) {
-        console.log('🔄 PR-specific API not found, trying with fallback development API...');
-        
         // Try with base development API as fallback
         const fallbackApiUrl = getApiUrl({
           envName: 'dev',
@@ -206,14 +180,10 @@ export async function loginWithPopup() {
           },
         };
 
-        console.log('🔧 Fallback popup options:', fallbackPopupOptions);
-        console.log('   Fallback audience:', fallbackApiUrl);
-
         try {
-          const fallbackResult = await auth0.loginWithPopup(fallbackPopupOptions);
-          console.log('✅ Fallback loginWithPopup succeeded:', fallbackResult);
+          await auth0.loginWithPopup(fallbackPopupOptions);
         } catch (fallbackError) {
-          console.error('❌ Fallback loginWithPopup also failed:', fallbackError);
+          console.error('❌ Authentication failed with both primary and fallback APIs');
           throw fallbackError;
         }
       } else {
@@ -223,7 +193,6 @@ export async function loginWithPopup() {
 
     // Verify authentication worked
     const authenticated = await auth0.isAuthenticated();
-    console.log('🔍 Authentication check after popup:', authenticated);
 
     isAuthenticated.set(authenticated);
 

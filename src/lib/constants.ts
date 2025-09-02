@@ -30,23 +30,8 @@ export function getAuth0ClientId(): string {
     environment = 'localhost/fallback';
   }
 
-  console.log('🔐 Auth0 Environment Detection:');
-  console.log(`   Hostname: ${currentHostname}`);
-  console.log(`   Environment: ${environment}`);
-  console.log(`   Client ID: ${clientId ? clientId.substring(0, 8) + '...' : 'MISSING'}`);
-  console.log('   Domain Checks:');
-  console.log(`     isNonProd: ${isNonProd}`);
-  console.log(`     isProduction: ${isProduction}`);
-  console.log(`     nonprod_hosted_zone: ${import.meta.env.nonprod_hosted_zone}`);
-  console.log(`     prod_hosted_zone: ${import.meta.env.prod_hosted_zone}`);
-
   if (!clientId) {
     console.error('❌ Auth0 client ID is missing for environment:', environment);
-    console.error('   Available env vars:', {
-      VITE_AUTH0_CLIENT_ID_PROD: import.meta.env.VITE_AUTH0_CLIENT_ID_PROD ? 'SET' : 'MISSING',
-      VITE_AUTH0_CLIENT_ID_DEV: import.meta.env.VITE_AUTH0_CLIENT_ID_DEV ? 'SET' : 'MISSING',
-      VITE_SPA_AUTH0_CLIENT_ID: import.meta.env.VITE_SPA_AUTH0_CLIENT_ID ? 'SET' : 'MISSING',
-    });
   }
 
   return clientId;

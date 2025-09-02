@@ -58,10 +58,16 @@ test.describe('Auth Debug Tests', () => {
       await popup.waitForLoadState('networkidle');
       console.log(`Popup final URL: ${popup.url()}`);
       
-      if (popup.url().includes('auth0.com')) {
-        console.log('✅ Auth0 popup opened successfully!');
-      } else {
-        console.log('❌ Popup did not navigate to Auth0');
+      // Use proper URL parsing to validate Auth0 domain
+      try {
+        const url = new URL(popup.url());
+        if (url.hostname.endsWith('.auth0.com') || url.hostname === 'auth0.com') {
+          console.log('✅ Auth0 popup opened successfully!');
+        } else {
+          console.log('❌ Popup did not navigate to Auth0');
+        }
+      } catch (e) {
+        console.log('❌ Invalid popup URL');
       }
       
       await popup.close();
