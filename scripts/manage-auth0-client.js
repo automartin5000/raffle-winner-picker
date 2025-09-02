@@ -549,12 +549,54 @@ class Auth0ClientManager {
       return existingApi;
     } catch (error) {
       if (error.message.includes('404')) {
-        console.log('🆕 No existing deployment API found, creating new one...');
-        return await this.createDeploymentApi(deploymentUrl, deploymentApiName);
+        console.log('🆕 No existing deployment API found, attempting to create new one...');
+        try {
+          return await this.createDeploymentApi(deploymentUrl, deploymentApiName);
+        } catch (createError) {
+          if (createError.message.includes('too_many_entities')) {
+            console.log('❌ Hit Auth0 tenant limit for API resources. Trying to reuse existing API...');
+            // Try to find and reuse an existing API resource
+            return await this.findAndReuseExistingApi(deploymentUrl);
+          }
+          throw createError;
+        }
       } else {
         console.error(`❌ Error checking for existing deployment API: ${error.message}`);
         throw error;
       }
+    }
+  }
+
+  /**
+   * Find and reuse an existing API resource when hitting tenant limits
+   */
+  async findAndReuseExistingApi(targetUrl) {
+    console.log('🔍 Looking for existing API resources to reuse...');
+    
+    try {
+      // Get all existing API resources
+      const apis = await this.makeRequest('GET', '/resource-servers');
+      
+      // Look for an existing development API that we can reuse
+      const developmentApis = apis.filter(api => 
+        api.name && api.name.toLowerCase().includes('development') &&
+        api.identifier && api.identifier.includes('dev.rafflewinnerpicker.com')
+      );
+      
+      if (developmentApis.length > 0) {
+        const reuseApi = developmentApis[0];
+        console.log(`🔄 Reusing existing API resource: ${reuseApi.identifier}`);
+        console.log(`   Name: ${reuseApi.name}`);
+        console.log(`   Note: Using existing API instead of creating PR-specific one`);
+        console.log(`   Tokens issued for: ${targetUrl} will use audience: ${reuseApi.identifier}`);
+        return reuseApi;
+      }
+      
+      // If no suitable API found, throw an error
+      throw new Error('No suitable API resource found to reuse and tenant limit reached');
+    } catch (error) {
+      console.error(`❌ Failed to find reusable API: ${error.message}`);
+      throw error;
     }
   }
 
