@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+// Jest globals are available globally, no import needed
 
 /**
  * Unit tests for Auth0 Client Management functionality
@@ -9,7 +9,7 @@ describe('Auth0 Client Management', () => {
     it('should require AUTH0_DOMAIN environment variable', () => {
       // Test that the required environment variables are checked
       const requiredVars = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET'];
-      
+
       requiredVars.forEach(varName => {
         expect(typeof varName).toBe('string');
         expect(varName.length).toBeGreaterThan(0);
@@ -22,9 +22,9 @@ describe('Auth0 Client Management', () => {
       const validUrls = [
         'https://api.example.com',
         'https://pr26.api.winners.dev.rafflewinnerpicker.com',
-        'https://dev.api.winners.dev.rafflewinnerpicker.com'
+        'https://dev.api.winners.dev.rafflewinnerpicker.com',
       ];
-      
+
       validUrls.forEach(url => {
         expect(() => new URL(url)).not.toThrow();
         expect(url).toMatch(/^https?:\/\//);
@@ -34,14 +34,12 @@ describe('Auth0 Client Management', () => {
     it('should reject invalid API URLs', () => {
       const invalidUrls = [
         'not-a-url',
-        'ftp://invalid-protocol.com',
-        ''
+        'just-a-string',
+        '://missing-protocol',
       ];
-      
+
       invalidUrls.forEach(url => {
-        if (url !== '') {
-          expect(() => new URL(url)).toThrow();
-        }
+        expect(() => new URL(url)).toThrow();
       });
     });
   });
@@ -50,11 +48,11 @@ describe('Auth0 Client Management', () => {
     it('should correctly identify production environments', () => {
       const prodDomains = [
         'rafflewinnerpicker.com',
-        'www.rafflewinnerpicker.com'
+        'www.rafflewinnerpicker.com',
       ];
-      
+
       prodDomains.forEach(domain => {
-        expect(domain.includes('rafflewinnerpicker.com')).toBe(true);
+        expect(domain === 'rafflewinnerpicker.com' || domain.endsWith('.rafflewinnerpicker.com')).toBe(true);
       });
     });
 
@@ -62,11 +60,11 @@ describe('Auth0 Client Management', () => {
       const devDomains = [
         'dev.rafflewinnerpicker.com',
         'pr26.dev.rafflewinnerpicker.com',
-        'staging.dev.rafflewinnerpicker.com'
+        'staging.dev.rafflewinnerpicker.com',
       ];
-      
+
       devDomains.forEach(domain => {
-        expect(domain.includes('dev.rafflewinnerpicker.com')).toBe(true);
+        expect(domain.endsWith('.rafflewinnerpicker.com') && domain.includes('dev')).toBe(true);
       });
     });
   });
@@ -83,7 +81,7 @@ describe('Auth0 Client Management', () => {
           return `${baseName} (Development) - (${deployEnv})`;
         }
       };
-      
+
       expect(getAppName('prod')).toBe('Raffle Winner Picker (Production)');
       expect(getAppName('dev')).toBe('Raffle Winner Picker (Development)');
       expect(getAppName('pr26')).toBe('Raffle Winner Picker (Development) - (pr26)');
@@ -103,7 +101,7 @@ describe('Auth0 Client Management', () => {
           return 'unknown_error';
         }
       };
-      
+
       expect(checkErrorType('HTTP 404: Not found')).toBe('not_found');
       expect(checkErrorType('too_many_entities')).toBe('tenant_limit');
       expect(checkErrorType('HTTP 401: Unauthorized')).toBe('authorization_error');
@@ -121,11 +119,11 @@ describe('Auth0 Client Management', () => {
           return false;
         }
       };
-      
+
       // Valid Auth0 domains
       expect(isValidAuth0Domain('https://dev-7h1ax9uy.us.auth0.com')).toBe(true);
       expect(isValidAuth0Domain('https://auth0.com')).toBe(true);
-      
+
       // Invalid domains (potential security issues)
       expect(isValidAuth0Domain('https://malicious-auth0.com.evil.com')).toBe(false);
       expect(isValidAuth0Domain('https://evilauth0.com')).toBe(false);
@@ -143,7 +141,7 @@ describe('Auth0 Client Management', () => {
           return false;
         }
       };
-      
+
       expect(isValidCallbackUrl('https://pr26.dev.rafflewinnerpicker.com')).toBe(true);
       expect(isValidCallbackUrl('http://localhost:5173')).toBe(true);
       expect(isValidCallbackUrl('http://insecure-site.com')).toBe(false);
