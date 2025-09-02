@@ -76,19 +76,22 @@ export async function initAuth0() {
       console.log('   → Detected: unknown domain (fallback to dev API)');
     }
 
+    // Use static API identifier to avoid Auth0 tenant limits with PR-specific APIs
+    const staticEnv = currentHostname.endsWith(import.meta.env.prod_hosted_zone) ? 'prod' : 'dev';
     const audience = getApiUrl({
-      envName: apiEnvName,
+      envName: staticEnv,
       service: CORE_SERVICES.WINNERS,
-      hostedZone,
+      hostedZone: staticEnv === 'prod' ? import.meta.env.prod_hosted_zone : import.meta.env.nonprod_hosted_zone,
     });
 
     console.log('🔧 Auth0 Configuration Debug (with fix):');
     console.log('   Domain:', domain);
     console.log('   Client ID:', clientId);
     console.log('   Current Hostname:', currentHostname);
-    console.log('   API Environment:', apiEnvName);
+    console.log('   Dynamic API Environment:', apiEnvName);
+    console.log('   Static API Environment:', staticEnv);
     console.log('   Hosted Zone:', hostedZone);
-    console.log('   Audience (API URL):', audience);
+    console.log('   Audience (Static API URL):', audience);
     console.log('   Redirect URI:', window.location.origin);
 
     if (!domain) {
@@ -146,13 +149,17 @@ export async function loginWithPopup() {
     console.log('✅ Auth0 client available, calling loginWithPopup...');
 
     // Configure popup options explicitly
+    // Use static API identifier to avoid Auth0 tenant limits with PR-specific APIs
+    const staticEnv = currentHostname.endsWith(import.meta.env.prod_hosted_zone) ? 'prod' : 'dev';
+    const staticApiUrl = getApiUrl({
+      envName: staticEnv,
+      service: CORE_SERVICES.WINNERS,
+      hostedZone: staticEnv === 'prod' ? import.meta.env.prod_hosted_zone : import.meta.env.nonprod_hosted_zone,
+    });
+
     const popupOptions = {
       authorizationParams: {
-        audience: getApiUrl({
-          envName: getApiEnvironmentFromHostname(),
-          service: CORE_SERVICES.WINNERS,
-          hostedZone: getHostedZone(),
-        }),
+        audience: staticApiUrl,
         scope: 'openid profile email',
         response_type: 'code',
       },
@@ -165,6 +172,7 @@ export async function loginWithPopup() {
     };
 
     console.log('🔧 Popup options:', popupOptions);
+    console.log('   Static API Audience:', staticApiUrl);
 
     try {
       const result = await auth0.loginWithPopup(popupOptions);
