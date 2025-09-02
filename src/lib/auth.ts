@@ -108,6 +108,8 @@ export async function initAuth0() {
       // Enable popup mode with proper configuration
       cacheLocation: 'localstorage',
       useRefreshTokens: true,
+      // Add popup-specific configuration
+      allowedConnections: ['Username-Password-Authentication', 'google-oauth2'],
     });
 
     auth0Client.set(auth0);
@@ -152,6 +154,13 @@ export async function loginWithPopup() {
           hostedZone: getHostedZone(),
         }),
         scope: 'openid profile email',
+        response_type: 'code',
+      },
+      popup: {
+        width: 400,
+        height: 600,
+        left: window.screen.width / 2 - 200,
+        top: window.screen.height / 2 - 300,
       },
     };
 
