@@ -634,10 +634,21 @@ export class Auth0ClientManager {
       const apis = await this.makeRequest<Auth0API[]>('GET', '/resource-servers');
 
       // Look for an existing development API that we can reuse
-      const developmentApis = apis.filter(api =>
-        api.name && api.name.toLowerCase().includes('development') &&
-        api.identifier && api.identifier.includes('dev.rafflewinnerpicker.com'),
-      );
+      const developmentApis = apis.filter(api => {
+        if (!api.name || !api.identifier) return false;
+
+        // Check name includes development
+        if (!api.name.toLowerCase().includes('development')) return false;
+
+        // Safely validate domain using URL parsing instead of string includes
+        try {
+          const url = new URL(api.identifier);
+          return url.hostname === 'dev.rafflewinnerpicker.com';
+        } catch {
+          // If not a valid URL, check if it ends with the exact domain
+          return api.identifier.endsWith('dev.rafflewinnerpicker.com');
+        }
+      });
 
       if (developmentApis.length > 0) {
         const reuseApi = developmentApis[0];
