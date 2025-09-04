@@ -169,7 +169,19 @@ export class Auth0ClientManager {
 
     urls.forEach(url => {
       try {
-        const origin = new URL(url).origin;
+        // Validate URL format and scheme before constructing URL object
+        if (!url || typeof url !== 'string') {
+          throw new Error('URL must be a non-empty string');
+        }
+
+        // Only allow http/https protocols for security
+        if (!url.match(/^https?:\/\//)) {
+          throw new Error('URL must use http or https protocol');
+        }
+
+        const urlObject = new URL(url);
+        const origin = urlObject.origin;
+
         if (!origins.includes(origin)) {
           origins.push(origin);
         }
