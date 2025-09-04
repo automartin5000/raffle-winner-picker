@@ -645,8 +645,11 @@ export class Auth0ClientManager {
           const url = new URL(api.identifier);
           return url.hostname === 'dev.rafflewinnerpicker.com';
         } catch {
-          // If not a valid URL, check if it ends with the exact domain
-          return api.identifier.endsWith('dev.rafflewinnerpicker.com');
+          // If not a valid URL, check if it's exactly the domain or a proper subdomain
+          const domain = 'dev.rafflewinnerpicker.com';
+          return api.identifier === domain ||
+                 api.identifier === `https://${domain}` ||
+                 api.identifier === `http://${domain}`;
         }
       });
 
