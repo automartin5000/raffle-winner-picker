@@ -72,7 +72,7 @@ jobs:
         run: |-
           echo "Setting up Auth0 client IDs for all environments before build..."
           # This ensures both PROD and DEV client IDs are available for the build
-          bun run scripts/manage-auth0-client.js ensure-all-env-clients
+          bun run scripts/manage-auth0-client.ts ensure-all-env-clients
 
           # Set up hosted zone environment variables for frontend build
           echo "📋 Setting up hosted zone environment variables..."

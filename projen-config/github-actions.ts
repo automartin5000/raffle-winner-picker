@@ -1,7 +1,7 @@
 import { awscdk } from "projen";
 import { BuildWorkflow } from "projen/lib/build";
 import { GitHub, GithubWorkflow } from "projen/lib/github";
-import { JobPermission, JobStepOutput } from "projen/lib/github/workflows-model";
+import { JobPermission, type JobStepOutput } from "projen/lib/github/workflows-model";
 import { BUILD_CONSTANTS } from "./constants";
 
 const RUNNER_TYPE = ["ubuntu-latest"];
@@ -72,6 +72,9 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
       PROD_AWS_ACCOUNT_ID: '${{ secrets.PROD_AWS_ACCOUNT_ID }}',
       NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
       PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+      // Frontend environment variables for environment detection
+      VITE_NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
+      VITE_PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
       // Auth0 environment variables for client management
       AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
       VITE_AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
@@ -193,13 +196,17 @@ const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
           id: "update-auth0-client", 
           env: {
             AUTH0_ADDITIONAL_CALLBACK_URLS: "${{ steps.get-urls.outputs.FRONTEND_URL }}",
+            API_BASE_URL: "${{ steps.get-urls.outputs.API_BASE_URL }}",
           },
           run: [
             'echo "Adding PR environment URL to Auth0 client callback URLs..."',
             'echo "PR Frontend URL: ${{ steps.get-urls.outputs.FRONTEND_URL }}"',
+            'echo "PR API URL: ${{ steps.get-urls.outputs.API_BASE_URL }}"',
             'echo "Waiting 10 seconds to avoid Auth0 rate limits..."',
             'sleep 10',
-            'bun run scripts/manage-auth0-client.js ensure-client'
+            'bun run scripts/manage-auth0-client.js ensure-client',
+            'echo "Creating Auth0 API resource for deployment..."',
+            'bun run scripts/manage-auth0-client.js ensureDeploymentApi'
           ].join("\n"),
         },
         {

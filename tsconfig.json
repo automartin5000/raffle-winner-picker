@@ -2,7 +2,7 @@
 {
   "extends": "./.svelte-kit/tsconfig.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "lib",
     "alwaysStrict": true,
     "declaration": true,
@@ -11,7 +11,9 @@
     "inlineSourceMap": false,
     "inlineSources": true,
     "lib": [
-      "es2022"
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
     ],
     "module": "esnext",
     "noEmitOnError": false,
@@ -40,7 +42,9 @@
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*"
+    "src/**/*",
+    "scripts/**/*",
+    "shared/**/*"
   ],
   "exclude": [
     "node_modules",

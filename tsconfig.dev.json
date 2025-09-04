@@ -9,7 +9,9 @@
     "inlineSourceMap": false,
     "inlineSources": true,
     "lib": [
-      "es2022"
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
     ],
     "module": "esnext",
     "noEmitOnError": false,
@@ -34,12 +36,15 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "noEmit": true
+    "noEmit": true,
+    "rootDir": "."
   },
   "include": [
     "src/**/*.ts",
     "test/**/*.ts",
     "src/**/*",
+    "scripts/**/*",
+    "shared/**/*",
     ".projenrc.ts",
     "projenrc/**/*.ts"
   ],

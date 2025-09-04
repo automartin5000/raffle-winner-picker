@@ -16,6 +16,10 @@ const buildWorkflowCallConfig = {
 };
 
 const project = new awscdk.AwsCdkTypeScriptApp({
+  eslint: true,
+  eslintOptions: {
+    dirs: ['src', 'test', 'build-tools', 'projenrc', 'scripts', 'shared'],
+  },
   defaultReleaseBranch: 'main',
   name: 'raffle-winner-picker',
   appEntrypoint: '../infra/bin/app.ts',
@@ -44,7 +48,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
         run: [
           'echo "Setting up Auth0 client IDs for all environments before build..."',
           '# This ensures both PROD and DEV client IDs are available for the build',
-          'bun run scripts/manage-auth0-client.js ensure-all-env-clients',
+          'bun run scripts/manage-auth0-client.ts ensure-all-env-clients',
           '',
           '# Set up hosted zone environment variables for frontend build',
           'echo "📋 Setting up hosted zone environment variables..."',
@@ -129,8 +133,26 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       target: 'ESNext',
       noEmit: true,
       module: 'esnext',
+      lib: ['ES2022', 'DOM', 'DOM.Iterable'],
+      rootDir: '.',
     },
-    include: ['src/**/*'],
+    include: ['src/**/*', 'scripts/**/*', 'shared/**/*'],
+  },
+  jestOptions: {
+    jestConfig: {
+      preset: 'ts-jest/presets/default-esm',
+      extensionsToTreatAsEsm: ['.ts'],
+      transform: {
+        '^.+\\.ts$': ['ts-jest', {
+          useESM: true,
+          tsconfig: 'tsconfig.dev.json',
+        }] as any,
+      },
+      moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1',
+      },
+      testEnvironment: 'node',
+    },
   },
   deps: [
     'csv-parser',
@@ -202,13 +224,13 @@ project.addFields({
 // Auth0 client management tasks
 const getAuth0ClientTask = project.addTask('get-auth0-client', {
   description: 'Get Auth0 SPA client ID for build (no updates)',
-  exec: 'bun run scripts/manage-auth0-client.js get-for-build',
+  exec: 'bun run scripts/manage-auth0-client.ts get-for-build',
   condition: '[ -n "$DEPLOY_ENV" ]',
 });
 
 const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
   description: 'Setup/update Auth0 SPA client IDs for all environments',
-  exec: 'bun run scripts/manage-auth0-client.js ensure-all-env-clients',
+  exec: 'bun run scripts/manage-auth0-client.ts ensure-all-env-clients',
   condition: '[ -n "$DEPLOY_ENV" ]',
 });
 
@@ -223,6 +245,15 @@ project.addTask('prepare', { exec: 'svelte-kit sync || echo ""' });
 project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json' });
 project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch' });
 project.compileTask.exec('vite build');
+
+// TypeScript compilation check
+const typeCheckTask = project.addTask('type-check', {
+  description: 'Type check TypeScript files with strict mode',
+  exec: 'tsc --noEmit --strict --project tsconfig.dev.json',
+});
+
+// Add type checking as a prerequisite to the compile task (must pass before build continues)
+project.compileTask.prependSpawn(typeCheckTask);
 
 // Testing tasks
 project.addTask('test:integration', {
