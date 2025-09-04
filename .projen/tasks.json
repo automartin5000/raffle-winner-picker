@@ -91,6 +91,9 @@
       "description": "Only compile",
       "steps": [
         {
+          "spawn": "type-check"
+        },
+        {
           "spawn": "setup-auth0-client"
         },
         {
@@ -170,7 +173,7 @@
       },
       "steps": [
         {
-          "exec": "eslint --ext .ts,.tsx --fix --no-error-on-unmatched-pattern $@ src test build-tools projenrc .projenrc.ts",
+          "exec": "eslint --ext .ts,.tsx --fix --no-error-on-unmatched-pattern $@ src test build-tools projenrc scripts shared .projenrc.ts",
           "receiveArgs": true
         }
       ]
@@ -319,6 +322,15 @@
       "steps": [
         {
           "exec": "jest --watch"
+        }
+      ]
+    },
+    "type-check": {
+      "name": "type-check",
+      "description": "Type check TypeScript files with strict mode",
+      "steps": [
+        {
+          "exec": "tsc --noEmit --strict --project tsconfig.dev.json"
         }
       ]
     },

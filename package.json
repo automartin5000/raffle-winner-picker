@@ -30,6 +30,7 @@
     "test:e2e:local": "npx projen test:e2e:local",
     "test:integration": "npx projen test:integration",
     "test:watch": "npx projen test:watch",
+    "type-check": "npx projen type-check",
     "watch": "npx projen watch",
     "projen": "npx projen"
   },

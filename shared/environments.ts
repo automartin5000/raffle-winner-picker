@@ -3,9 +3,9 @@
  * Kept in sync with src/lib/shared-constants.ts
  */
 
-import { 
-  buildApiUrl, 
-  buildFrontendUrl 
+import {
+  buildApiUrl,
+  buildFrontendUrl,
 } from './domain-constants.js';
 
 // Type definitions
@@ -45,23 +45,23 @@ const DEPLOYMENT_ENVIRONMENTS: Record<string, DeploymentEnvironment> = {
     isProd: false,
     isEphemeral: true, // PRs and dev environments are ephemeral
   },
-  
+
   // Production environment
   prod: {
     name: 'Production',
     description: 'Production environment for live users',
-    auth0ClientName: 'Raffle Winner Picker (Production)', 
+    auth0ClientName: 'Raffle Winner Picker (Production)',
     auth0Description: 'Production environment for Raffle Winner Picker application',
     isProd: true,
     isEphemeral: false, // Production is persistent
-  }
+  },
 };
 
 /**
  * Get environment configuration by key
  */
 export function getEnvironmentConfig(env: string): DeploymentEnvironment {
-  return DEPLOYMENT_ENVIRONMENTS[env] ?? DEPLOYMENT_ENVIRONMENTS['dev'];
+  return DEPLOYMENT_ENVIRONMENTS[env] ?? DEPLOYMENT_ENVIRONMENTS.dev;
 }
 
 /**
@@ -70,22 +70,22 @@ export function getEnvironmentConfig(env: string): DeploymentEnvironment {
  */
 export function resolveDeploymentEnvironment(options?: ResolveEnvironmentOptions): string {
   const { deployEnv, isEphemeral } = options || {};
-  
+
   // If explicitly ephemeral (PR environment), use dev
   if (isEphemeral) {
     return 'dev';
   }
-  
+
   // Check explicit environment variable
   if (deployEnv === 'prod' || deployEnv === 'production') {
     return 'prod';
   }
-  
+
   // Check if hostname suggests production (for frontend)
   // Note: We cannot determine production from hostname alone in public code
   // as that would expose the production domain pattern
   // This detection relies on explicit environment variables only
-  
+
   // Default to dev for all other cases (local dev, PR environments, etc.)
   return 'dev';
 }
@@ -116,7 +116,7 @@ export function isEphemeralEnvironment(env: string): boolean {
  */
 export function getApiBaseUrl(options?: ApiBaseUrlOptions): string {
   const { deploymentEnv, hostedZone, envName } = options || {};
-  
+
   if (!hostedZone) {
     return 'https://api.localhost:3000'; // fallback for local development
   }
@@ -133,7 +133,7 @@ export function getApiBaseUrl(options?: ApiBaseUrlOptions): string {
  */
 export function getFrontendUrl(options?: FrontendUrlOptions): string {
   const { deploymentEnv, hostedZone, envName } = options || {};
-  
+
   if (!hostedZone) {
     return 'http://localhost:5173'; // fallback for local development
   }
@@ -149,9 +149,9 @@ export function getFrontendUrl(options?: FrontendUrlOptions): string {
 export { DEPLOYMENT_ENVIRONMENTS };
 
 // Export types for consumers
-export type { 
-  DeploymentEnvironment, 
-  ResolveEnvironmentOptions, 
-  ApiBaseUrlOptions, 
-  FrontendUrlOptions 
+export type {
+  DeploymentEnvironment,
+  ResolveEnvironmentOptions,
+  ApiBaseUrlOptions,
+  FrontendUrlOptions,
 };

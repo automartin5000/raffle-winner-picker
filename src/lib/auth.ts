@@ -87,8 +87,6 @@ export async function initAuth0() {
       // Enable popup mode with proper configuration
       cacheLocation: 'localstorage',
       useRefreshTokens: true,
-      // Add popup-specific configuration
-      allowedConnections: ['Username-Password-Authentication', 'google-oauth2'],
     });
 
     auth0Client.set(auth0);
@@ -149,16 +147,17 @@ export async function loginWithPopup() {
       console.error('❌ loginWithPopup failed:', popupError);
 
       // Check if it's a popup blocked error or user cancelled
-      if (popupError.message?.includes('popup_blocked')) {
+      const errorMessage = popupError instanceof Error ? popupError.message : String(popupError);
+      if (errorMessage.includes('popup_blocked')) {
         console.error('❌ Popup was blocked by browser. Please allow popups for this site.');
         throw popupError;
-      } else if (popupError.message?.includes('cancelled') || popupError.message?.includes('user_cancelled')) {
+      } else if (errorMessage.includes('cancelled') || errorMessage.includes('user_cancelled')) {
         console.log('ℹ️ User cancelled the authentication popup');
         throw popupError;
       }
 
       // Check if it's a "Service not found" error - this means PR-specific API doesn't exist
-      if (popupError.message?.includes('Service not found')) {
+      if (errorMessage.includes('Service not found')) {
         // Try with base development API as fallback
         const fallbackApiUrl = getApiUrl({
           envName: 'dev',

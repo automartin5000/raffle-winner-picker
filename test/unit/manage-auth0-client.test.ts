@@ -25,10 +25,18 @@ jest.mock('../../shared/environments.js', () => ({
   DEPLOYMENT_ENVIRONMENTS: { prod: 'prod', dev: 'dev' },
 }));
 
-// Mock process.exit to prevent tests from actually exiting
-const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
-  throw new Error('process.exit called');
+// Create a mock function that doesn't throw for now
+const mockExit = jest.fn().mockImplementation((code?: string | number) => {
+  // Don't throw, just record the call
+  return undefined as never;
 });
+
+// Replace process.exit with our mock
+const originalExit = process.exit;
+process.exit = mockExit as unknown as typeof process.exit;
+
+// Mock console.error to suppress error output during tests
+const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 
 describe('Auth0ClientManager', () => {
   const validEnv = {
@@ -58,7 +66,14 @@ describe('Auth0ClientManager', () => {
   });
 
   afterEach(() => {
+    mockExit.mockClear();
+    mockConsoleError.mockClear();
     jest.restoreAllMocks();
+  });
+
+  afterAll(() => {
+    // Restore original process.exit
+    process.exit = originalExit;
   });
 
   describe('Constructor', () => {
@@ -74,21 +89,21 @@ describe('Auth0ClientManager', () => {
     it('should exit when AUTH0_DOMAIN is missing', () => {
       delete process.env.AUTH0_DOMAIN;
 
-      expect(() => new Auth0ClientManager()).toThrow('process.exit called');
+      new Auth0ClientManager();
       expect(mockExit).toHaveBeenCalledWith(1);
     });
 
     it('should exit when AUTH0_CLIENT_ID is missing', () => {
       delete process.env.AUTH0_CLIENT_ID;
 
-      expect(() => new Auth0ClientManager()).toThrow('process.exit called');
+      new Auth0ClientManager();
       expect(mockExit).toHaveBeenCalledWith(1);
     });
 
     it('should exit when AUTH0_CLIENT_SECRET is missing', () => {
       delete process.env.AUTH0_CLIENT_SECRET;
 
-      expect(() => new Auth0ClientManager()).toThrow('process.exit called');
+      new Auth0ClientManager();
       expect(mockExit).toHaveBeenCalledWith(1);
     });
 

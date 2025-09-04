@@ -1,7 +1,7 @@
 import { awscdk } from "projen";
 import { BuildWorkflow } from "projen/lib/build";
 import { GitHub, GithubWorkflow } from "projen/lib/github";
-import { JobPermission, JobStepOutput } from "projen/lib/github/workflows-model";
+import { JobPermission, type JobStepOutput } from "projen/lib/github/workflows-model";
 import { BUILD_CONSTANTS } from "./constants";
 
 const RUNNER_TYPE = ["ubuntu-latest"];

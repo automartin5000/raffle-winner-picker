@@ -1,15 +1,15 @@
-import * as https from 'https';
 import * as fs from 'fs';
+import * as https from 'https';
 import * as path from 'path';
 
 // Import shared environment configuration
-import { 
-  resolveDeploymentEnvironment, 
-  getEnvironmentConfig, 
+import {
+  resolveDeploymentEnvironment,
+  getEnvironmentConfig,
   getFrontendUrl,
   getApiBaseUrl,
-  DEPLOYMENT_ENVIRONMENTS
-} from '../shared/environments.js';
+  DEPLOYMENT_ENVIRONMENTS,
+} from '../shared/environments';
 
 // Type definitions for Auth0 API responses
 interface Auth0Client {
@@ -49,10 +49,10 @@ interface Auth0User {
 
 /**
  * Auth0 SPA Client Management Script
- * 
+ *
  * This script manages Auth0 Single Page Application clients for different environments.
  * It can create, read, update, or delete Auth0 SPA clients via the Management API.
- * 
+ *
  * Environment Variables Required:
  * - AUTH0_DOMAIN: Your Auth0 domain (e.g., 'your-tenant.auth0.com')
  * - AUTH0_CLIENT_ID: Management API client ID (Machine to Machine)
@@ -61,7 +61,7 @@ interface Auth0User {
  * - PROD_HOSTED_ZONE: Production domain for callback URL (derived from domain-constants)
  * - NONPROD_HOSTED_ZONE: Development domain for callback URL (derived from domain-constants)
  * - AUTH0_SPA_CALLBACK_URL: Manual override for callback URL (optional)
- * 
+ *
  * Usage:
  * bunx scripts/manage-auth0-client.ts create
  * bunx scripts/manage-auth0-client.ts read <client_id>
@@ -77,10 +77,10 @@ export class Auth0ClientManager {
   public readonly domain: string;
   public readonly clientId: string;
   public readonly clientSecret: string;
-  public readonly deployEnv: string;
+  public deployEnv: string;
   public readonly callbackUrl: string | null;
   public accessToken: string | null;
-  public readonly appName: string;
+  public appName: string;
 
   constructor() {
     this.domain = process.env.AUTH0_DOMAIN!;
@@ -88,13 +88,13 @@ export class Auth0ClientManager {
     this.clientSecret = process.env.AUTH0_CLIENT_SECRET!;
     this.deployEnv = process.env.DEPLOY_ENV || 'dev';
     this.callbackUrl = this.getCallbackUrl();
-    
+
     if (!this.domain || !this.clientId || !this.clientSecret) {
       console.error('❌ Missing required Auth0 environment variables:');
       console.error('   AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET');
       process.exit(1);
     }
-    
+
     this.accessToken = null;
     this.appName = this.getAppName();
   }
@@ -119,14 +119,14 @@ export class Auth0ClientManager {
     }
 
     // Derive from hosted zones based on environment
-    const hostedZone = this.deployEnv === 'prod' 
-      ? process.env.PROD_HOSTED_ZONE 
+    const hostedZone = this.deployEnv === 'prod'
+      ? process.env.PROD_HOSTED_ZONE
       : process.env.NONPROD_HOSTED_ZONE;
 
     const frontendUrl = getFrontendUrl({
       deploymentEnv: this.deployEnv,
       hostedZone,
-      envName: process.env.DEPLOY_ENV
+      envName: process.env.DEPLOY_ENV,
     });
 
     if (frontendUrl && !frontendUrl.includes('localhost')) {
@@ -141,8 +141,8 @@ export class Auth0ClientManager {
    * Get all callback URLs including additional ones from environment
    */
   getAllCallbackUrls(): string[] {
-    const urls = [];
-    
+    const urls: string[] = [];
+
     // Add primary callback URL
     if (this.callbackUrl) {
       urls.push(this.callbackUrl);
@@ -165,7 +165,7 @@ export class Auth0ClientManager {
    */
   getAllowedOrigins(): string[] {
     const urls = this.getAllCallbackUrls();
-    const origins = [];
+    const origins: string[] = [];
 
     urls.forEach(url => {
       try {
@@ -185,12 +185,12 @@ export class Auth0ClientManager {
    * Get the standardized app name and description from shared config
    */
   getAppName() {
-      const config = getEnvironmentConfig(this.deployEnv);
-      if (!Object.keys(DEPLOYMENT_ENVIRONMENTS).includes(this.deployEnv)) {
-          return `${config.auth0ClientName} - (${this.deployEnv})`;
-      } else {
-          return config.auth0ClientName;
-      }
+    const config = getEnvironmentConfig(this.deployEnv);
+    if (!Object.keys(DEPLOYMENT_ENVIRONMENTS).includes(this.deployEnv)) {
+      return `${config.auth0ClientName} - (${this.deployEnv})`;
+    } else {
+      return config.auth0ClientName;
+    }
   }
 
   /**
@@ -211,7 +211,7 @@ export class Auth0ClientManager {
       client_id: this.clientId,
       client_secret: this.clientSecret,
       audience: `https://${this.domain}/api/v2/`,
-      grant_type: 'client_credentials'
+      grant_type: 'client_credentials',
     });
 
     const options = {
@@ -221,8 +221,8 @@ export class Auth0ClientManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': data.length
-      }
+        'Content-Length': data.length,
+      },
     };
 
     return new Promise((resolve, reject) => {
@@ -253,18 +253,18 @@ export class Auth0ClientManager {
   /**
    * Make authenticated request to Management API
    */
-  async makeRequest(method, path, data = null) {
+  async makeRequest<T = any>(method: string, reqPath: string, data: any = null): Promise<T> {
     const token = await this.getAccessToken();
-    
+
     const options = {
       hostname: this.domain,
       port: 443,
-      path: `/api/v2${path}`,
+      path: `/api/v2${reqPath}`,
       method: method,
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      } as Record<string, string | number>,
     };
 
     if (data) {
@@ -279,10 +279,10 @@ export class Auth0ClientManager {
         res.on('end', () => {
           try {
             const response = body ? JSON.parse(body) : {};
-            if (res.statusCode >= 200 && res.statusCode < 300) {
+            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
               resolve(response);
             } else {
-              reject(new Error(`HTTP ${res.statusCode}: ${body}`));
+              reject(new Error(`HTTP ${res.statusCode || 'unknown'}: ${body}`));
             }
           } catch (error) {
             reject(error);
@@ -304,7 +304,7 @@ export class Auth0ClientManager {
   async createClient() {
     const callbackUrls = this.getAllCallbackUrls();
     const allowedOrigins = this.getAllowedOrigins();
-    
+
     const clientData = {
       name: this.appName,
       description: this.getAppDescription(),
@@ -318,27 +318,27 @@ export class Auth0ClientManager {
       token_endpoint_auth_method: 'none',
       grant_types: ['authorization_code', 'implicit', 'refresh_token', 'password'],
       jwt_configuration: {
-        alg: 'RS256'
+        alg: 'RS256',
       },
       client_metadata: {
         environment: this.deployEnv,
-        static_env: 'true' // Mark as static environment client
-      }
+        static_env: 'true', // Mark as static environment client
+      },
     };
 
     try {
-      const client = await this.makeRequest('POST', '/clients', clientData);
+      const client = await this.makeRequest<Auth0Client>('POST', '/clients', clientData);
       console.log('✅ Successfully created Auth0 SPA client:');
       console.log(`   Client ID: ${client.client_id}`);
       console.log(`   Name: ${client.name}`);
       console.log(`   Environment: ${this.deployEnv}`);
-      
+
       // Write client ID to environment file
       this.writeClientIdToEnv(client.client_id);
-      
+
       return client;
     } catch (error) {
-      console.error('❌ Failed to create Auth0 client:', error.message);
+      console.error('❌ Failed to create Auth0 client:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -346,9 +346,9 @@ export class Auth0ClientManager {
   /**
    * Read client information
    */
-  async readClient(clientId) {
+  async readClient(clientId: string) {
     try {
-      const client = await this.makeRequest('GET', `/clients/${clientId}`);
+      const client = await this.makeRequest<Auth0Client>('GET', `/clients/${clientId}`);
       console.log('📖 Auth0 Client Information:');
       console.log(`   Client ID: ${client.client_id}`);
       console.log(`   Name: ${client.name}`);
@@ -357,7 +357,7 @@ export class Auth0ClientManager {
       console.log(`   Callbacks: ${JSON.stringify(client.callbacks, null, 2)}`);
       return client;
     } catch (error) {
-      console.error('❌ Failed to read Auth0 client:', error.message);
+      console.error('❌ Failed to read Auth0 client:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -365,10 +365,10 @@ export class Auth0ClientManager {
   /**
    * Update an existing client
    */
-  async updateClient(clientId) {
+  async updateClient(clientId: string) {
     const callbackUrls = this.getAllCallbackUrls();
     const allowedOrigins = this.getAllowedOrigins();
-    
+
     const updates = {
       name: this.appName,
       callbacks: callbackUrls,
@@ -376,8 +376,8 @@ export class Auth0ClientManager {
       web_origins: allowedOrigins,
       allowed_origins: allowedOrigins,
       client_metadata: {
-        environment: this.deployEnv
-      }
+        environment: this.deployEnv,
+      },
     };
 
     try {
@@ -387,7 +387,7 @@ export class Auth0ClientManager {
       console.log(`   Name: ${client.name}`);
       return client;
     } catch (error) {
-      console.error('❌ Failed to update Auth0 client:', error.message);
+      console.error('❌ Failed to update Auth0 client:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -395,15 +395,15 @@ export class Auth0ClientManager {
   /**
    * Delete a client
    */
-  async deleteClient(clientId) {
+  async deleteClient(clientId: string) {
     try {
       await this.makeRequest('DELETE', `/clients/${clientId}`);
       console.log('✅ Successfully deleted Auth0 SPA client:', clientId);
-      
+
       // Remove from environment file if it exists
       this.removeClientIdFromEnv(clientId);
     } catch (error) {
-      console.error('❌ Failed to delete Auth0 client:', error.message);
+      console.error('❌ Failed to delete Auth0 client:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -413,25 +413,25 @@ export class Auth0ClientManager {
    */
   async findClientByEnvironment() {
     try {
-      const clients = await this.makeRequest('GET', '/clients?app_type=spa');
+      const clients = await this.makeRequest<Auth0Client[]>('GET', '/clients?app_type=spa');
       return clients.find(client => {
         // Check for exact name match first
         if (client.name === this.appName) {
           return true;
         }
-        
+
         // Check metadata for static environment
-        if (client.client_metadata?.static_env === 'true' && 
+        if (client.client_metadata?.static_env === 'true' &&
             client.client_metadata?.environment === this.deployEnv) {
           return true;
         }
-        
+
         // Legacy check for older naming pattern
         const config = getEnvironmentConfig(this.deployEnv);
         return client.name.includes(`(${config.name})`);
       });
     } catch (error) {
-      console.error('❌ Failed to search for existing clients:', error.message);
+      console.error('❌ Failed to search for existing clients:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -441,9 +441,9 @@ export class Auth0ClientManager {
    */
   async ensureClient() {
     console.log(`🔍 Looking for existing Auth0 SPA client for environment: ${this.deployEnv}`);
-    
+
     const existingClient = await this.findClientByEnvironment();
-    
+
     if (existingClient) {
       console.log(`📝 Found existing client: ${existingClient.client_id}`);
       const updatedClient = await this.updateClient(existingClient.client_id);
@@ -451,7 +451,7 @@ export class Auth0ClientManager {
       return updatedClient;
     } else {
       console.log('🆕 No existing client found, creating new one...');
-      return await this.createClient();
+      return this.createClient();
     }
   }
 
@@ -460,49 +460,49 @@ export class Auth0ClientManager {
    */
   async getClientForBuild() {
     console.log(`🔍 Getting Auth0 SPA client ID for build environment: ${this.deployEnv}`);
-    
+
     const existingClient = await this.findClientByEnvironment();
-    
+
     if (existingClient) {
       console.log(`📋 Found existing client: ${existingClient.client_id}`);
       this.writeClientIdToEnv(existingClient.client_id);
       return existingClient;
     } else {
       console.log('🆕 No existing client found, creating new one...');
-      return await this.createClient();
+      return this.createClient();
     }
   }
 
   /**
    * Write client ID and derived URLs to environment file
    */
-  writeClientIdToEnv(clientId) {
+  writeClientIdToEnv(clientId: string) {
     const envFile = path.join(process.cwd(), '.env');
     let envContent = '';
-    
+
     // Read existing env file if it exists
     if (fs.existsSync(envFile)) {
       envContent = fs.readFileSync(envFile, 'utf8');
     }
-    
+
     const lines = envContent.split('\n');
-    
+
     // Helper function to update or add environment variable
-    const updateEnvVar = (varName, value) => {
+    const updateEnvVar = (varName: string, value: string) => {
       const envVarLine = `${varName}=${value}`;
       const existingLineIndex = lines.findIndex(line => line.startsWith(`${varName}=`));
-      
+
       if (existingLineIndex >= 0) {
         lines[existingLineIndex] = envVarLine;
       } else {
         lines.push(envVarLine);
       }
     };
-    
+
     // Update or add the environment-specific client ID
     const envVarName = `VITE_SPA_AUTH0_CLIENT_ID_${this.deployEnv.toUpperCase()}`;
     updateEnvVar(envVarName, clientId);
-    
+
     // Also add the current environment's client ID as the default
     updateEnvVar('VITE_SPA_AUTH0_CLIENT_ID', clientId);
 
@@ -513,16 +513,16 @@ export class Auth0ClientManager {
   /**
    * Remove client ID from environment file
    */
-  removeClientIdFromEnv(clientId) {
+  removeClientIdFromEnv(clientId: string) {
     const envFile = path.join(process.cwd(), '.env.local');
-    
+
     if (!fs.existsSync(envFile)) return;
-    
+
     const envContent = fs.readFileSync(envFile, 'utf8');
-    const lines = envContent.split('\n').filter(line => 
-      !line.includes(clientId) && line.trim()
+    const lines = envContent.split('\n').filter(line =>
+      !line.includes(clientId) && line.trim(),
     );
-    
+
     fs.writeFileSync(envFile, lines.join('\n') + '\n');
     console.log(`📝 Removed client ID ${clientId} from ${envFile}`);
   }
@@ -533,33 +533,33 @@ export class Auth0ClientManager {
   async ensureApi() {
     const apiIdentifier = this.getApiIdentifier();
     const apiName = this.getApiName();
-    
+
     console.log(`🔍 Looking for existing Auth0 API: ${apiIdentifier}`);
     console.log(`   Expected API Name: ${apiName}`);
-    
+
     try {
       // Check if API already exists
       const existingApi = await this.makeRequest('GET', `/resource-servers/${encodeURIComponent(apiIdentifier)}`);
-      console.log(`📝 Found existing API:`);
+      console.log('📝 Found existing API:');
       console.log(`   Name: ${existingApi.name}`);
       console.log(`   Identifier: ${existingApi.identifier}`);
       console.log(`   ID: ${existingApi.id}`);
-      console.log(`   Scopes: ${existingApi.scopes?.map(s => s.value).join(', ') || 'none'}`);
-      
+      console.log(`   Scopes: ${existingApi.scopes?.map((s: { value: string }) => s.value).join(', ') || 'none'}`);
+
       // Update the API
       const updatedApi = await this.updateApi(apiIdentifier);
-      
-      
+
+
       return updatedApi;
     } catch (error) {
-      if (error.message.includes('404')) {
+      if (error instanceof Error ? error.message : String(error).includes('404')) {
         console.log('🆕 No existing API found, creating new one...');
         const createdApi = await this.createApi();
-        
-        
+
+
         return createdApi;
       } else {
-        console.error(`❌ Error checking for existing API: ${error.message}`);
+        console.error(`❌ Error checking for existing API: ${error instanceof Error ? error.message : String(error)}`);
         throw error;
       }
     }
@@ -572,40 +572,40 @@ export class Auth0ClientManager {
   async ensureDeploymentApi() {
     const deploymentUrl = process.env.API_BASE_URL;
     if (!deploymentUrl) {
-      console.log(`ℹ️  No API_BASE_URL provided, skipping deployment API creation`);
+      console.log('ℹ️  No API_BASE_URL provided, skipping deployment API creation');
       return;
     }
 
     const deploymentApiName = `${this.getApiName()} (Deployment)`;
-    
+
     console.log(`🔍 Looking for existing deployment API: ${deploymentUrl}`);
     console.log(`   Expected API Name: ${deploymentApiName}`);
-    
+
     try {
       // Check if deployment API already exists
       const existingApi = await this.makeRequest('GET', `/resource-servers/${encodeURIComponent(deploymentUrl)}`);
-      console.log(`📝 Found existing deployment API:`);
+      console.log('📝 Found existing deployment API:');
       console.log(`   Name: ${existingApi.name}`);
       console.log(`   Identifier: ${existingApi.identifier}`);
-      
+
       // Update the deployment API
       await this.updateDeploymentApi(deploymentUrl, deploymentApiName);
       return existingApi;
     } catch (error) {
-      if (error.message.includes('404')) {
+      if (error instanceof Error ? error.message : String(error).includes('404')) {
         console.log('🆕 No existing deployment API found, attempting to create new one...');
         try {
           return await this.createDeploymentApi(deploymentUrl, deploymentApiName);
         } catch (createError) {
-          if (createError.message.includes('too_many_entities')) {
+          if (createError instanceof Error && createError.message.includes('too_many_entities')) {
             console.log('❌ Hit Auth0 tenant limit for API resources. Trying to reuse existing API...');
             // Try to find and reuse an existing API resource
-            return await this.findAndReuseExistingApi(deploymentUrl);
+            return this.findAndReuseExistingApi(deploymentUrl);
           }
           throw createError;
         }
       } else {
-        console.error(`❌ Error checking for existing deployment API: ${error.message}`);
+        console.error(`❌ Error checking for existing deployment API: ${error instanceof Error ? error.message : String(error)}`);
         throw error;
       }
     }
@@ -614,32 +614,32 @@ export class Auth0ClientManager {
   /**
    * Find and reuse an existing API resource when hitting tenant limits
    */
-  async findAndReuseExistingApi(targetUrl) {
+  async findAndReuseExistingApi(targetUrl: string) {
     console.log('🔍 Looking for existing API resources to reuse...');
-    
+
     try {
       // Get all existing API resources
-      const apis = await this.makeRequest('GET', '/resource-servers');
-      
+      const apis = await this.makeRequest<Auth0API[]>('GET', '/resource-servers');
+
       // Look for an existing development API that we can reuse
-      const developmentApis = apis.filter(api => 
+      const developmentApis = apis.filter(api =>
         api.name && api.name.toLowerCase().includes('development') &&
-        api.identifier && api.identifier.includes('dev.rafflewinnerpicker.com')
+        api.identifier && api.identifier.includes('dev.rafflewinnerpicker.com'),
       );
-      
+
       if (developmentApis.length > 0) {
         const reuseApi = developmentApis[0];
         console.log(`🔄 Reusing existing API resource: ${reuseApi.identifier}`);
         console.log(`   Name: ${reuseApi.name}`);
-        console.log(`   Note: Using existing API instead of creating PR-specific one`);
+        console.log('   Note: Using existing API instead of creating PR-specific one');
         console.log(`   Tokens issued for: ${targetUrl} will use audience: ${reuseApi.identifier}`);
         return reuseApi;
       }
-      
+
       // If no suitable API found, throw an error
       throw new Error('No suitable API resource found to reuse and tenant limit reached');
     } catch (error) {
-      console.error(`❌ Failed to find reusable API: ${error.message}`);
+      console.error(`❌ Failed to find reusable API: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -650,35 +650,35 @@ export class Auth0ClientManager {
   async createApi() {
     const apiIdentifier = this.getApiIdentifier();
     const apiName = this.getApiName();
-    
+
     const apiData = {
       name: apiName,
       identifier: apiIdentifier,
       scopes: [
         {
           value: 'read:raffles',
-          description: 'Read raffle runs and entries'
+          description: 'Read raffle runs and entries',
         },
         {
           value: 'write:raffles',
-          description: 'Create new raffle runs'
-        }
+          description: 'Create new raffle runs',
+        },
       ],
       signing_alg: 'RS256',
       token_lifetime: 86400,
       token_lifetime_for_web: 7200,
-      skip_consent_for_verifiable_first_party_clients: true
+      skip_consent_for_verifiable_first_party_clients: true,
     };
 
     try {
-      const api = await this.makeRequest('POST', '/resource-servers', apiData);
+      const api = await this.makeRequest<Auth0API>('POST', '/resource-servers', apiData);
       console.log('✅ Successfully created Auth0 API:');
       console.log(`   API ID: ${api.id}`);
       console.log(`   Identifier: ${api.identifier}`);
       console.log(`   Name: ${api.name}`);
       return api;
     } catch (error) {
-      console.error('❌ Failed to create Auth0 API:', error.message);
+      console.error('❌ Failed to create Auth0 API:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -686,23 +686,23 @@ export class Auth0ClientManager {
   /**
    * Update existing Auth0 API resource
    */
-  async updateApi(apiIdentifier) {
+  async updateApi(apiIdentifier: string) {
     const apiName = this.getApiName();
-    
+
     const updates = {
       name: apiName,
       scopes: [
         {
           value: 'read:raffles',
-          description: 'Read raffle runs and entries'
+          description: 'Read raffle runs and entries',
         },
         {
           value: 'write:raffles',
-          description: 'Create new raffle runs'
-        }
+          description: 'Create new raffle runs',
+        },
       ],
       token_lifetime: 86400,
-      token_lifetime_for_web: 7200
+      token_lifetime_for_web: 7200,
     };
 
     try {
@@ -712,7 +712,7 @@ export class Auth0ClientManager {
       console.log(`   Name: ${api.name}`);
       return api;
     } catch (error) {
-      console.error('❌ Failed to update Auth0 API:', error.message);
+      console.error('❌ Failed to update Auth0 API:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -720,35 +720,35 @@ export class Auth0ClientManager {
   /**
    * Create Auth0 API resource for actual deployment URL
    */
-  async createDeploymentApi(deploymentUrl, deploymentApiName) {
+  async createDeploymentApi(deploymentUrl: string, deploymentApiName: string) {
     const apiData = {
       name: deploymentApiName,
       identifier: deploymentUrl,
       scopes: [
         {
           value: 'read:raffles',
-          description: 'Read raffle runs and entries'
+          description: 'Read raffle runs and entries',
         },
         {
           value: 'write:raffles',
-          description: 'Create new raffle runs'
-        }
+          description: 'Create new raffle runs',
+        },
       ],
       signing_alg: 'RS256',
       token_lifetime: 86400,
       token_lifetime_for_web: 7200,
-      skip_consent_for_verifiable_first_party_clients: true
+      skip_consent_for_verifiable_first_party_clients: true,
     };
 
     try {
-      const api = await this.makeRequest('POST', '/resource-servers', apiData);
+      const api = await this.makeRequest<Auth0API>('POST', '/resource-servers', apiData);
       console.log('✅ Successfully created deployment Auth0 API:');
       console.log(`   API ID: ${api.id}`);
       console.log(`   Identifier: ${api.identifier}`);
       console.log(`   Name: ${api.name}`);
       return api;
     } catch (error) {
-      console.error('❌ Failed to create deployment Auth0 API:', error.message);
+      console.error('❌ Failed to create deployment Auth0 API:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -756,21 +756,21 @@ export class Auth0ClientManager {
   /**
    * Update existing deployment Auth0 API resource
    */
-  async updateDeploymentApi(deploymentUrl, deploymentApiName) {
+  async updateDeploymentApi(deploymentUrl: string, deploymentApiName: string) {
     const updates = {
       name: deploymentApiName,
       scopes: [
         {
           value: 'read:raffles',
-          description: 'Read raffle runs and entries'
+          description: 'Read raffle runs and entries',
         },
         {
           value: 'write:raffles',
-          description: 'Create new raffle runs'
-        }
+          description: 'Create new raffle runs',
+        },
       ],
       token_lifetime: 86400,
-      token_lifetime_for_web: 7200
+      token_lifetime_for_web: 7200,
     };
 
     try {
@@ -780,7 +780,7 @@ export class Auth0ClientManager {
       console.log(`   Name: ${api.name}`);
       return api;
     } catch (error) {
-      console.error('❌ Failed to update deployment Auth0 API:', error.message);
+      console.error('❌ Failed to update deployment Auth0 API:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -793,13 +793,13 @@ export class Auth0ClientManager {
     const apiBaseUrl = getApiBaseUrl({
       deploymentEnv: staticEnv,
       hostedZone: staticEnv === 'prod' ? process.env.PROD_HOSTED_ZONE : process.env.NONPROD_HOSTED_ZONE,
-      envName: staticEnv // Use static environment to reuse APIs across PRs
+      envName: staticEnv, // Use static environment to reuse APIs across PRs
     });
-    
+
     if (apiBaseUrl && !apiBaseUrl.includes('localhost')) {
       return apiBaseUrl;
     }
-    
+
     // Fallback for localhost/testing - use static environment to reuse APIs
     return `https://${staticEnv}.api.winners.dev.rafflewinnerpicker.com`;
   }
@@ -819,32 +819,32 @@ export class Auth0ClientManager {
    */
   async ensureTestClient() {
     const testClientName = this.getTestClientName();
-    
+
     console.log(`🔍 Looking for existing Auth0 test client: ${testClientName}`);
-    
+
     const existingClient = await this.findTestClient();
-    
+
     if (existingClient) {
       console.log(`📝 Found existing test client: ${existingClient.client_id}`);
       const updatedClient = await this.updateTestClient(existingClient.client_id);
-      
+
       // Check if credentials actually exist in .env file
       const hasCredentials = this.hasTestClientCredentials();
       const hasApiBaseUrl = process.env.API_BASE_URL;
-      
+
       if (hasCredentials && !hasApiBaseUrl) {
-        console.log(`ℹ️  Skipping .env update for existing client (credentials already exist)`);
+        console.log('ℹ️  Skipping .env update for existing client (credentials already exist)');
       } else if (hasCredentials && hasApiBaseUrl) {
-        console.log(`📝 Updating audience in .env for CI environment (API_BASE_URL provided)`);
-        this.writeTestClientToEnv(existingClient.client_id, undefined);
-        console.log(`⚠️  Note: client_secret not updated (using existing value)`);
+        console.log('📝 Updating audience in .env for CI environment (API_BASE_URL provided)');
+        this.writeTestClientToEnv(existingClient.client_id, existingClient.client_secret || '');
+        console.log('⚠️  Note: client_secret not updated (using existing value)');
       } else {
-        console.log(`📝 Writing test client credentials to .env (missing from file)`);
+        console.log('📝 Writing test client credentials to .env (missing from file)');
         // Write credentials without client_secret since Auth0 update API doesn't return it
         // In CI/CD environments, the secret should be provided via environment variables
-        this.writeTestClientToEnv(existingClient.client_id, undefined);
-        console.log(`⚠️  Note: client_secret not written (not returned by Auth0 update API)`);
-        console.log(`   If integration tests fail, ensure AUTH0_TEST_CLIENT_SECRET is provided via environment`);
+        this.writeTestClientToEnv(existingClient.client_id, existingClient.client_secret || '');
+        console.log('⚠️  Note: client_secret not written (not returned by Auth0 update API)');
+        console.log('   If integration tests fail, ensure AUTH0_TEST_CLIENT_SECRET is provided via environment');
       }
       return updatedClient;
     } else {
@@ -853,23 +853,24 @@ export class Auth0ClientManager {
         return await this.createTestClient();
       } catch (error) {
         // If we hit tenant limits, try to find any existing test client and reuse it
-        if (error.message.includes('too_many_entities') || error.message.includes('403')) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('too_many_entities') || errorMessage.includes('403')) {
           console.log('⚠️  Hit Auth0 tenant limit, searching for any existing test client to reuse...');
-          const allClients = await this.makeRequest('GET', '/clients?app_type=non_interactive');
-          const anyTestClient = allClients.find(client => 
-            client.client_metadata?.purpose === 'integration_testing'
+          const allClients = await this.makeRequest<Auth0Client[]>('GET', '/clients?app_type=non_interactive');
+          const anyTestClient = allClients.find(client =>
+            client.client_metadata?.purpose === 'integration_testing',
           );
-          
+
           if (anyTestClient) {
             console.log(`🔄 Reusing existing test client due to tenant limits: ${anyTestClient.client_id}`);
             const updatedClient = await this.updateTestClient(anyTestClient.client_id);
-            
+
             // Try to write what we can to .env file
-            this.writeTestClientToEnv(anyTestClient.client_id, undefined);
-            console.log(`⚠️  Reused client credentials written to .env (client_secret may be missing)`);
-            console.log(`   If integration tests fail due to missing client_secret, you may need to:`);
-            console.log(`   1. Manually clean up unused Auth0 M2M applications, or`);
-            console.log(`   2. Check if existing credentials work from a previous setup`);
+            this.writeTestClientToEnv(anyTestClient.client_id, anyTestClient.client_secret || '');
+            console.log('⚠️  Reused client credentials written to .env (client_secret may be missing)');
+            console.log('   If integration tests fail due to missing client_secret, you may need to:');
+            console.log('   1. Manually clean up unused Auth0 M2M applications, or');
+            console.log('   2. Check if existing credentials work from a previous setup');
             return updatedClient;
           }
         }
@@ -884,7 +885,7 @@ export class Auth0ClientManager {
   async createTestClient() {
     const testClientName = this.getTestClientName();
     const apiIdentifier = this.getApiIdentifier();
-    
+
     const clientData = {
       name: testClientName,
       description: `Integration testing client for ${this.getAppDescription()}`,
@@ -892,12 +893,12 @@ export class Auth0ClientManager {
       token_endpoint_auth_method: 'client_secret_post',
       grant_types: ['client_credentials'],
       jwt_configuration: {
-        alg: 'RS256'
+        alg: 'RS256',
       },
       client_metadata: {
         environment: this.deployEnv,
-        purpose: 'integration_testing'
-      }
+        purpose: 'integration_testing',
+      },
     };
 
     try {
@@ -905,17 +906,17 @@ export class Auth0ClientManager {
       console.log('✅ Successfully created Auth0 test client:');
       console.log(`   Client ID: ${client.client_id}`);
       console.log(`   Name: ${client.name}`);
-      
+
       // Grant access to the API
       await this.grantClientApiAccess(client.client_id, apiIdentifier);
-      
-      
+
+
       // Write credentials to .env file
       this.writeTestClientToEnv(client.client_id, client.client_secret);
-      
+
       return client;
     } catch (error) {
-      console.error('❌ Failed to create Auth0 test client:', error.message);
+      console.error('❌ Failed to create Auth0 test client:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -923,36 +924,37 @@ export class Auth0ClientManager {
   /**
    * Update existing test client
    */
-  async updateTestClient(clientId) {
+  async updateTestClient(clientId: string) {
     const testClientName = this.getTestClientName();
     const apiIdentifier = this.getApiIdentifier();
-    
+
     const updates = {
       name: testClientName,
       description: `Integration testing client for ${this.getAppDescription()}`,
       client_metadata: {
         environment: this.deployEnv,
-        purpose: 'integration_testing'
-      }
+        purpose: 'integration_testing',
+      },
     };
 
     try {
       const client = await this.makeRequest('PATCH', `/clients/${clientId}`, updates);
-      
+
       // Ensure API access is granted
       await this.grantClientApiAccess(clientId, apiIdentifier);
-      
-      
+
+
       console.log('✅ Successfully updated Auth0 test client:');
       console.log(`   Client ID: ${client.client_id}`);
       console.log(`   Name: ${client.name}`);
       return client;
     } catch (error) {
-      if (error.message.includes('429') || error.message.includes('too_many_requests')) {
-        console.log(`⚠️  Rate limit reached while updating test client, but continuing`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('429') || errorMessage.includes('too_many_requests')) {
+        console.log('⚠️  Rate limit reached while updating test client, but continuing');
         return { client_id: clientId, name: testClientName };
       } else {
-        console.error('❌ Failed to update Auth0 test client:', error.message);
+        console.error('❌ Failed to update Auth0 test client:', error instanceof Error ? error.message : String(error));
         throw error;
       }
     }
@@ -963,35 +965,35 @@ export class Auth0ClientManager {
    */
   async findTestClient() {
     try {
-      const clients = await this.makeRequest('GET', '/clients?app_type=non_interactive');
+      const clients = await this.makeRequest<Auth0Client[]>('GET', '/clients?app_type=non_interactive');
       const testClientName = this.getTestClientName();
-      
+
       // Look for exact name match or environment match
-      const existingClient = clients.find(client => 
+      const existingClient = clients.find(client =>
         client.name === testClientName ||
-        (client.client_metadata?.purpose === 'integration_testing' && 
-         client.client_metadata?.environment === this.deployEnv)
+        (client.client_metadata?.purpose === 'integration_testing' &&
+         client.client_metadata?.environment === this.deployEnv),
       );
-      
+
       // For ephemeral environments, try to create new clients if we don't have credentials
       if (process.env.DEPLOY_EPHEMERAL === 'true') {
         if (existingClient && this.hasTestClientCredentials()) {
           console.log(`🔄 Ephemeral environment detected, but found existing client with credentials: ${existingClient.client_id}`);
-          console.log(`   Will reuse existing client since credentials are available`);
+          console.log('   Will reuse existing client since credentials are available');
           return existingClient;
         } else if (existingClient) {
           console.log(`🔄 Ephemeral environment detected, found existing client but missing credentials: ${existingClient.client_id}`);
-          console.log(`   Will try to create new client to get fresh credentials`);
+          console.log('   Will try to create new client to get fresh credentials');
           return null;
         } else {
-          console.log(`🔄 Ephemeral environment detected, will create new test client`);
+          console.log('🔄 Ephemeral environment detected, will create new test client');
           return null;
         }
       }
-      
+
       return existingClient;
     } catch (error) {
-      console.error('❌ Failed to search for existing test clients:', error.message);
+      console.error('❌ Failed to search for existing test clients:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -999,58 +1001,59 @@ export class Auth0ClientManager {
   /**
    * Grant client access to API
    */
-  async grantClientApiAccess(clientId, apiIdentifier) {
+  async grantClientApiAccess(clientId: string, apiIdentifier: string) {
     try {
       console.log(`🔍 Checking API access for client ${clientId} to audience ${apiIdentifier}`);
-      
+
       // First, try to find existing grants for this client
       const existingGrants = await this.makeRequest('GET', `/client-grants?client_id=${clientId}`);
       console.log(`📋 Found ${existingGrants.length} existing grants for client ${clientId}`);
-      
+
       // Check if there's already a grant for this API
-      const existingGrant = existingGrants.find(grant => grant.audience === apiIdentifier);
-      
+      const existingGrant = existingGrants.find((grant: Auth0Grant) => grant.audience === apiIdentifier);
+
       if (existingGrant) {
         console.log(`ℹ️  Client ${clientId} already has access to API ${apiIdentifier}`);
         console.log(`   Grant ID: ${existingGrant.id}, Scopes: ${existingGrant.scope}`);
-        
+
         // Update existing grant to ensure scopes are current
         const updateData = {
-          scope: ['read:raffles', 'write:raffles']
+          scope: ['read:raffles', 'write:raffles'],
         };
-        
+
         await this.makeRequest('PATCH', `/client-grants/${existingGrant.id}`, updateData);
         console.log(`✅ Updated API access scopes for client ${clientId}`);
         return;
       }
-      
+
       // If no existing grant, create a new one
       console.log(`🆕 Creating new API grant for client ${clientId} to audience ${apiIdentifier}`);
       const grantData = {
         client_id: clientId,
         audience: apiIdentifier,
-        scope: ['read:raffles', 'write:raffles']
+        scope: ['read:raffles', 'write:raffles'],
       };
-      
+
       await this.makeRequest('POST', '/client-grants', grantData);
       console.log(`✅ Granted API access to client ${clientId}`);
-      
+
       // Verify the grant was created
       const verifyGrants = await this.makeRequest('GET', `/client-grants?client_id=${clientId}`);
-      const newGrant = verifyGrants.find(grant => grant.audience === apiIdentifier);
+      const newGrant = verifyGrants.find((grant: Auth0Grant) => grant.audience === apiIdentifier);
       if (newGrant) {
         console.log(`✅ Verified grant created: ${newGrant.id} for audience ${apiIdentifier}`);
       } else {
-        console.warn(`⚠️  Grant creation may not have completed immediately`);
+        console.warn('⚠️  Grant creation may not have completed immediately');
       }
-      
+
     } catch (error) {
-      if (error.message.includes('409') || error.message.includes('already exists')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('409') || errorMessage.includes('already exists')) {
         console.log(`ℹ️  Client ${clientId} already has API access`);
-      } else if (error.message.includes('429') || error.message.includes('too_many_requests')) {
-        console.log(`⚠️  Rate limit reached while granting API access, but continuing (client may already have access)`);
+      } else if (errorMessage.includes('429') || errorMessage.includes('too_many_requests')) {
+        console.log('⚠️  Rate limit reached while granting API access, but continuing (client may already have access)');
       } else {
-        console.error('❌ Failed to grant API access:', error.message);
+        console.error('❌ Failed to grant API access:', error instanceof Error ? error.message : String(error));
         console.error(`   Client ID: ${clientId}`);
         console.error(`   API Identifier: ${apiIdentifier}`);
         throw error;
@@ -1073,68 +1076,68 @@ export class Auth0ClientManager {
    */
   hasTestClientCredentials() {
     const envFile = path.join(process.cwd(), '.env');
-    
+
     if (!fs.existsSync(envFile)) {
       return false;
     }
-    
+
     const envContent = fs.readFileSync(envFile, 'utf8');
     const lines = envContent.split('\n');
-    
+
     const hasClientId = lines.some(line => line.startsWith('AUTH0_TEST_CLIENT_ID='));
     const hasClientSecret = lines.some(line => line.startsWith('AUTH0_TEST_CLIENT_SECRET='));
     const hasAudience = lines.some(line => line.startsWith('AUTH0_TEST_AUDIENCE='));
-    
+
     return hasClientId && hasClientSecret && hasAudience;
   }
 
   /**
    * Write test client credentials to .env file
    */
-  writeTestClientToEnv(clientId, clientSecret) {
+  writeTestClientToEnv(clientId: string, clientSecret: string) {
     const envFile = path.join(process.cwd(), '.env');
     let envContent = '';
-    
+
     // Read existing env file if it exists
     if (fs.existsSync(envFile)) {
       envContent = fs.readFileSync(envFile, 'utf8');
     }
-    
+
     const lines = envContent.split('\n');
-    
+
     // Helper function to update or add environment variable
-    const updateEnvVar = (varName, value) => {
+    const updateEnvVar = (varName: string, value: string) => {
       const envVarLine = `${varName}=${value}`;
       const existingLineIndex = lines.findIndex(line => line.startsWith(`${varName}=`));
-      
+
       if (existingLineIndex >= 0) {
         lines[existingLineIndex] = envVarLine;
       } else {
         lines.push(envVarLine);
       }
     };
-    
+
     // Update or add test client credentials
     updateEnvVar(`AUTH0_TEST_CLIENT_ID_${this.deployEnv.toUpperCase()}`, clientId);
     if (clientSecret && clientSecret !== 'undefined') {
       updateEnvVar(`AUTH0_TEST_CLIENT_SECRET_${this.deployEnv.toUpperCase()}`, clientSecret);
       updateEnvVar('AUTH0_TEST_CLIENT_SECRET', clientSecret);
     } else {
-      console.log(`⚠️  Skipping client secret update (value is undefined or invalid)`);
+      console.log('⚠️  Skipping client secret update (value is undefined or invalid)');
     }
     updateEnvVar('AUTH0_TEST_CLIENT_ID', clientId);
-    
+
     // Get the correct audience URL for integration tests
     // Always use the static API identifier to avoid Auth0 tenant limits
     // The Lambda function should accept tokens with this audience regardless of the access URL
     const audienceUrl = this.getApiIdentifier();
     updateEnvVar('AUTH0_TEST_AUDIENCE', audienceUrl);
-    
+
     console.log(`🔍 Setting Auth0 test audience to: ${audienceUrl}`);
     if (process.env.API_BASE_URL) {
       console.log(`   CI mode: Static audience for token validation, tests will call ${process.env.API_BASE_URL}`);
     } else {
-      console.log(`   Local mode: Using static API identifier`);
+      console.log('   Local mode: Using static API identifier');
     }
 
     fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
@@ -1147,39 +1150,39 @@ export class Auth0ClientManager {
   async cleanupOldTestClients() {
     try {
       console.log('🧹 Cleaning up old test clients...');
-      
-      const allClients = await this.makeRequest('GET', '/clients?app_type=non_interactive');
-      const testClients = allClients.filter(client => 
+
+      const allClients = await this.makeRequest<Auth0Client[]>('GET', '/clients?app_type=non_interactive');
+      const testClients = allClients.filter(client =>
         client.client_metadata?.purpose === 'integration_testing' ||
-        client.name.includes('Integration Tests')
+        client.name.includes('Integration Tests'),
       );
-      
+
       console.log(`   Found ${testClients.length} test clients total`);
-      
+
       // Keep only the 1 most recent test client, delete the rest
-      const sortedClients = testClients.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+      const sortedClients = testClients.sort((a, b) => new Date(b.updated_at!).getTime() - new Date(a.updated_at!).getTime());
       const clientsToDelete = sortedClients.slice(1);
-      
+
       if (clientsToDelete.length === 0) {
         console.log('   No old test clients to clean up');
         return;
       }
-      
+
       console.log(`   Deleting ${clientsToDelete.length} old test clients...`);
-      
+
       for (const client of clientsToDelete) {
         try {
           await this.makeRequest('DELETE', `/clients/${client.client_id}`);
           console.log(`   ✅ Deleted client: ${client.name} (${client.client_id})`);
         } catch (error) {
-          console.log(`   ⚠️  Failed to delete client ${client.client_id}: ${error.message}`);
+          console.log(`   ⚠️  Failed to delete client ${client.client_id}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
-      
+
       console.log(`✅ Cleanup complete: deleted ${clientsToDelete.length} old test clients`);
-      
+
     } catch (error) {
-      console.log(`⚠️  Cleanup failed: ${error.message}`);
+      console.log(`⚠️  Cleanup failed: ${error instanceof Error ? error.message : String(error)}`);
       // Don't throw - cleanup is best effort
     }
   }
@@ -1190,22 +1193,22 @@ export class Auth0ClientManager {
   async ensureTestUser() {
     const testEmail = process.env.AUTH0_TEST_USER_EMAIL || 'e2etest@example.com';
     const testPassword = process.env.AUTH0_TEST_USER_PASSWORD || 'TestPassword123!';
-    
+
     console.log(`🔍 Looking for existing test user: ${testEmail}`);
-    
+
     try {
       // Search for existing user
       const users = await this.makeRequest('GET', `/users?q=email:"${testEmail}"`);
-      
+
       if (users && users.length > 0) {
         console.log(`✅ Found existing test user: ${users[0].user_id}`);
         // Update .env with test user credentials
         this.writeTestUserToEnv(testEmail, testPassword);
         return users[0];
       }
-      
+
       console.log('🆕 Creating new test user...');
-      
+
       // Create new test user
       const userData = {
         email: testEmail,
@@ -1213,22 +1216,22 @@ export class Auth0ClientManager {
         connection: 'Username-Password-Authentication',
         email_verified: true,
         user_metadata: {
-          purpose: 'e2e_testing'
+          purpose: 'e2e_testing',
         },
         app_metadata: {
-          roles: ['tester']
-        }
+          roles: ['tester'],
+        },
       };
-      
+
       const newUser = await this.makeRequest('POST', '/users', userData);
       console.log(`✅ Created test user: ${newUser.user_id}`);
-      
+
       // Update .env with test user credentials
       this.writeTestUserToEnv(testEmail, testPassword);
-      
+
       return newUser;
     } catch (error) {
-      console.error('❌ Failed to ensure test user:', error.message);
+      console.error('❌ Failed to ensure test user:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -1236,29 +1239,29 @@ export class Auth0ClientManager {
   /**
    * Write test user credentials to environment file
    */
-  writeTestUserToEnv(email, password) {
+  writeTestUserToEnv(email: string, password: string) {
     const envFile = path.join(process.cwd(), '.env');
     let envContent = '';
-    
+
     // Read existing env file if it exists
     if (fs.existsSync(envFile)) {
       envContent = fs.readFileSync(envFile, 'utf8');
     }
-    
+
     const lines = envContent.split('\n');
-    
+
     // Helper function to update or add environment variable
-    const updateEnvVar = (varName, value) => {
+    const updateEnvVar = (varName: string, value: string) => {
       const envVarLine = `${varName}=${value}`;
       const existingLineIndex = lines.findIndex(line => line.startsWith(`${varName}=`));
-      
+
       if (existingLineIndex >= 0) {
         lines[existingLineIndex] = envVarLine;
       } else {
         lines.push(envVarLine);
       }
     };
-    
+
     updateEnvVar('AUTH0_TEST_USER_EMAIL', email);
     updateEnvVar('AUTH0_TEST_USER_PASSWORD', password);
 
@@ -1271,41 +1274,41 @@ export class Auth0ClientManager {
    */
   async setupIntegrationTesting() {
     console.log('🚀 Setting up complete integration testing environment...');
-    
+
     try {
       // 0. Clean up old test clients to free up tenant space
       console.log('\n0️⃣ Cleaning up old test clients...');
       await this.cleanupOldTestClients();
-      
+
       // 1. Ensure API exists
       console.log('\n1️⃣ Setting up Auth0 API...');
       await this.ensureApi();
-      
+
       // 2. Ensure SPA client exists
       console.log('\n2️⃣ Setting up SPA client...');
       await this.ensureClient();
-      
+
       // 3. Ensure test client exists
       console.log('\n3️⃣ Setting up integration test client...');
       await this.ensureTestClient();
-      
+
       // 4. Ensure test user exists
       console.log('\n4️⃣ Setting up test user...');
       await this.ensureTestUser();
-      
+
       // 5. Verify test client credentials are correct
       console.log('\n5️⃣ Verifying test client setup...');
       console.log(`✅ Integration testing will use dedicated test client: ${this.getTestClientName()}`);
-      console.log(`   Client ID written to .env file for test authentication`)
-      
+      console.log('   Client ID written to .env file for test authentication');
+
       console.log('\n✅ Integration testing environment setup complete!');
       console.log('📋 Next steps:');
       console.log('   • Integration tests can now authenticate using client credentials flow');
       console.log('   • Test credentials have been written to .env file');
       console.log('   • Run integration tests with: bun run test:integration');
-      
+
     } catch (error) {
-      console.error('❌ Failed to setup integration testing environment:', error.message);
+      console.error('❌ Failed to setup integration testing environment:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -1316,23 +1319,23 @@ export class Auth0ClientManager {
    */
   async ensureAllEnvironmentClientIds() {
     console.log('🔄 Setting up client IDs for all environments...');
-    
+
     const originalEnv = this.deployEnv;
     const envFile = path.join(process.cwd(), '.env');
     let envContent = '';
-    
+
     // Read existing env file if it exists
     if (fs.existsSync(envFile)) {
       envContent = fs.readFileSync(envFile, 'utf8');
     }
-    
+
     const lines = envContent.split('\n');
-    
+
     // Helper function to update or add environment variable
-    const updateEnvVar = (varName, value) => {
+    const updateEnvVar = (varName: string, value: string) => {
       const envVarLine = `${varName}=${value}`;
       const existingLineIndex = lines.findIndex(line => line.startsWith(`${varName}=`));
-      
+
       if (existingLineIndex >= 0) {
         lines[existingLineIndex] = envVarLine;
       } else {
@@ -1347,30 +1350,30 @@ export class Auth0ClientManager {
       this.appName = this.getAppName(); // Refresh app name for prod environment
       const prodClient = await this.ensureClient();
       updateEnvVar('VITE_AUTH0_CLIENT_ID_PROD', prodClient.client_id);
-      
-      // Get or create DEV client ID  
+
+      // Get or create DEV client ID
       console.log('📋 Setting up development client ID...');
       this.deployEnv = 'dev';
       this.appName = this.getAppName(); // Refresh app name for dev environment
       const devClient = await this.ensureClient();
       updateEnvVar('VITE_AUTH0_CLIENT_ID_DEV', devClient.client_id);
-      
+
       // Set the current environment's client ID as default
       this.deployEnv = originalEnv;
       this.appName = this.getAppName(); // Restore original app name
       const currentClientId = originalEnv === 'prod' ? prodClient.client_id : devClient.client_id;
       updateEnvVar('VITE_SPA_AUTH0_CLIENT_ID', currentClientId);
-      
+
       // Write updated environment file
       fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
-      
+
       console.log('✅ All environment client IDs configured:');
       console.log(`   PROD Client ID: ${prodClient.client_id}`);
       console.log(`   DEV Client ID: ${devClient.client_id}`);
       console.log(`   Current (${originalEnv}) Client ID: ${currentClientId}`);
-      
+
     } catch (error) {
-      console.error('❌ Failed to setup all environment client IDs:', error.message);
+      console.error('❌ Failed to setup all environment client IDs:', error instanceof Error ? error.message : String(error));
       throw error;
     } finally {
       // Restore original environment
@@ -1384,7 +1387,7 @@ export class Auth0ClientManager {
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
-  
+
   if (!command) {
     console.log('Usage: bunx scripts/manage-auth0-client.ts <command> [options]');
     console.log('Commands:');
@@ -1459,7 +1462,7 @@ async function main() {
         process.exit(1);
     }
   } catch (error) {
-    console.error('❌ Script failed:', error.message);
+    console.error('❌ Script failed:', error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }
@@ -1467,7 +1470,7 @@ async function main() {
 // Run the CLI if this script is executed directly (when not imported for testing)
 // Use CommonJS check for compatibility with both Jest and direct execution
 if (typeof require !== 'undefined' && require.main === module && typeof jest === 'undefined') {
-  main();
+  void main();
 }
 
 export default Auth0ClientManager;

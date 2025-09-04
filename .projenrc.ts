@@ -16,6 +16,10 @@ const buildWorkflowCallConfig = {
 };
 
 const project = new awscdk.AwsCdkTypeScriptApp({
+  eslint: true,
+  eslintOptions: {
+    dirs: ['src', 'test', 'build-tools', 'projenrc', 'scripts', 'shared'],
+  },
   defaultReleaseBranch: 'main',
   name: 'raffle-winner-picker',
   appEntrypoint: '../infra/bin/app.ts',
@@ -129,8 +133,10 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       target: 'ESNext',
       noEmit: true,
       module: 'esnext',
+      lib: ['ES2022', 'DOM', 'DOM.Iterable'],
+      rootDir: '.',
     },
-    include: ['src/**/*'],
+    include: ['src/**/*', 'scripts/**/*', 'shared/**/*'],
   },
   jestOptions: {
     jestConfig: {
@@ -140,7 +146,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
         '^.+\\.ts$': ['ts-jest', {
           useESM: true,
           tsconfig: 'tsconfig.dev.json',
-        }],
+        }] as any,
       },
       moduleNameMapper: {
         '^(\\.{1,2}/.*)\\.js$': '$1',
@@ -239,6 +245,15 @@ project.addTask('prepare', { exec: 'svelte-kit sync || echo ""' });
 project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json' });
 project.addTask('check:watch', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch' });
 project.compileTask.exec('vite build');
+
+// TypeScript compilation check
+const typeCheckTask = project.addTask('type-check', {
+  description: 'Type check TypeScript files with strict mode',
+  exec: 'tsc --noEmit --strict --project tsconfig.dev.json',
+});
+
+// Add type checking as a prerequisite to the compile task (must pass before build continues)
+project.compileTask.prependSpawn(typeCheckTask);
 
 // Testing tasks
 project.addTask('test:integration', {
