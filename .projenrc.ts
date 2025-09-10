@@ -184,6 +184,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     '@types/uuid',
     '@playwright/test',
     'dotenv',
+    'jest-environment-jsdom',
   ],
 });
 project.gitignore.exclude(
