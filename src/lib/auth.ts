@@ -113,16 +113,16 @@ export async function initAuth0() {
   }
 }
 
-export async function loginWithPopup() {
+export async function loginWithRedirect() {
   try {
-    console.log('🔐 Attempting login with popup...');
+    console.log('🔐 Attempting login with redirect...');
     if (!auth0) {
       console.error('❌ Auth0 client not initialized! Cannot login.');
       return;
     }
 
-    // Configure popup options explicitly
-    const popupOptions = {
+    // Configure redirect options
+    const redirectOptions = {
       authorizationParams: {
         audience: getApiUrl({
           envName: getApiEnvironmentFromHostname(),
@@ -131,32 +131,17 @@ export async function loginWithPopup() {
         }),
         scope: 'openid profile email',
         response_type: 'code',
-      },
-      popup: {
-        width: 400,
-        height: 600,
-        left: window.screen.width / 2 - 200,
-        top: window.screen.height / 2 - 300,
+        redirect_uri: window.location.origin,
       },
     };
 
-
     try {
-      await auth0.loginWithPopup(popupOptions);
-    } catch (popupError) {
-      console.error('❌ loginWithPopup failed:', popupError);
-
-      // Check if it's a popup blocked error or user cancelled
-      const errorMessage = popupError instanceof Error ? popupError.message : String(popupError);
-      if (errorMessage.includes('popup_blocked')) {
-        console.error('❌ Popup was blocked by browser. Please allow popups for this site.');
-        throw popupError;
-      } else if (errorMessage.includes('cancelled') || errorMessage.includes('user_cancelled')) {
-        console.log('ℹ️ User cancelled the authentication popup');
-        throw popupError;
-      }
+      await auth0.loginWithRedirect(redirectOptions);
+    } catch (redirectError) {
+      console.error('❌ loginWithRedirect failed:', redirectError);
 
       // Check if it's a "Service not found" error - this means PR-specific API doesn't exist
+      const errorMessage = redirectError instanceof Error ? redirectError.message : String(redirectError);
       if (errorMessage.includes('Service not found')) {
         // Try with base development API as fallback
         const fallbackApiUrl = getApiUrl({
@@ -165,42 +150,24 @@ export async function loginWithPopup() {
           hostedZone: import.meta.env.nonprod_hosted_zone,
         });
 
-        const fallbackPopupOptions = {
+        const fallbackRedirectOptions = {
           authorizationParams: {
             audience: fallbackApiUrl,
             scope: 'openid profile email',
             response_type: 'code',
-          },
-          popup: {
-            width: 400,
-            height: 600,
-            left: window.screen.width / 2 - 200,
-            top: window.screen.height / 2 - 300,
+            redirect_uri: window.location.origin,
           },
         };
 
         try {
-          await auth0.loginWithPopup(fallbackPopupOptions);
+          await auth0.loginWithRedirect(fallbackRedirectOptions);
         } catch (fallbackError) {
           console.error('❌ Authentication failed with both primary and fallback APIs');
           throw fallbackError;
         }
       } else {
-        throw popupError;
+        throw redirectError;
       }
-    }
-
-    // Verify authentication worked
-    const authenticated = await auth0.isAuthenticated();
-
-    isAuthenticated.set(authenticated);
-
-    if (authenticated) {
-      const userData = await auth0.getUser();
-      user.set(userData as User);
-      console.log('✅ Login successful, user data:', userData);
-    } else {
-      console.error('❌ Authentication failed - user not authenticated after popup');
     }
   } catch (error) {
     console.error('❌ Login error:', error);

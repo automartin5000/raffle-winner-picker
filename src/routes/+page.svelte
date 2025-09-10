@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { isAuthenticated, user, loginWithPopup, logout } from '../lib/auth';
+  import { isAuthenticated, user, loginWithRedirect, logout } from '../lib/auth';
   import { parseCSV } from '../utils/csv';
   import { setCSVData } from '../lib/stores/raffle';
 
@@ -110,7 +110,7 @@ George Washington,george_washington@email.com,Principal for the Day,5`;
       </div>
       
       <div class="sign-in-content">
-        <button class="sign-in-button" on:click={loginWithPopup}>
+        <button class="sign-in-button" on:click={loginWithRedirect}>
           <span class="sign-in-icon">🔐</span>
           <span>Sign In to Continue</span>
         </button>

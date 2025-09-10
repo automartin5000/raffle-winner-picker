@@ -42,94 +42,81 @@ test.describe('Basic Application Flow Tests', () => {
     const signInButton = page.getByRole('button', { name: /sign in to continue/i });
     await expect(signInButton).toBeVisible();
     
-    // Test that the sign-in button triggers auth flow
-    let popupOpened = false;
+    // Test that the sign-in button triggers auth redirect flow
     let auth0UrlDetected = false;
-    let popupNavigatedToAuth0 = false;
+    let redirectedToAuth0 = false;
     
-    const [popup] = await Promise.all([
-      page.waitForEvent('popup').then(async (popup) => {
-        popupOpened = true;
+    // Set up a promise to wait for the redirect to Auth0
+    const redirectPromise = page.waitForURL(url => {
+      const urlString = typeof url === 'string' ? url : url.toString();
+      let isAuth0Domain = false;
+      try {
+        const parsedUrl = new URL(urlString);
+        // Check if hostname ends with auth0.com (proper domain validation)
+        isAuth0Domain = parsedUrl.hostname.endsWith('.auth0.com') || parsedUrl.hostname === 'auth0.com';
+      } catch {
+        // If URL parsing fails, it's definitely not a valid Auth0 URL
+        isAuth0Domain = false;
+      }
+      
+      if (isAuth0Domain) {
+        auth0UrlDetected = true;
+        redirectedToAuth0 = true;
+        console.log('✅ Page successfully redirected to Auth0:', urlString);
         
-        try {
-          // Wait for popup to navigate to Auth0 (or timeout after 10 seconds)
-          await popup.waitForURL(url => {
-            const urlString = typeof url === 'string' ? url : url.toString();
-            let isAuth0Domain = false;
-            try {
-              const parsedUrl = new URL(urlString);
-              // Check if hostname ends with auth0.com (proper domain validation)
-              isAuth0Domain = parsedUrl.hostname.endsWith('.auth0.com') || parsedUrl.hostname === 'auth0.com';
-            } catch {
-              // If URL parsing fails, it's definitely not a valid Auth0 URL
-              isAuth0Domain = false;
-            }
-            
-            if (isAuth0Domain) {
-              auth0UrlDetected = true;
-              popupNavigatedToAuth0 = true;
-              console.log('✅ Popup successfully navigated to Auth0:', urlString);
-              
-              // Validate that the audience URL is properly formed
-              const url = new URL(urlString);
-              const audienceParam = url.searchParams.get('audience');
-              if (audienceParam && audienceParam.includes('undefined')) {
-                throw new Error(`❌ Auth0 audience URL is malformed: ${audienceParam}`);
-              }
-            }
-            return isAuth0Domain;
-          }, { timeout: 10000 });
-        } catch (error) {
-          // Check final URL even if waitForURL times out
-          const finalUrl = popup.url();
-          console.log('Popup final URL after timeout/error:', finalUrl);
-          
-          let isAuth0Domain = false;
-          try {
-            const parsedUrl = new URL(finalUrl);
-            // Check if hostname ends with auth0.com (proper domain validation)
-            isAuth0Domain = parsedUrl.hostname.endsWith('.auth0.com') || parsedUrl.hostname === 'auth0.com';
-          } catch {
-            // If URL parsing fails, it's definitely not a valid Auth0 URL
-            isAuth0Domain = false;
-          }
-          
-          if (isAuth0Domain) {
-            auth0UrlDetected = true;
-            popupNavigatedToAuth0 = true;
-            console.log('✅ Popup did navigate to Auth0 (detected in final URL)');
-            
-            // Validate that the audience URL is properly formed
-            try {
-              const url = new URL(finalUrl);
-              const audienceParam = url.searchParams.get('audience');
-              if (audienceParam && audienceParam.includes('undefined')) {
-                throw new Error(`❌ Auth0 audience URL is malformed: ${audienceParam}`);
-              }
-            } catch (validationError) {
-              console.log('❌ Audience validation failed:', validationError.message);
-              throw validationError;
-            }
-          } else {
-            console.log('❌ Popup did not navigate to Auth0. Error:', error.message);
-          }
+        // Validate that the audience URL is properly formed
+        const url = new URL(urlString);
+        const audienceParam = url.searchParams.get('audience');
+        if (audienceParam && audienceParam.includes('undefined')) {
+          throw new Error(`❌ Auth0 audience URL is malformed: ${audienceParam}`);
         }
+      }
+      return isAuth0Domain;
+    }, { timeout: 10000 });
+    
+    // Click the sign-in button and wait for redirect
+    await signInButton.click();
+    
+    try {
+      await redirectPromise;
+    } catch (error) {
+      // Check current URL even if waitForURL times out
+      const currentUrl = page.url();
+      console.log('Current URL after timeout/error:', currentUrl);
+      
+      let isAuth0Domain = false;
+      try {
+        const parsedUrl = new URL(currentUrl);
+        // Check if hostname ends with auth0.com (proper domain validation)
+        isAuth0Domain = parsedUrl.hostname.endsWith('.auth0.com') || parsedUrl.hostname === 'auth0.com';
+      } catch {
+        // If URL parsing fails, it's definitely not a valid Auth0 URL
+        isAuth0Domain = false;
+      }
+      
+      if (isAuth0Domain) {
+        auth0UrlDetected = true;
+        redirectedToAuth0 = true;
+        console.log('✅ Page did redirect to Auth0 (detected in current URL)');
         
-        return popup;
-      }),
-      signInButton.click()
-    ]);
-    
-    // Verify that the popup was opened (indicating auth flow was triggered)
-    expect(popupOpened).toBe(true);
-    
-    // Verify that the popup navigated to Auth0 (indicating proper auth configuration)
-    expect(popupNavigatedToAuth0).toBe(true);
-    
-    // Clean up if popup is still open
-    if (!popup.isClosed()) {
-      await popup.close();
+        // Validate that the audience URL is properly formed
+        try {
+          const url = new URL(currentUrl);
+          const audienceParam = url.searchParams.get('audience');
+          if (audienceParam && audienceParam.includes('undefined')) {
+            throw new Error(`❌ Auth0 audience URL is malformed: ${audienceParam}`);
+          }
+        } catch (validationError) {
+          console.log('❌ Audience validation failed:', validationError.message);
+          throw validationError;
+        }
+      } else {
+        console.log('❌ Page did not redirect to Auth0. Error:', error.message);
+      }
     }
+    
+    // Verify that the page redirected to Auth0 (indicating proper auth configuration)
+    expect(redirectedToAuth0).toBe(true);
   });
 
   test('should have proper meta tags and SEO', async ({ page }) => {

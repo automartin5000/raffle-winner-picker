@@ -27,6 +27,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   githubOptions: {
     mergify: false,
   },
+  buildCommand: undefined, // Disable default build to customize
   renovatebot: true,
   buildWorkflowOptions: {
     permissions: {
@@ -238,6 +239,7 @@ const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
 project.compileTask.prependSpawn(setupAuth0ClientTask);
 project.cdkTasks.deploy.prependExec('echo Deploying to environment: $DEPLOY_ENV');
 project.cdkTasks.deploy.prependSpawn(project.compileTask);
+project.cdkConfig.
 // Svelte/Vite tasks
 project.addTask('dev', { exec: 'vite dev' });
 project.addTask('preview', { exec: 'vite preview' });
