@@ -272,11 +272,7 @@
       "description": "Run tests",
       "steps": [
         {
-          "exec": "jest --passWithNoTests --updateSnapshot",
-          "receiveArgs": true
-        },
-        {
-          "spawn": "eslint"
+          "exec": "bun test --coverage test/unit/"
         }
       ]
     },

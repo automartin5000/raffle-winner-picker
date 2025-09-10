@@ -153,6 +153,9 @@ const project = new awscdk.AwsCdkTypeScriptApp({
         '^(\\.{1,2}/.*)\\.js$': '$1',
       },
       testEnvironment: 'node',
+      collectCoverage: true,
+      coverageProvider: 'babel', // Use babel instead of v8
+      // Note: Bun test doesn't use Jest's coverage threshold format
     },
   },
   deps: [
@@ -183,10 +186,19 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     'svelte-preprocess',
     'vite-plugin-svelte',
     '@types/uuid',
+    'jest@^29.7.0', // Pin to v29 for Bun compatibility
+    '@types/jest@^29.5.14', // Match Jest version
+    'ts-jest@^29.2.5',
+    '@types/bun', // Add Bun types for test files
     '@playwright/test',
     'dotenv',
   ],
 });
+
+// Replace Jest with Bun test since Jest isn't compatible with Bun runtime
+project.testTask.reset();
+project.testTask.exec('bun test --coverage test/unit/');
+
 project.gitignore.exclude(
   // Output
   '.output',
@@ -241,7 +253,7 @@ project.cdkTasks.deploy.prependExec('echo Deploying to environment: $DEPLOY_ENV'
 project.cdkTasks.deploy.prependSpawn(project.compileTask);
 project.cdkConfig.
 // Svelte/Vite tasks
-project.addTask('dev', { exec: 'vite dev' });
+  project.addTask('dev', { exec: 'vite dev' });
 project.addTask('preview', { exec: 'vite preview' });
 project.addTask('prepare', { exec: 'svelte-kit sync || echo ""' });
 project.addTask('check', { exec: 'svelte-kit sync && svelte-check --tsconfig ./tsconfig.json' });

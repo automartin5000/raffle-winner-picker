@@ -100,7 +100,7 @@
   {:else}
     <div class="raffles-grid">
       {#each myRaffles as raffle}
-        <div class="raffle-card" on:click={() => showRaffleDetails(raffle)}>
+        <div class="raffle-card" role="button" tabindex="0" on:click={() => showRaffleDetails(raffle)} on:keydown={(e) => e.key === 'Enter' && showRaffleDetails(raffle)}>
           <div class="card-header">
             <h3>Raffle {raffle.runId.slice(-8)}</h3>
             <div class="date">{new Date(raffle.timestamp).toLocaleString()}</div>
@@ -154,8 +154,8 @@
 </main>
 
 {#if selectedRaffle}
-  <div class="modal-backdrop" on:click={closeDetails}>
-    <div class="modal" on:click|stopPropagation>
+  <div class="modal-backdrop" role="button" tabindex="0" on:click={closeDetails} on:keydown={(e) => e.key === 'Escape' && closeDetails()}>
+    <div class="modal" role="dialog" tabindex="-1" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeDetails()}>
       <div class="modal-header">
         <h2>Raffle Details - {selectedRaffle.runId.slice(-8)}</h2>
         <button class="close-btn" on:click={closeDetails}>&times;</button>
