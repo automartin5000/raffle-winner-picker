@@ -1468,13 +1468,21 @@ export class Auth0ClientManager {
       console.log('📋 Setting up production client ID...');
       this.deployEnv = 'prod';
       this.appName = this.getAppName(); // Refresh app name for prod environment
+      // Ensure PROD_HOSTED_ZONE is available for callback URL generation
+      if (!process.env.PROD_HOSTED_ZONE) {
+        console.warn('⚠️  PROD_HOSTED_ZONE not set, production client may have incorrect callback URLs');
+      }
       const prodClient = await this.ensureClient();
       updateEnvVar('VITE_AUTH0_CLIENT_ID_PROD', prodClient.client_id);
 
-      // Get or create DEV client ID
+      // Get or create DEV client ID  
       console.log('📋 Setting up development client ID...');
       this.deployEnv = 'dev';
       this.appName = this.getAppName(); // Refresh app name for dev environment
+      // Ensure NONPROD_HOSTED_ZONE is available for callback URL generation
+      if (!process.env.NONPROD_HOSTED_ZONE) {
+        console.warn('⚠️  NONPROD_HOSTED_ZONE not set, development client may have incorrect callback URLs');
+      }
       const devClient = await this.ensureClient();
       updateEnvVar('VITE_AUTH0_CLIENT_ID_DEV', devClient.client_id);
 
