@@ -754,6 +754,10 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
         PROD_AWS_ACCOUNT_ID: '${{ secrets.PROD_AWS_ACCOUNT_ID }}',
         NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
         PROD_HOSTED_ZONE: '${{ secrets.PROD_HOSTED_ZONE }}',
+        // Auth0 environment variables for client cleanup
+        AUTH0_DOMAIN: '${{ secrets.AUTH0_DOMAIN }}',
+        AUTH0_CLIENT_ID: '${{ secrets.AUTH0_CLIENT_ID }}',
+        AUTH0_CLIENT_SECRET: '${{ secrets.AUTH0_CLIENT_SECRET }}',
       },
       steps: [
         { name: "Checkout", uses: "actions/checkout@v4" },
@@ -777,6 +781,13 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
         {
           name: "Dummy build directory for cdk",
           run: "mkdir build && touch build/index.js",
+        },
+        {
+          name: "Delete Auth0 PR resources",
+          run: [
+            'echo "🗑️ Deleting Auth0 client app and API resources for PR environment: $DEPLOY_ENV"',
+            'bun run scripts/manage-auth0-client.ts delete-pr-client || echo "⚠️ Auth0 resource deletion failed or resources not found"'
+          ].join("\n"),
         },
         {
           name: "Destroy PR environment",
