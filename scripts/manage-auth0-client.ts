@@ -421,6 +421,28 @@ export class Auth0ClientManager {
   }
 
   /**
+   * Delete PR-specific client (finds and deletes client for current PR environment)
+   */
+  async deletePrClient() {
+    console.log(`🔍 Looking for Auth0 SPA client for PR environment: ${this.deployEnv}`);
+
+    try {
+      const existingClient = await this.findClientByEnvironment();
+
+      if (existingClient) {
+        console.log(`🗑️ Found PR client to delete: ${existingClient.client_id} (${existingClient.name})`);
+        await this.deleteClient(existingClient.client_id);
+        console.log(`✅ Successfully deleted PR client for environment: ${this.deployEnv}`);
+      } else {
+        console.log(`ℹ️ No Auth0 client found for PR environment: ${this.deployEnv}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to delete PR client:', error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
+  /**
    * Find existing client by environment
    */
   async findClientByEnvironment() {
@@ -1428,6 +1450,7 @@ async function main() {
     console.log('  setup-integration-testing Complete integration testing setup');
     console.log('  ensure-all-env-clients   Set up client IDs for all environments (prod + dev)');
     console.log('  cleanup-test-clients     Delete old test clients to free up tenant space');
+    console.log('  delete-pr-client         Delete Auth0 client for current PR environment');
     process.exit(1);
   }
 
@@ -1482,6 +1505,9 @@ async function main() {
         break;
       case 'cleanup-test-clients':
         await manager.cleanupOldTestClients();
+        break;
+      case 'delete-pr-client':
+        await manager.deletePrClient();
         break;
       default:
         console.error(`❌ Unknown command: ${command}`);
