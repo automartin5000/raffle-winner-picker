@@ -421,14 +421,16 @@ export class Auth0ClientManager {
   }
 
   /**
-   * Delete PR-specific client (finds and deletes client for current PR environment)
+   * Delete PR-specific client and resource server (finds and deletes both for current PR environment)
    */
   async deletePrClient() {
-    console.log(`🔍 Looking for Auth0 SPA client for PR environment: ${this.deployEnv}`);
+    console.log(`🔍 Looking for Auth0 resources for PR environment: ${this.deployEnv}`);
+
+    let deletionErrors: string[] = [];
 
     try {
+      // 1. Delete SPA client
       const existingClient = await this.findClientByEnvironment();
-
       if (existingClient) {
         console.log(`🗑️ Found PR client to delete: ${existingClient.client_id} (${existingClient.name})`);
         await this.deleteClient(existingClient.client_id);
@@ -437,7 +439,77 @@ export class Auth0ClientManager {
         console.log(`ℹ️ No Auth0 client found for PR environment: ${this.deployEnv}`);
       }
     } catch (error) {
-      console.error('❌ Failed to delete PR client:', error instanceof Error ? error.message : String(error));
+      const errorMsg = `Failed to delete PR client: ${error instanceof Error ? error.message : String(error)}`;
+      console.error(`❌ ${errorMsg}`);
+      deletionErrors.push(errorMsg);
+    }
+
+    try {
+      // 2. Delete deployment API resource server (if it exists)
+      await this.deleteDeploymentApiResources();
+    } catch (error) {
+      const errorMsg = `Failed to delete PR API resources: ${error instanceof Error ? error.message : String(error)}`;
+      console.error(`❌ ${errorMsg}`);
+      deletionErrors.push(errorMsg);
+    }
+
+    if (deletionErrors.length > 0) {
+      console.warn(`⚠️ Some Auth0 resources could not be deleted for PR ${this.deployEnv}:`);
+      deletionErrors.forEach(error => console.warn(`   - ${error}`));
+      // Don't throw - cleanup should be best effort
+    } else {
+      console.log(`✅ Successfully cleaned up all Auth0 resources for PR environment: ${this.deployEnv}`);
+    }
+  }
+
+  /**
+   * Delete API resource servers for PR environment
+   */
+  async deleteDeploymentApiResources() {
+    console.log(`🔍 Looking for Auth0 API resources to delete for PR environment: ${this.deployEnv}`);
+
+    try {
+      // Get all resource servers
+      const apis = await this.makeRequest<Auth0API[]>('GET', '/resource-servers');
+      
+      // Find PR-specific API resources
+      const prApis = apis.filter(api => {
+        if (!api.name || !api.identifier) return false;
+        
+        // Check if the API name contains the PR environment
+        const nameContainsPr = api.name.toLowerCase().includes(this.deployEnv.toLowerCase()) ||
+                              api.name.toLowerCase().includes(`(${this.deployEnv})`) ||
+                              api.name.toLowerCase().includes(`- ${this.deployEnv}`);
+        
+        // Check if the identifier looks like a PR environment URL
+        const identifierContainsPr = api.identifier.includes(this.deployEnv) ||
+                                    api.identifier.includes(`${this.deployEnv}.`) ||
+                                    api.identifier.includes(`/${this.deployEnv}/`);
+        
+        return nameContainsPr || identifierContainsPr;
+      });
+
+      if (prApis.length === 0) {
+        console.log(`ℹ️ No Auth0 API resources found for PR environment: ${this.deployEnv}`);
+        return;
+      }
+
+      console.log(`🗑️ Found ${prApis.length} API resource(s) to delete for PR ${this.deployEnv}:`);
+      
+      for (const api of prApis) {
+        try {
+          console.log(`   Deleting: ${api.name} (${api.identifier})`);
+          await this.makeRequest('DELETE', `/resource-servers/${encodeURIComponent(api.identifier)}`);
+          console.log(`   ✅ Deleted API resource: ${api.identifier}`);
+        } catch (error) {
+          console.log(`   ⚠️ Failed to delete API resource ${api.identifier}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      
+      console.log(`✅ Completed API resource cleanup for PR environment: ${this.deployEnv}`);
+      
+    } catch (error) {
+      console.error(`❌ Failed to search for API resources: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }

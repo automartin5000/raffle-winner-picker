@@ -783,10 +783,10 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
           run: "mkdir build && touch build/index.js",
         },
         {
-          name: "Delete Auth0 PR client app",
+          name: "Delete Auth0 PR resources",
           run: [
-            'echo "🗑️ Deleting Auth0 client app for PR environment: $DEPLOY_ENV"',
-            'bun run scripts/manage-auth0-client.ts delete-pr-client || echo "⚠️ Auth0 client deletion failed or client not found"'
+            'echo "🗑️ Deleting Auth0 client app and API resources for PR environment: $DEPLOY_ENV"',
+            'bun run scripts/manage-auth0-client.ts delete-pr-client || echo "⚠️ Auth0 resource deletion failed or resources not found"'
           ].join("\n"),
         },
         {
