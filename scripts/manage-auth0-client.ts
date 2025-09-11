@@ -471,21 +471,21 @@ export class Auth0ClientManager {
     try {
       // Get all resource servers
       const apis = await this.makeRequest<Auth0API[]>('GET', '/resource-servers');
-      
+
       // Find PR-specific API resources
       const prApis = apis.filter(api => {
         if (!api.name || !api.identifier) return false;
-        
+
         // Check if the API name contains the PR environment
         const nameContainsPr = api.name.toLowerCase().includes(this.deployEnv.toLowerCase()) ||
                               api.name.toLowerCase().includes(`(${this.deployEnv})`) ||
                               api.name.toLowerCase().includes(`- ${this.deployEnv}`);
-        
+
         // Check if the identifier looks like a PR environment URL
         const identifierContainsPr = api.identifier.includes(this.deployEnv) ||
                                     api.identifier.includes(`${this.deployEnv}.`) ||
                                     api.identifier.includes(`/${this.deployEnv}/`);
-        
+
         return nameContainsPr || identifierContainsPr;
       });
 
@@ -495,7 +495,7 @@ export class Auth0ClientManager {
       }
 
       console.log(`🗑️ Found ${prApis.length} API resource(s) to delete for PR ${this.deployEnv}:`);
-      
+
       for (const api of prApis) {
         try {
           console.log(`   Deleting: ${api.name} (${api.identifier})`);
@@ -505,9 +505,9 @@ export class Auth0ClientManager {
           console.log(`   ⚠️ Failed to delete API resource ${api.identifier}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
-      
+
       console.log(`✅ Completed API resource cleanup for PR environment: ${this.deployEnv}`);
-      
+
     } catch (error) {
       console.error(`❌ Failed to search for API resources: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
