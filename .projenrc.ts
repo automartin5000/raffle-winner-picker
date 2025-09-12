@@ -192,6 +192,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     '@types/bun', // Add Bun types for test files
     '@playwright/test',
     'dotenv',
+    'jest-environment-jsdom',
   ],
 });
 

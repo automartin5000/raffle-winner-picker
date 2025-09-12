@@ -86,6 +86,10 @@
       "type": "build"
     },
     {
+      "name": "jest-environment-jsdom",
+      "type": "build"
+    },
+    {
       "name": "jest-junit",
       "version": "^16",
       "type": "build"
