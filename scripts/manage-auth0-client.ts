@@ -1475,7 +1475,7 @@ export class Auth0ClientManager {
       const prodClient = await this.ensureClient();
       updateEnvVar('VITE_AUTH0_CLIENT_ID_PROD', prodClient.client_id);
 
-      // Get or create DEV client ID  
+      // Get or create DEV client ID
       console.log('📋 Setting up development client ID...');
       this.deployEnv = 'dev';
       this.appName = this.getAppName(); // Refresh app name for dev environment
