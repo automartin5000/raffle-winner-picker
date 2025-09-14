@@ -1,28 +1,30 @@
-/**
- * @jest-environment jsdom
- */
-
+import { mock, describe, test, beforeEach, expect } from "bun:test";
 import { downloadCSV } from '../../src/utils/download';
 
+// Mock the DOM environment since we're running in Node
+const mockLink = {
+  setAttribute: mock(),
+  click: mock(),
+};
+
+const mockDocument = {
+  createElement: mock(() => mockLink),
+  body: {
+    appendChild: mock(() => mockLink),
+    removeChild: mock(() => mockLink),
+  },
+};
+
+// Create a global document mock
+(global as any).document = mockDocument;
+
 describe('Download Utility Functions', () => {
-  // Mock DOM methods
   beforeEach(() => {
-    // Reset DOM mocks
-    document.body.innerHTML = '';
-
-    // Mock createElement
-    const mockLink = {
-      setAttribute: jest.fn(),
-      click: jest.fn(),
-    };
-
-    jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
-    jest.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as any);
-    jest.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as any);
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
+    mockLink.setAttribute.mockClear();
+    mockLink.click.mockClear();
+    mockDocument.createElement.mockClear();
+    mockDocument.body.appendChild.mockClear();
+    mockDocument.body.removeChild.mockClear();
   });
 
   describe('downloadCSV', () => {
@@ -35,31 +37,31 @@ describe('Download Utility Functions', () => {
 
       downloadCSV(data);
 
-      expect(document.createElement).toHaveBeenCalledWith('a');
+      expect(mockDocument.createElement).toHaveBeenCalledWith('a');
 
-      const mockLink = (document.createElement as jest.Mock).mock.results[0].value;
+      const linkElement = mockLink;
 
       // Check that href was set with CSV content
-      expect(mockLink.setAttribute).toHaveBeenCalledWith(
+      expect(linkElement.setAttribute).toHaveBeenCalledWith(
         'href',
         expect.stringContaining('data:text/csv;charset=utf-8,'),
       );
-      expect(mockLink.setAttribute).toHaveBeenCalledWith(
+      expect(linkElement.setAttribute).toHaveBeenCalledWith(
         'href',
         expect.stringContaining('Name,Email,Tickets'),
       );
-      expect(mockLink.setAttribute).toHaveBeenCalledWith(
+      expect(linkElement.setAttribute).toHaveBeenCalledWith(
         'href',
         expect.stringContaining('John%20Doe,john@example.com,3'),
       );
 
       // Check default filename
-      expect(mockLink.setAttribute).toHaveBeenCalledWith('download', 'winners.csv');
+      expect(linkElement.setAttribute).toHaveBeenCalledWith('download', 'winners.csv');
 
       // Check that link was added to DOM, clicked, and removed
-      expect(document.body.appendChild).toHaveBeenCalledWith(mockLink);
-      expect(mockLink.click).toHaveBeenCalled();
-      expect(document.body.removeChild).toHaveBeenCalledWith(mockLink);
+      expect(mockDocument.body.appendChild).toHaveBeenCalledWith(linkElement);
+      expect(linkElement.click).toHaveBeenCalled();
+      expect(mockDocument.body.removeChild).toHaveBeenCalledWith(linkElement);
     });
 
     test('should use custom filename when provided', () => {
@@ -70,8 +72,6 @@ describe('Download Utility Functions', () => {
       const customFilename = 'raffle-results.csv';
 
       downloadCSV(data, customFilename);
-
-      const mockLink = (document.createElement as jest.Mock).mock.results[0].value;
 
       expect(mockLink.setAttribute).toHaveBeenCalledWith('download', customFilename);
     });

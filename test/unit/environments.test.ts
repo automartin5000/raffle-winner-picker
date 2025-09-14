@@ -1,7 +1,4 @@
-/**
- * @jest-environment node
- */
-
+import { describe, test, expect } from "bun:test";
 import {
   getEnvironmentConfig,
   resolveDeploymentEnvironment,
@@ -16,20 +13,6 @@ import {
   type ApiBaseUrlOptions,
   type FrontendUrlOptions,
 } from '../../shared/environments';
-
-// Mock the domain-constants module since it's imported
-jest.mock('../../shared/domain-constants', () => ({
-  buildApiUrl: jest.fn(({ envName, hostedZone, isProd }) =>
-    isProd
-      ? `https://api.${hostedZone}`
-      : `https://${envName}.api.${hostedZone}`,
-  ),
-  buildFrontendUrl: jest.fn(({ envName, hostedZone, isProd }) =>
-    isProd
-      ? `https://${hostedZone}`
-      : `https://${envName}.${hostedZone}`,
-  ),
-}));
 
 describe('Environments Utility Functions', () => {
   describe('getEnvironmentConfig', () => {
@@ -194,7 +177,7 @@ describe('Environments Utility Functions', () => {
         envName: 'test',
       });
 
-      expect(result).toBe('https://test.api.example.com');
+      expect(result).toBe('https://test.api.winners.example.com');
     });
 
     test('should build API URL for prod environment', () => {
@@ -204,7 +187,7 @@ describe('Environments Utility Functions', () => {
         envName: 'prod',
       });
 
-      expect(result).toBe('https://api.example.com');
+      expect(result).toBe('https://api.winners.example.com');
     });
 
     test('should use deploymentEnv as fallback for envName', () => {
@@ -213,7 +196,7 @@ describe('Environments Utility Functions', () => {
         hostedZone: 'example.com',
       });
 
-      expect(result).toBe('https://staging.api.example.com');
+      expect(result).toBe('https://staging.api.winners.example.com');
     });
 
     test('should default to dev when no envName or deploymentEnv', () => {
@@ -221,7 +204,7 @@ describe('Environments Utility Functions', () => {
         hostedZone: 'example.com',
       });
 
-      expect(result).toBe('https://dev.api.example.com');
+      expect(result).toBe('https://dev.api.winners.example.com');
     });
   });
 

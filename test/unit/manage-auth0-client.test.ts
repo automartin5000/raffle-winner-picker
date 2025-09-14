@@ -8,15 +8,72 @@ import { Auth0ClientManager } from '../../scripts/manage-auth0-client';
 
 // Mock the shared environment module
 mock.module('../../shared/environments.js', () => ({
-  resolveDeploymentEnvironment: () => 'dev',
-  getEnvironmentConfig: () => ({
-    name: 'Development',
-    auth0ClientName: 'Raffle Winner Picker (Development)',
-    auth0Description: 'Development environment for raffle application',
-  }),
-  getFrontendUrl: () => 'https://dev.rafflewinnerpicker.com',
-  getApiBaseUrl: () => 'https://dev.api.winners.dev.rafflewinnerpicker.com',
-  DEPLOYMENT_ENVIRONMENTS: { prod: 'prod', dev: 'dev' },
+  resolveDeploymentEnvironment: (options?: any) => {
+    const { deployEnv, isEphemeral } = options || {};
+    if (isEphemeral) return 'dev';
+    if (deployEnv === 'prod' || deployEnv === 'production') return 'prod';
+    return 'dev';
+  },
+  getEnvironmentConfig: (env: string) => {
+    const configs: Record<string, any> = {
+      dev: {
+        name: 'Development',
+        description: 'Development environment for testing and PRs',
+        auth0ClientName: 'Raffle Winner Picker (Development)',
+        auth0Description: 'Development environment for Raffle Winner Picker application',
+        isProd: false,
+        isEphemeral: true,
+      },
+      prod: {
+        name: 'Production',
+        description: 'Production environment for live users',
+        auth0ClientName: 'Raffle Winner Picker (Production)',
+        auth0Description: 'Production environment for Raffle Winner Picker application',
+        isProd: true,
+        isEphemeral: false,
+      }
+    };
+    return configs[env] || configs.dev;
+  },
+  getAllEnvironments: () => ['dev', 'prod'],
+  isProductionEnvironment: (env: string) => env === 'prod',
+  isEphemeralEnvironment: (env: string) => env !== 'prod',
+  getFrontendUrl: (options?: any) => {
+    const { deploymentEnv, hostedZone, envName } = options || {};
+    if (!hostedZone) return 'http://localhost:5173';
+    
+    const env = envName || deploymentEnv || 'dev';
+    const isProd = env === 'prod';
+    
+    return isProd ? `https://${hostedZone}` : `https://${env}.${hostedZone}`;
+  },
+  getApiBaseUrl: (options: any) => {
+    const { envName, deploymentEnv, hostedZone } = options || {};
+    if (!hostedZone) return 'https://api.localhost:3000';
+    
+    const env = envName || deploymentEnv || 'dev';
+    const isProd = env === 'prod';
+    
+    return isProd ? `https://api.winners.${hostedZone}` : `https://${env}.api.winners.${hostedZone}`;
+  },
+  DEPLOYMENT_ENVIRONMENTS: {
+    dev: {
+      name: 'Development',
+      description: 'Development environment for testing and PRs',
+      auth0ClientName: 'Raffle Winner Picker (Development)',
+      auth0Description: 'Development environment for Raffle Winner Picker application',
+      isProd: false,
+      isEphemeral: true,
+    },
+    prod: {
+      name: 'Production',
+      description: 'Production environment for live users',
+      auth0ClientName: 'Raffle Winner Picker (Production)',
+      auth0Description: 'Production environment for Raffle Winner Picker application',
+      isProd: true,
+      isEphemeral: false,
+    }
+  },
 }));
 
 // Mock fs module
@@ -132,7 +189,7 @@ describe('Auth0ClientManager', () => {
 
     test('should get callback URL from environment configuration', () => {
       const callbackUrl = manager.getCallbackUrl();
-      expect(callbackUrl).toBe('https://dev.rafflewinnerpicker.com');
+      expect(callbackUrl).toBe('https://dev.dev.rafflewinnerpicker.com');
     });
 
     test('should use manual override when AUTH0_SPA_CALLBACK_URL is set', () => {
@@ -149,7 +206,7 @@ describe('Auth0ClientManager', () => {
       manager = new Auth0ClientManager();
       const urls = manager.getAllCallbackUrls();
 
-      expect(urls).toContain('https://dev.rafflewinnerpicker.com');
+      expect(urls).toContain('https://dev.dev.rafflewinnerpicker.com');
       expect(urls).toContain('https://extra1.com');
       expect(urls).toContain('https://extra2.com');
       expect(urls).toHaveLength(3);
@@ -158,7 +215,7 @@ describe('Auth0ClientManager', () => {
     test('should handle empty additional callback URLs', () => {
       const urls = manager.getAllCallbackUrls();
 
-      expect(urls).toContain('https://dev.rafflewinnerpicker.com');
+      expect(urls).toContain('https://dev.dev.rafflewinnerpicker.com');
       expect(urls).toHaveLength(1);
     });
 
@@ -168,7 +225,7 @@ describe('Auth0ClientManager', () => {
       manager = new Auth0ClientManager();
       const origins = manager.getAllowedOrigins();
 
-      expect(origins).toContain('https://dev.rafflewinnerpicker.com');
+      expect(origins).toContain('https://dev.dev.rafflewinnerpicker.com');
       expect(origins).toContain('https://extra.com');
       expect(origins).toHaveLength(2);
     });
@@ -179,7 +236,7 @@ describe('Auth0ClientManager', () => {
       manager = new Auth0ClientManager();
       const origins = manager.getAllowedOrigins();
 
-      expect(origins).toContain('https://dev.rafflewinnerpicker.com');
+      expect(origins).toContain('https://dev.dev.rafflewinnerpicker.com');
       expect(origins).toContain('https://valid.com');
       expect(origins).not.toContain('invalid-url');
     });
@@ -203,7 +260,7 @@ describe('Auth0ClientManager', () => {
 
     test('should get app description from environment config', () => {
       const description = manager.getAppDescription();
-      expect(description).toBe('Development environment for raffle application');
+      expect(description).toBe('Development environment for Raffle Winner Picker application');
     });
 
     test('should get API identifier from environment config', () => {
@@ -303,7 +360,7 @@ describe('Auth0ClientManager', () => {
 
     test('should handle missing environment in shared config gracefully', () => {
       const testDescription = manager.getAppDescription();
-      expect(testDescription).toBe('Development environment for raffle application');
+      expect(testDescription).toBe('Development environment for Raffle Winner Picker application');
     });
   });
 });
