@@ -1,7 +1,6 @@
 {
   "app": "bun run --tsconfig-override=tsconfig.json ./infra/bin/app.ts",
   "output": "cdk.out",
-  "build": "npx projen bundle",
   "watch": {
     "include": [
       "src/**/*.ts",

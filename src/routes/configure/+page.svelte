@@ -286,7 +286,7 @@
                       <span class="prize-name">{prize}</span>
                     </div>
                     <div class="winner-count-controls">
-                      <label class="winner-count-label">Winners:</label>
+                      <label class="winner-count-label" for="winners-{prize}">Winners:</label>
                       <div class="winner-count-input">
                         <button 
                           class="count-btn decrease" 
@@ -295,7 +295,7 @@
                         >
                           −
                         </button>
-                        <span class="count-display">{prizeWinnerCounts[prize]}</span>
+                        <span class="count-display" id="winners-{prize}">{prizeWinnerCounts[prize]}</span>
                         <button 
                           class="count-btn increase" 
                           on:click={() => prizeWinnerCounts[prize] = Math.min(10, prizeWinnerCounts[prize] + 1)}
