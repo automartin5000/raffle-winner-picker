@@ -248,7 +248,7 @@ const setupAuth0ClientTask = project.addTask('setup-auth0-client', {
   condition: '[ -n "$DEPLOY_ENV" ]',
 });
 
-// Use get-for-build during compile to avoid updating clients during PR builds
+// Use ensure-all-env-clients during compile to ensure both prod and dev client IDs are available
 project.compileTask.prependSpawn(setupAuth0ClientTask);
 project.cdkTasks.deploy.prependExec('echo Deploying to environment: $DEPLOY_ENV');
 project.cdkTasks.deploy.prependSpawn(project.compileTask);
