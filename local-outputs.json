@@ -1,8 +1,0 @@
-{
-  "RPW-Api-local": {
-    "ApiCustomDomainUrl": "https://local.api.winners.dev.rafflewinnerpicker.com"
-  },
-  "RPW-Frontend-local": {
-    "WebsiteUrl": "https://local.dev.rafflewinnerpicker.com"
-  }
-}

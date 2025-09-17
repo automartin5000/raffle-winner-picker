@@ -29,7 +29,8 @@
     "target": "ESNext",
     "moduleResolution": "bundler",
     "typeRoots": [
-      "./node_modules/@types"
+      "./node_modules/@types",
+      "./types"
     ],
     "allowJs": true,
     "checkJs": true,
@@ -45,6 +46,7 @@
     "src/**/*",
     "scripts/**/*",
     "shared/**/*",
+    "types/**/*",
     ".projenrc.ts",
     "projenrc/**/*.ts"
   ],

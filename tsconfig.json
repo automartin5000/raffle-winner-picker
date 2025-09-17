@@ -31,7 +31,8 @@
     "target": "ESNext",
     "moduleResolution": "bundler",
     "typeRoots": [
-      "./node_modules/@types"
+      "./node_modules/@types",
+      "./types"
     ],
     "allowJs": true,
     "checkJs": true,
@@ -44,7 +45,8 @@
     "src/**/*.ts",
     "src/**/*",
     "scripts/**/*",
-    "shared/**/*"
+    "shared/**/*",
+    "types/**/*"
   ],
   "exclude": [
     "node_modules",
