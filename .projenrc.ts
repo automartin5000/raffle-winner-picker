@@ -47,9 +47,10 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       {
         name: 'Setup Auth0 Client IDs for Build',
         run: [
-          'echo "Setting up Auth0 client IDs for all environments before build..."',
-          '# This ensures both PROD and DEV client IDs are available for the build',
-          'bun run scripts/manage-auth0-client.ts ensure-all-env-clients',
+          'echo "Setting up Auth0 client IDs for build environment..."',
+          '# For non-production builds, only create/update the dev client',
+          '# Production client should only be created during production deployment',
+          'bun run scripts/manage-auth0-client.ts ensure-client-ids-for-build',
           '',
           '# Set up hosted zone environment variables for frontend build',
           'echo "📋 Setting up hosted zone environment variables..."',
@@ -68,8 +69,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
           '  export VITE_NONPROD_HOSTED_ZONE="${NONPROD_HOSTED_ZONE}"',
           '  ',
           '  echo "✅ Environment variables loaded for build:"',
-          '  echo "   VITE_AUTH0_CLIENT_ID_PROD: ${VITE_AUTH0_CLIENT_ID_PROD:+[SET]}"',
-          '  echo "   VITE_AUTH0_CLIENT_ID_DEV: ${VITE_AUTH0_CLIENT_ID_DEV:+[SET]}"',
+          '  echo "   VITE_SPA_AUTH0_CLIENT_ID: ${VITE_SPA_AUTH0_CLIENT_ID:+[SET]}"',
           '  echo "   VITE_PROD_HOSTED_ZONE: ${VITE_PROD_HOSTED_ZONE}"',
           '  echo "   VITE_NONPROD_HOSTED_ZONE: ${VITE_NONPROD_HOSTED_ZONE}"',
           'else',

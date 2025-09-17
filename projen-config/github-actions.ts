@@ -483,7 +483,11 @@ const addProductionDeployWorkflow = (github: GitHub) => {
         { name: "Install dependencies", run: "bun install --frozen-lockfile" },
         {
           name: "Setup Auth0 Production Client", 
-          run: "bun run scripts/manage-auth0-client.ts get-all-env-for-prod",
+          run: "bun run scripts/manage-auth0-client.ts ensure-client",
+        },
+        {
+          name: "Setup Auth0 Production API", 
+          run: "bun run scripts/manage-auth0-client.ts ensure-api",
         },
         {
           name: "Deploy to Production",
@@ -706,7 +710,11 @@ const addManualProductionDeployWorkflow = (github: GitHub) => {
         { name: "Install dependencies", run: "bun install --frozen-lockfile" },
         {
           name: "Setup Auth0 Production Client",
-          run: "bun run scripts/manage-auth0-client.ts get-all-env-for-prod",
+          run: "bun run scripts/manage-auth0-client.ts ensure-client",
+        },
+        {
+          name: "Setup Auth0 Production API",
+          run: "bun run scripts/manage-auth0-client.ts ensure-api",
         },
         {
           name: "Deploy to Production",

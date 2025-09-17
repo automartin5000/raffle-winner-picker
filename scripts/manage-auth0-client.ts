@@ -102,25 +102,23 @@ export class Auth0ClientManager {
       process.env.AUTH0_CLIENT_ID = auth0ClientId;
       process.env.AUTH0_CLIENT_SECRET = auth0ClientSecret;
 
-      // Create a single manager instance and reuse it by changing its deployEnv
-      const manager = new Auth0ClientManager(auth0Domain, auth0ClientId, auth0ClientSecret, 'prod', null);
+      // Create managers with correct environment contexts
       
       // Get production client
       console.log('📋 Setting up production client ID...');
       if (!process.env.PROD_HOSTED_ZONE) {
         console.warn('⚠️  PROD_HOSTED_ZONE not set, production client may have incorrect callback URLs');
       }
-      const prodClient = await manager.ensureClient();
+      const prodManager = new Auth0ClientManager(auth0Domain, auth0ClientId, auth0ClientSecret, 'prod', null);
+      const prodClient = await prodManager.ensureClient();
 
-      // Switch to dev environment
-      manager.deployEnv = 'dev';
-      
       // Get development client
       console.log('📋 Setting up environment-specific client ID...');
       if (!process.env.NONPROD_HOSTED_ZONE) {
         console.warn('⚠️  NONPROD_HOSTED_ZONE not set, development client may have incorrect callback URLs');
       }
-      const devClient = await manager.ensureClient();
+      const devManager = new Auth0ClientManager(auth0Domain, auth0ClientId, auth0ClientSecret, 'dev', null);
+      const devClient = await devManager.ensureClient();
 
       return {
         prodClientId: prodClient.client_id,
@@ -145,7 +143,8 @@ export class Auth0ClientManager {
     this.clientId = clientId || process.env.AUTH0_CLIENT_ID!;
     this.clientSecret = clientSecret || process.env.AUTH0_CLIENT_SECRET!;
     this.deployEnv = deployEnv || process.env.DEPLOY_ENV || 'dev';
-    this.callbackUrl = callbackUrl !== undefined ? callbackUrl : this.getCallbackUrl();
+    // Don't cache callback URL - compute it dynamically each time
+    this.callbackUrl = callbackUrl !== undefined ? callbackUrl : null;
 
     if (!this.domain || !this.clientId || !this.clientSecret) {
       console.error('❌ Missing required Auth0 configuration:');
@@ -211,9 +210,12 @@ export class Auth0ClientManager {
   getAllCallbackUrls(): string[] {
     const urls: string[] = [];
 
+    // Get current callback URL dynamically
+    const currentCallbackUrl = this.callbackUrl !== null ? this.callbackUrl : this.getCallbackUrl();
+
     // Add primary callback URL
-    if (this.callbackUrl) {
-      urls.push(this.callbackUrl);
+    if (currentCallbackUrl) {
+      urls.push(currentCallbackUrl);
     }
 
     // Add additional callback URLs from environment variable
@@ -385,11 +387,31 @@ export class Auth0ClientManager {
     const callbackUrls = this.getAllCallbackUrls();
     const allowedOrigins = this.getAllowedOrigins();
 
+    // For logo_uri, use the appropriate domain based on environment
+    let logoUri: string | undefined;
+    if (this.deployEnv === 'prod' && process.env.PROD_HOSTED_ZONE) {
+      logoUri = `https://${process.env.PROD_HOSTED_ZONE}/favicon.svg`;
+    } else if (this.deployEnv !== 'prod' && process.env.NONPROD_HOSTED_ZONE) {
+      // For dev/PR environments, construct URL from nonprod hosted zone
+      const hostedZone = process.env.NONPROD_HOSTED_ZONE;
+      const envName = process.env.DEPLOY_ENV;
+      if (envName && envName !== 'dev') {
+        // PR environment
+        logoUri = `https://${envName}.${hostedZone}/favicon.svg`;
+      } else {
+        // Dev environment
+        logoUri = `https://dev.${hostedZone}/favicon.svg`;
+      }
+    } else if (allowedOrigins.length > 0) {
+      // Fallback to first allowed origin
+      logoUri = `${allowedOrigins[0]}/favicon.svg`;
+    }
+
     const clientData = {
       name: this.appName,
       description: this.getAppDescription(),
       app_type: 'spa',
-      logo_uri: allowedOrigins.length > 0 ? `${allowedOrigins[0]}/favicon.svg` : undefined,
+      logo_uri: logoUri,
       callbacks: callbackUrls,
       allowed_logout_urls: callbackUrls,
       web_origins: allowedOrigins,
@@ -637,8 +659,126 @@ export class Auth0ClientManager {
   }
 
   /**
-   * Ensure client exists (create if not found, update if found)
+   * Setup client IDs for build - ensures current env client exists, reads prod if available
    */
+  async ensureClientIdsForBuild() {
+    console.log('🔄 Setting up client IDs for build environment...');
+
+    const envFile = path.join(process.cwd(), '.env');
+    let envContent = '';
+
+    // Read existing env file if it exists
+    if (fs.existsSync(envFile)) {
+      envContent = fs.readFileSync(envFile, 'utf8');
+    }
+
+    const lines = envContent.split('\n');
+
+    // Helper function to update or add environment variable
+    const updateEnvVar = (varName: string, value: string) => {
+      const envVarLine = `${varName}=${value}`;
+      const existingLineIndex = lines.findIndex(line => line.startsWith(`${varName}=`));
+
+      if (existingLineIndex >= 0) {
+        lines[existingLineIndex] = envVarLine;
+      } else {
+        lines.push(envVarLine);
+      }
+    };
+
+    try {
+      // 1. Ensure the current environment's client exists
+      console.log(`📋 Ensuring client for current environment: ${this.deployEnv}`);
+      const currentClient = await this.ensureClient();
+      
+      // 1.5. Ensure the current environment's API resource server exists
+      console.log(`📋 Ensuring API resource server for current environment: ${this.deployEnv}`);
+      await this.ensureApi();
+      
+      // 2. Try to get production client ID (read-only) if we're not in production
+      let prodClientId = '';
+      if (this.deployEnv !== 'prod') {
+        try {
+          console.log('📋 Attempting to read existing production client...');
+          const prodManager = new Auth0ClientManager(
+            process.env.AUTH0_DOMAIN,
+            process.env.AUTH0_CLIENT_ID,
+            process.env.AUTH0_CLIENT_SECRET,
+            'prod',
+            null
+          );
+          const existingProdClient = await prodManager.findClientByEnvironment();
+          if (existingProdClient) {
+            prodClientId = existingProdClient.client_id;
+            console.log(`✅ Found existing production client: ${prodClientId}`);
+          } else {
+            console.log('ℹ️  No existing production client found - will be created during production deployment');
+          }
+        } catch (error) {
+          console.log('ℹ️  Could not read production client - will be created during production deployment');
+        }
+      } else {
+        // We are in production, use the current client
+        prodClientId = currentClient.client_id;
+      }
+
+      // 3. Try to get development client ID (read-only) if we're not in development
+      let devClientId = '';
+      if (this.deployEnv === 'prod') {
+        try {
+          console.log('📋 Attempting to read existing development client...');
+          const devManager = new Auth0ClientManager(
+            process.env.AUTH0_DOMAIN,
+            process.env.AUTH0_CLIENT_ID,
+            process.env.AUTH0_CLIENT_SECRET,
+            'dev',
+            null
+          );
+          const existingDevClient = await devManager.findClientByEnvironment();
+          if (existingDevClient) {
+            devClientId = existingDevClient.client_id;
+            console.log(`✅ Found existing development client: ${devClientId}`);
+          } else {
+            console.log('ℹ️  No existing development client found');
+          }
+        } catch (error) {
+          console.log('ℹ️  Could not read development client');
+        }
+      } else {
+        // We are in development/PR, use the current client
+        devClientId = currentClient.client_id;
+      }
+
+      // Update environment variables with what we have
+      if (prodClientId) {
+        updateEnvVar('VITE_AUTH0_CLIENT_ID_PROD', prodClientId);
+      }
+      if (devClientId) {
+        updateEnvVar('VITE_AUTH0_CLIENT_ID_DEV', devClientId);
+      }
+
+      // Set the current environment's client ID as default
+      updateEnvVar('VITE_SPA_AUTH0_CLIENT_ID', currentClient.client_id);
+
+      // Write updated environment file
+      fs.writeFileSync(envFile, lines.filter(line => line.trim()).join('\n') + '\n');
+
+      console.log('✅ Client IDs configured for build:');
+      console.log(`   Current (${this.deployEnv}) Client ID: ${currentClient.client_id}`);
+      if (prodClientId) {
+        console.log(`   PROD Client ID: ${prodClientId}`);
+      }
+      if (devClientId) {
+        console.log(`   DEV Client ID: ${devClientId}`);
+      }
+
+      return currentClient;
+
+    } catch (error) {
+      console.error('❌ Failed to setup client IDs for build:', error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
   async ensureClient() {
     console.log(`🔍 Looking for existing Auth0 SPA client for environment: ${this.deployEnv}`);
 
@@ -1719,6 +1859,7 @@ async function main() {
     console.log('  ensure-client            Create or update client as needed');
     console.log('  get-for-build            Get client ID for build (no updates)');
     console.log('  get-for-prod-deploy      Get client ID for production deployment (read-only)');
+    console.log('  ensure-client-ids-for-build  Setup client IDs for build (only creates current env)');
     console.log('  ensure-api               Create or update Auth0 API');
     console.log('  ensure-test-client       Create or update integration test client');
     console.log('  setup-integration-testing Complete integration testing setup');
@@ -1765,6 +1906,9 @@ async function main() {
         break;
       case 'get-for-prod-deploy':
         await manager.getClientForProdDeploy();
+        break;
+      case 'ensure-client-ids-for-build':
+        await manager.ensureClientIdsForBuild();
         break;
       case 'ensure-api':
         await manager.ensureApi();
