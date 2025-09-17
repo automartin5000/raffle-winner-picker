@@ -37,6 +37,7 @@ interface RaffleRun {
   entries: RaffleEntry[];
   winners: Winner[];
   totalEntries: number;
+  isPublic?: boolean;
 }
 
 interface RaffleEntry {
@@ -137,4 +138,39 @@ export async function getRaffleRun(runId: string): Promise<{ success: boolean; r
     console.error('Error fetching raffle run:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
+}
+
+export async function updateRafflePublicStatus(runId: string, isPublic: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    const token = await getAccessToken();
+    if (!token) {
+      throw new Error('No access token available');
+    }
+
+    const response = await fetch(`${winnersBaseApiUrl}/runs/${runId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ isPublic }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating raffle public status:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+export function getPublicRaffleUrl(runId: string): string {
+  // Get the current hostname and construct the public URL
+  const currentHostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  
+  return `${protocol}//${currentHostname}/public/${runId}`;
 }

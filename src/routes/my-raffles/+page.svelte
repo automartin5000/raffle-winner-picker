@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getRaffleRuns } from '$lib/api';
+  import { getRaffleRuns, updateRafflePublicStatus, getPublicRaffleUrl } from '$lib/api';
   import Header from '../../components/Header.svelte';
 
   interface RaffleEntry {
@@ -23,6 +23,7 @@
     entries: RaffleEntry[];
     winners: Winner[];
     totalEntries: number;
+    isPublic?: boolean;
   }
 
   let myRaffles: RaffleRun[] = [];
@@ -65,6 +66,45 @@
 
   function getUniquePrizes(winners: Winner[]): string[] {
     return [...new Set(winners.map(w => w.prize))];
+  }
+
+  async function togglePublicStatus(raffle: RaffleRun) {
+    try {
+      const newStatus = !raffle.isPublic;
+      const result = await updateRafflePublicStatus(raffle.runId, newStatus);
+      
+      if (result.success) {
+        // Update the local raffle object
+        raffle.isPublic = newStatus;
+        // Trigger reactivity
+        myRaffles = [...myRaffles];
+        if (selectedRaffle && selectedRaffle.runId === raffle.runId) {
+          selectedRaffle = { ...selectedRaffle, isPublic: newStatus };
+        }
+      } else {
+        console.error('Failed to update public status:', result.error);
+        alert('Failed to update raffle visibility. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error toggling public status:', error);
+      alert('Failed to update raffle visibility. Please try again.');
+    }
+  }
+
+  function copyPublicLink(runId: string) {
+    const url = getPublicRaffleUrl(runId);
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Public link copied to clipboard!');
+    }).catch(() => {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('Public link copied to clipboard!');
+    });
   }
 
   onMount(() => {
@@ -169,6 +209,46 @@
             <div>Total Entries: {selectedRaffle.totalEntries}</div>
             <div>Unique Participants: {getUniqueParticipants(selectedRaffle.entries)}</div>
             <div>Winners Selected: {selectedRaffle.winners.length}</div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Public Sharing</h3>
+          <div class="sharing-controls">
+            <label class="checkbox-label">
+              <input 
+                type="checkbox" 
+                checked={selectedRaffle.isPublic || false}
+                on:change={() => togglePublicStatus(selectedRaffle)}
+              />
+              <span>Make this raffle public</span>
+            </label>
+            
+            {#if selectedRaffle.isPublic}
+              <div class="public-link-section">
+                <p class="public-link-info">
+                  📋 This raffle is now public! Anyone with this link can view the results:
+                </p>
+                <div class="link-container">
+                  <input 
+                    type="text" 
+                    value={getPublicRaffleUrl(selectedRaffle.runId)}
+                    readonly
+                    class="link-input"
+                  />
+                  <button 
+                    class="copy-btn"
+                    on:click={() => copyPublicLink(selectedRaffle.runId)}
+                  >
+                    Copy Link
+                  </button>
+                </div>
+              </div>
+            {:else}
+              <p class="private-info">
+                🔒 This raffle is private. Only you can see the results.
+              </p>
+            {/if}
           </div>
         </div>
 
@@ -538,6 +618,85 @@
     color: #1d4ed8;
     font-weight: 500;
     font-size: 0.875rem;
+  }
+
+  /* Sharing controls styling */
+  .sharing-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 1.125rem;
+    height: 1.125rem;
+    accent-color: #2563eb;
+    cursor: pointer;
+  }
+
+  .public-link-section {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 0.5rem;
+    padding: 1rem;
+  }
+
+  .public-link-info {
+    margin: 0 0 0.75rem 0;
+    color: #0369a1;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .link-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .link-input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    background: white;
+    color: #374151;
+  }
+
+  .copy-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+
+  .copy-btn:hover {
+    background: #1d4ed8;
+  }
+
+  .private-info {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin: 0;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 0.375rem;
+    border: 1px solid #e5e7eb;
   }
 
   /* Responsive adjustments */
