@@ -3,8 +3,26 @@ import { getAccessToken } from './auth';
 import { getHostedZone } from './constants';
 import { getApiUrl, CORE_SERVICES } from './domain-constants';
 
+// Dynamically determine environment from current hostname (like auth.ts does)
+function getApiEnvironment(): string {
+  const currentHostname = window.location.hostname;
+
+  if (currentHostname === 'localhost' || currentHostname === '127.0.0.1') {
+    return 'local';
+  } else if (currentHostname.endsWith(import.meta.env.nonprod_hosted_zone)) {
+    // Non-production domains - extract the environment prefix
+    const nonprodHostedZone = import.meta.env.nonprod_hosted_zone;
+    const prefix = currentHostname.replace(`.${nonprodHostedZone}`, '');
+    return prefix || 'dev'; // fallback to 'dev' if no prefix
+  } else if (currentHostname.endsWith(import.meta.env.prod_hosted_zone)) {
+    return 'prod';
+  } else {
+    return 'dev'; // fallback
+  }
+}
+
 const apiHostedZone = getHostedZone();
-const envName = import.meta.env.deploy_env;
+const envName = getApiEnvironment(); // Use dynamic detection instead of build-time variable
 const winnersBaseApiUrl = getApiUrl({
   envName,
   service: CORE_SERVICES.WINNERS,
