@@ -136,8 +136,9 @@ const project = new awscdk.AwsCdkTypeScriptApp({
       module: 'esnext',
       lib: ['ES2022', 'DOM', 'DOM.Iterable'],
       rootDir: '.',
+      typeRoots: ['./node_modules/@types', './types'],
     },
-    include: ['src/**/*', 'scripts/**/*', 'shared/**/*'],
+    include: ['src/**/*', 'scripts/**/*', 'shared/**/*', 'types/**/*'],
   },
   jestOptions: {
     jestConfig: {

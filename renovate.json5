@@ -31,17 +31,6 @@
     "jest-junit",
     "projen",
     "aws-cdk-lib",
-    "constructs",
-    "actions/checkout",
-    "actions/download-artifact",
-    "aws-actions/configure-aws-credentials",
-    "oven-sh/setup-bun",
-    "./.github/actions/build",
-    "peter-evans/find-comment",
-    "peter-evans/create-or-update-comment",
-    "actions/github-script",
-    "amannn/action-semantic-pull-request",
-    "github/codeql-action/init",
-    "github/codeql-action/analyze"
+    "constructs"
   ]
 }
