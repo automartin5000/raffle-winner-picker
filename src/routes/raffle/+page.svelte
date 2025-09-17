@@ -170,7 +170,7 @@
     if ($raffleStore.winners.length === 0) return;
     
     try {
-      await saveRaffleRun({
+      const result = await saveRaffleRun({
         entries: $raffleStore.entries,
         winners: $raffleStore.winners.map(w => ({
           name: w.name,
@@ -179,7 +179,12 @@
           timestamp: w.timestamp
         }))
       });
-      console.log('Raffle results saved successfully');
+      
+      if (result.success) {
+        console.log('Raffle results saved successfully');
+      } else {
+        console.error('Failed to save raffle results:', result.error);
+      }
     } catch (error) {
       console.error('Failed to save raffle results:', error);
     }
