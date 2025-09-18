@@ -83,6 +83,30 @@ class ApiClient {
       body,
     };
   }
+
+  async patch(endpoint: string, data: any): Promise<ApiResponse> {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify(data),
+    });
+
+    const rawText = await response.text();
+    
+    let body;
+    // Try to parse as JSON regardless of content-type, since the API returns JSON with incorrect content-type
+    try {
+      body = JSON.parse(rawText);
+    } catch (error) {
+      body = rawText;
+    }
+
+    return {
+      statusCode: response.status,
+      body,
+    };
+  }
 }
 
 describe('Raffle API Integration Tests', () => {
@@ -500,6 +524,114 @@ describe('Raffle API Integration Tests', () => {
       const runIds = results.map(r => r.body.runId);
       const uniqueRunIds = new Set(runIds);
       expect(uniqueRunIds.size).toBe(runIds.length);
+    });
+  });
+
+  describe('Public API endpoints', () => {
+    let publicRunId: string;
+    let privateRunId: string;
+
+    beforeAll(async () => {
+      // Create a raffle run that we'll make public
+      const publicRaffleData = {
+        entries: [
+          { name: 'Public User 1', email: 'public1@example.com' },
+          { name: 'Public User 2', email: 'public2@example.com' },
+        ],
+        winners: [
+          { name: 'Public User 1', prize: 'Public Prize', timestamp: new Date().toISOString() },
+        ],
+        totalEntries: 2,
+      };
+
+      const publicResponse = await apiClient.post('/runs', publicRaffleData);
+      expect(publicResponse.statusCode).toBe(201);
+      publicRunId = publicResponse.body.runId;
+      createdRunIds.push(publicRunId);
+
+      // Create a raffle run that will stay private
+      const privateRaffleData = {
+        entries: [
+          { name: 'Private User 1', email: 'private1@example.com' },
+        ],
+        winners: [
+          { name: 'Private User 1', prize: 'Private Prize', timestamp: new Date().toISOString() },
+        ],
+        totalEntries: 1,
+      };
+
+      const privateResponse = await apiClient.post('/runs', privateRaffleData);
+      expect(privateResponse.statusCode).toBe(201);
+      privateRunId = privateResponse.body.runId;
+      createdRunIds.push(privateRunId);
+    });
+
+    describe('PATCH /runs/{runId}', () => {
+      it('should toggle raffle public status', async () => {
+        // Make the raffle public
+        const makePublicResponse = await apiClient.patch(`/runs/${publicRunId}`, { isPublic: true });
+        expect(makePublicResponse.statusCode).toBe(200);
+
+        // Verify it's now public by fetching the raffle
+        const getRaffleResponse = await apiClient.get(`/runs/${publicRunId}`);
+        expect(getRaffleResponse.statusCode).toBe(200);
+        expect(getRaffleResponse.body.isPublic).toBe(true);
+      });
+
+      it('should make raffle private again', async () => {
+        // Make the raffle private
+        const makePrivateResponse = await apiClient.patch(`/runs/${publicRunId}`, { isPublic: false });
+        expect(makePrivateResponse.statusCode).toBe(200);
+
+        // Verify it's now private
+        const getRaffleResponse = await apiClient.get(`/runs/${publicRunId}`);
+        expect(getRaffleResponse.statusCode).toBe(200);
+        expect(getRaffleResponse.body.isPublic).toBe(false);
+      });
+
+      it('should reject invalid fields', async () => {
+        const response = await apiClient.patch(`/runs/${publicRunId}`, { invalidField: 'value' });
+        expect(response.statusCode).toBe(400);
+      });
+
+      it('should handle non-existent raffle', async () => {
+        const response = await apiClient.patch('/runs/non-existent-id', { isPublic: true });
+        expect(response.statusCode).toBe(404);
+      });
+    });
+
+    describe('GET /public/runs/{runId}', () => {
+      beforeAll(async () => {
+        // Make sure publicRunId is public for these tests
+        await apiClient.patch(`/runs/${publicRunId}`, { isPublic: true });
+      });
+
+      it('should return public raffle data without authentication', async () => {
+        // Make a direct fetch without auth headers
+        const response = await fetch(`${API_BASE_URL}/public/runs/${publicRunId}`);
+        
+        expect(response.status).toBe(200);
+        
+        const data = await response.json();
+        expect(data).toHaveProperty('runId', publicRunId);
+        expect(data).toHaveProperty('timestamp');
+        expect(data).toHaveProperty('winners');
+        expect(data).toHaveProperty('totalEntries');
+        
+        // Should not include sensitive data
+        expect(data).not.toHaveProperty('userId');
+        expect(data).not.toHaveProperty('entries');
+      });
+
+      it('should return 404 for private raffles', async () => {
+        const response = await fetch(`${API_BASE_URL}/public/runs/${privateRunId}`);
+        expect(response.status).toBe(404);
+      });
+
+      it('should return 404 for non-existent raffles', async () => {
+        const response = await fetch(`${API_BASE_URL}/public/runs/non-existent-id`);
+        expect(response.status).toBe(404);
+      });
     });
   });
 });

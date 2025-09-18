@@ -1,5 +1,5 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand, GetCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, PutCommand, GetCommand, QueryCommand, UpdateCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
 const { randomUUID } = require('crypto');
 
 const client = new DynamoDBClient({});
@@ -42,11 +42,65 @@ exports.handler = async (event) => {
                 statusCode: 204,
                 headers: {
                     ...headers,
-                    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+                    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
                     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
                     'Access-Control-Max-Age': '86400'
                 },
                 body: '' 
+            };
+        }
+
+        const method = event.requestContext?.http?.method;
+        const path = event.requestContext?.http?.path;
+
+        // Public endpoints (no authentication required)
+        if (method === 'GET' && path.startsWith('/public/runs/')) {
+            // Get public raffle run
+            const runId = path.split('/')[3]; // /public/runs/{runId}
+            
+            if (!runId) {
+                return { 
+                    statusCode: 400, 
+                    headers, 
+                    body: JSON.stringify({ error: 'Run ID is required' }) 
+                };
+            }
+
+            // We need to scan for the run since we don't have the userId for public access
+            // For better performance in production, consider adding a GSI on runId
+            const result = await docClient.send(new ScanCommand({
+                TableName: TABLE_NAME,
+                FilterExpression: 'runId = :runId AND isPublic = :isPublic',
+                ExpressionAttributeValues: { 
+                    ':runId': runId,
+                    ':isPublic': true
+                },
+                Limit: 1,
+            }));
+
+            if (!result.Items || result.Items.length === 0) {
+                return { 
+                    statusCode: 404, 
+                    headers, 
+                    body: JSON.stringify({ error: 'Public raffle run not found' }) 
+                };
+            }
+
+            const raffleRun = result.Items[0];
+            
+            // Remove sensitive user information for public view
+            const publicRaffleRun = {
+                runId: raffleRun.runId,
+                timestamp: raffleRun.timestamp,
+                winners: raffleRun.winners || [],
+                totalEntries: raffleRun.totalEntries || 0,
+                // Don't include entries (privacy) or userId
+            };
+
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify(publicRaffleRun),
             };
         }
 
@@ -65,9 +119,6 @@ exports.handler = async (event) => {
             };
         }
 
-        const method = event.requestContext?.http?.method;
-        const path = event.requestContext?.http?.path;
-
         if (method === 'POST' && path === '/runs') {
             // Save new raffle run
             const body = JSON.parse(event.body);
@@ -81,6 +132,7 @@ exports.handler = async (event) => {
                 entries: body.entries || [],
                 winners: body.winners || [],
                 totalEntries: body.totalEntries || 0,
+                isPublic: false, // Default to private
             };
 
             await docClient.send(new PutCommand({
@@ -135,6 +187,57 @@ exports.handler = async (event) => {
                 headers,
                 body: JSON.stringify(result.Item),
             };
+        }
+
+        if (method === 'PATCH' && path.startsWith('/runs/')) {
+            // Update raffle run (currently only supports toggling public status)
+            const runId = path.split('/')[2]; // /runs/{runId}
+            
+            if (!runId) {
+                return { 
+                    statusCode: 400, 
+                    headers, 
+                    body: JSON.stringify({ error: 'Run ID is required' }) 
+                };
+            }
+
+            const body = JSON.parse(event.body);
+            
+            // Only allow updating isPublic field for now
+            if (!body.hasOwnProperty('isPublic')) {
+                return { 
+                    statusCode: 400, 
+                    headers, 
+                    body: JSON.stringify({ error: 'Only isPublic field can be updated' }) 
+                };
+            }
+
+            const { UpdateCommand } = require('@aws-sdk/lib-dynamodb');
+            
+            try {
+                await docClient.send(new UpdateCommand({
+                    TableName: TABLE_NAME,
+                    Key: { userId, runId },
+                    UpdateExpression: 'SET isPublic = :isPublic',
+                    ExpressionAttributeValues: { ':isPublic': body.isPublic },
+                    ConditionExpression: 'attribute_exists(runId)', // Ensure the run exists
+                }));
+
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify({ message: 'Raffle visibility updated successfully' }),
+                };
+            } catch (error) {
+                if (error.name === 'ConditionalCheckFailedException') {
+                    return { 
+                        statusCode: 404, 
+                        headers, 
+                        body: JSON.stringify({ error: 'Raffle run not found' }) 
+                    };
+                }
+                throw error; // Re-throw other errors
+            }
         }
 
         return { 

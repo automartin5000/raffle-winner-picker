@@ -1,5 +1,7 @@
 <script lang="ts">
   import { user, logout } from '../lib/auth';
+  
+  export let showAuth = true; // Allow hiding auth controls for public pages
 </script>
 
 <header class="header-modern">
@@ -17,29 +19,36 @@
     </div>
     
     <div class="header-actions">
-      <nav class="header-nav">
-        <a href="/my-entries" class="nav-link">
-          <span class="nav-icon">🎫</span>
-          My Entries
-        </a>
-        <a href="/my-raffles" class="nav-link">
-          <span class="nav-icon">🏆</span>
-          My Raffles
-        </a>
-      </nav>
-      <div class="user-info">
-        <div class="user-avatar">
-          {($user?.name || 'User').charAt(0).toUpperCase()}
+      {#if showAuth}
+        <nav class="header-nav">
+          <a href="/my-entries" class="nav-link">
+            <span class="nav-icon">🎫</span>
+            My Entries
+          </a>
+          <a href="/my-raffles" class="nav-link">
+            <span class="nav-icon">🏆</span>
+            My Raffles
+          </a>
+        </nav>
+        <div class="user-info">
+          <div class="user-avatar">
+            {($user?.name || 'User').charAt(0).toUpperCase()}
+          </div>
+          <div class="user-details">
+            <div class="user-name">{$user?.name || 'User'}</div>
+            <div class="user-email">{$user?.email || ''}</div>
+          </div>
         </div>
-        <div class="user-details">
-          <div class="user-name">{$user?.name || 'User'}</div>
-          <div class="user-email">{$user?.email || ''}</div>
-        </div>
-      </div>
-      <button class="sign-out-btn" on:click={logout}>
-        <span class="sign-out-icon">↗</span>
-        Sign Out
-      </button>
+        <button class="sign-out-btn" on:click={logout}>
+          <span class="sign-out-icon">↗</span>
+          Sign Out
+        </button>
+      {:else}
+        <a href="/" class="home-link">
+          <span class="nav-icon">🏠</span>
+          Go to App
+        </a>
+      {/if}
     </div>
   </div>
 </header>
@@ -149,6 +158,26 @@
 
   .nav-icon {
     font-size: 1rem;
+  }
+
+  .home-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+  }
+
+  .home-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
 
   .user-info {
