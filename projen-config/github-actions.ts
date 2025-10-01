@@ -62,8 +62,9 @@ const addSecurityScanningJob = (github: GitHub) => {
 const addDeployPrEnvironmentWorkflow = (github: GitHub) => {
   const workflow = new GithubWorkflow(github, "deploy-pr-environment", {
     limitConcurrency: true,
-      concurrencyOptions: {
-        group: "pr-deploy",
+    concurrencyOptions: {
+        // each pr# should have its own queue
+        group: "pr-deploy-${{ github.event.number }}",
         cancelInProgress: false,
     },
     env: {
