@@ -8,7 +8,7 @@ on:
       - synchronize
       - reopened
 concurrency:
-  group: pr-deploy
+  group: pr-deploy-${{ github.event.number }}
   cancel-in-progress: false
 env:
   DEPLOY_ENV: pr${{ github.event.number }}
