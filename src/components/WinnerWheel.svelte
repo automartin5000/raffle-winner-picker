@@ -3,6 +3,8 @@
   export let winner: string = '';
   export let spinDuration = 3000; // Default 3 seconds, configurable
   
+  const MIN_CYCLE_DELAY_MS = 50; // Minimum delay between participants in rapid cycling phase
+  
   let spinning = false;
   let currentIndex = 0;
   let showWinnerEffect = false;
@@ -30,19 +32,23 @@
         addTerminalLine(`> ${names.length} PARTICIPANTS LOADED`);
         addTerminalLine('> STARTING RANDOM SELECTION...');
         
-        // Start fast cycling animation
+        // Calculate timing to ensure all participants are shown
         const startTime = Date.now();
-        let cycleSpeed = 50; // Start fast
+        const participantCount = displayNames.length;
+        
+        // Use the first 2 seconds (or total duration if less) to show all participants
+        const cyclingDuration = Math.min(spinDuration, 2000);
+        
+        // Calculate time per participant to ensure everyone is shown
+        const timePerParticipant = cyclingDuration / participantCount;
+        
+        let participantsSeen = new Set<number>();
+        let cycleCount = 0;
         
         const cycle = () => {
           if (!spinning) return;
           
-          currentIndex = (currentIndex + 1) % displayNames.length;
           const elapsed = Date.now() - startTime;
-          const progress = elapsed / spinDuration;
-          
-          // Gradually slow down
-          cycleSpeed = 50 + (progress * 300); // Slow from 50ms to 350ms
           
           if (elapsed >= spinDuration) {
             // Stop on winner
@@ -61,7 +67,28 @@
               resolve();
             }, 1000);
           } else {
-            setTimeout(cycle, cycleSpeed);
+            // Move to next participant
+            currentIndex = (currentIndex + 1) % displayNames.length;
+            participantsSeen.add(currentIndex);
+            
+            // If we've completed one full cycle through all participants
+            if (participantsSeen.size === participantCount) {
+              cycleCount++;
+              participantsSeen.clear();
+            }
+            
+            // Calculate delay based on whether we're in first cycle or repeating
+            let delay: number;
+            
+            if (elapsed < cyclingDuration) {
+              // First cycle: ensure we show all participants evenly
+              delay = timePerParticipant;
+            } else {
+              // After first cycle: repeat quickly
+              delay = Math.min(timePerParticipant, MIN_CYCLE_DELAY_MS);
+            }
+            
+            setTimeout(cycle, delay);
           }
         };
         
