@@ -3,6 +3,8 @@
   export let winner: string = '';
   export let spinDuration = 3000; // Default 3 seconds, configurable
   
+  const MIN_CYCLE_DELAY_MS = 50; // Minimum delay between participants in rapid cycling phase
+  
   let spinning = false;
   let currentIndex = 0;
   let showWinnerEffect = false;
@@ -83,7 +85,7 @@
               delay = timePerParticipant;
             } else {
               // After first cycle: repeat quickly
-              delay = Math.min(timePerParticipant, 50); // At least as fast as 50ms
+              delay = Math.min(timePerParticipant, MIN_CYCLE_DELAY_MS);
             }
             
             setTimeout(cycle, delay);
