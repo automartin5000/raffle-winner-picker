@@ -70,7 +70,7 @@
             participantsSeen.add(currentIndex);
             
             // If we've completed one full cycle through all participants
-            if (participantsSeen.size === participantCount && currentIndex === 0) {
+            if (participantsSeen.size === participantCount) {
               cycleCount++;
               participantsSeen.clear();
             }
