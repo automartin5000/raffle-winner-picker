@@ -18,40 +18,41 @@ const currentAwsAccount = resolveAwsAccount({
 
 console.log(`Resolved AWS account: ${currentAwsAccount}`);
 
-// Always create both dev and prod static environments for CDK synthesis
-getAllEnvironments().forEach(envKey => {
+// Determine if we're doing an ephemeral PR environment operation
+const isEphemeralOp = process.env.DEPLOY_EPHEMERAL === 'true' && process.env.DEPLOY_ENV;
+const isStaticEnv = process.env.DEPLOY_ENV && getAllEnvironments().includes(process.env.DEPLOY_ENV as any);
+
+// For ephemeral PR environments, only create the PR stacks (skip dev/prod)
+// For static environments or when no DEPLOY_ENV is set, create all static stacks
+if (isEphemeralOp && !isStaticEnv) {
+  // Only create the ephemeral PR environment
+  console.log(`Creating ephemeral environment for ${process.env.DEPLOY_ENV}`);
   awsEnvironments.push({
     env: {
+      account: process.env.NONPROD_AWS_ACCOUNT_ID!,
       region,
-      account: envKey === 'prod' 
-        ? process.env.PROD_AWS_ACCOUNT_ID 
-        : process.env.NONPROD_AWS_ACCOUNT_ID,
     },
-    envName: envKey,
-    hostedZone: envKey === 'prod' 
-      ? process.env.PROD_HOSTED_ZONE! 
-      : process.env.NONPROD_HOSTED_ZONE!,
-    deploymentEnv: envKey,
+    envName: process.env.DEPLOY_ENV!, // Use PR-specific name (e.g., "pr123")
+    hostedZone: process.env.NONPROD_HOSTED_ZONE!,
+    deploymentEnv: currentAwsAccount,
   });
-});
-
-// If this is an ephemeral deployment (PR), also create the ephemeral environment
-// But only if it's different from the static environments
-if (process.env.DEPLOY_EPHEMERAL === 'true' && process.env.DEPLOY_ENV) {
-  const isStaticEnv = getAllEnvironments().includes(process.env.DEPLOY_ENV as any);
-  
-  if (!isStaticEnv) {
-    console.log(`Creating ephemeral environment for ${process.env.DEPLOY_ENV}`);
+} else {
+  // Create both dev and prod static environments for CDK synthesis
+  getAllEnvironments().forEach(envKey => {
     awsEnvironments.push({
       env: {
-        account: process.env.NONPROD_AWS_ACCOUNT_ID!,
         region,
+        account: envKey === 'prod' 
+          ? process.env.PROD_AWS_ACCOUNT_ID 
+          : process.env.NONPROD_AWS_ACCOUNT_ID,
       },
-      envName: process.env.DEPLOY_ENV, // Use PR-specific name (e.g., "pr123")
-      hostedZone: process.env.NONPROD_HOSTED_ZONE!,
-      deploymentEnv: currentAwsAccount,
+      envName: envKey,
+      hostedZone: envKey === 'prod' 
+        ? process.env.PROD_HOSTED_ZONE! 
+        : process.env.NONPROD_HOSTED_ZONE!,
+      deploymentEnv: envKey,
     });
-  }
+  });
 }
 console.log(`Creating stacks for environments: ${awsEnvironments.map((env) => env.envName).join(', ')}`);
 const cdkApp = new App();

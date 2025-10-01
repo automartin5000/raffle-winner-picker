@@ -759,6 +759,7 @@ const addCleanupPrEnvironmentWorkflow = (github: GitHub) => {
       },
       env: {
         DEPLOY_ENV: "pr${{ github.event.number }}", // Unified deployment environment identifier
+        DEPLOY_EPHEMERAL: "true", // Flag to indicate this is an ephemeral PR environment
         NONPROD_AWS_ACCOUNT_ID: '${{ secrets.NONPROD_AWS_ACCOUNT_ID }}',
         PROD_AWS_ACCOUNT_ID: '${{ secrets.PROD_AWS_ACCOUNT_ID }}',
         NONPROD_HOSTED_ZONE: '${{ secrets.NONPROD_HOSTED_ZONE }}',
