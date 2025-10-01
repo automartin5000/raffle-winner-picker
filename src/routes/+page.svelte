@@ -98,24 +98,230 @@ George Washington,george_washington@email.com,Principal for the Day,5`;
 </script>
 
 {#if !$isAuthenticated}
-  <!-- Sign In Screen -->
-  <div class="sign-in-container">
-    <div class="sign-in-panel">
-      <div class="sign-in-header">
-        <div class="app-logo">🎲</div>
-        <h1 class="app-name">Raffle Winner Picker</h1>
-        <p class="app-description">
-          Create fair, transparent raffles with spinning wheel animations and automatic result tracking.
+  <!-- Marketing Home Page -->
+  <div class="marketing-page">
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-icon">🎰</div>
+        <h1 class="hero-title">Raffle Winner Picker</h1>
+        <p class="hero-subtitle">
+          Make conducting fair drawings simple and fun. Upload your participant list, 
+          watch the animated selection process, and share your results with confidence.
         </p>
-      </div>
-      
-      <div class="sign-in-content">
-        <button class="sign-in-button" on:click={loginWithRedirect}>
-          <span class="sign-in-icon">🔐</span>
-          <span>Sign In to Continue</span>
+        <button class="cta-button" on:click={loginWithRedirect}>
+          <span class="cta-icon">🔐</span>
+          <span>Get Started - Sign In</span>
         </button>
+        <p class="cta-subtext">Free to use • Secure • Transparent</p>
       </div>
-    </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+      <h2 class="section-title">Why Choose Raffle Winner Picker?</h2>
+      <p class="section-subtitle">
+        Everything you need to run fair, transparent raffles that everyone can trust
+      </p>
+      
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📤</div>
+          <h3 class="feature-title">Easy Upload</h3>
+          <p class="feature-description">
+            Drop your CSV file with participant names, emails, and ticket quantities. 
+            We'll automatically detect your columns and get you started in seconds.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🎪</div>
+          <h3 class="feature-title">Live Animation</h3>
+          <p class="feature-description">
+            Animated terminal-style visualization displays each participant during selection. 
+            Every participant is shown to ensure complete transparency.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3 class="feature-title">Smart Prizes</h3>
+          <p class="feature-description">
+            Support multiple prizes with different winner counts per prize. 
+            Perfect for complex raffles with various prize tiers.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3 class="feature-title">Secure & Private</h3>
+          <p class="feature-description">
+            Your data is protected with enterprise-grade authentication. 
+            Results are private by default, public only when you choose.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📋</div>
+          <h3 class="feature-title">Instant Results</h3>
+          <p class="feature-description">
+            Download winner lists and share public links to your raffle results. 
+            Export to CSV for record keeping and notifications.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔄</div>
+          <h3 class="feature-title">Complete History</h3>
+          <p class="feature-description">
+            Access all your past raffles anytime. Full audit trail ensures 
+            accountability and transparency for every drawing.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works-section">
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-subtitle">Get started in minutes with our simple 5-step process</p>
+      
+      <div class="steps-container">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3 class="step-title">Sign In</h3>
+          <p class="step-description">
+            Sign in with Google, GitHub, or email. Your account keeps all your raffles organized and secure.
+          </p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3 class="step-title">Upload CSV</h3>
+          <p class="step-description">
+            Upload your participant list with names, emails, tickets, and prizes. We'll detect your columns automatically.
+          </p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3 class="step-title">Configure</h3>
+          <p class="step-description">
+            Set up your prizes and specify how many winners you want for each. Customize timing for the selection animation.
+          </p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">4</div>
+          <h3 class="step-title">Run Raffle</h3>
+          <p class="step-description">
+            Hit start and watch the exciting animated selection. Every participant is displayed to ensure complete transparency.
+          </p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">5</div>
+          <h3 class="step-title">Share Results</h3>
+          <p class="step-description">
+            Download results, make them public, and share the link. Perfect for stakeholders and participants to verify fairness.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust Section -->
+    <section class="trust-section">
+      <h2 class="section-title">Fair & Transparent Selection</h2>
+      <div class="trust-grid">
+        <div class="trust-item">
+          <div class="trust-icon">🎲</div>
+          <h3 class="trust-title">True Randomization</h3>
+          <p class="trust-description">
+            Using proven random number generation to ensure every participant has an equal chance based on their ticket count.
+          </p>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">👁️</div>
+          <h3 class="trust-title">Transparent Process</h3>
+          <p class="trust-description">
+            Watch the selection happen in real-time with every participant displayed on screen during the drawing.
+          </p>
+        </div>
+
+        <div class="trust-item">
+          <div class="trust-icon">✅</div>
+          <h3 class="trust-title">Verifiable Results</h3>
+          <p class="trust-description">
+            Complete audit trail and permanent records of all selections. Results cannot be edited after drawing.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Use Cases Section -->
+    <section class="use-cases-section">
+      <h2 class="section-title">Perfect For</h2>
+      <div class="use-cases-grid">
+        <div class="use-case">
+          <div class="use-case-icon">❤️</div>
+          <h3 class="use-case-title">Charity Fundraisers</h3>
+          <p class="use-case-description">Transparent drawings build donor trust</p>
+        </div>
+
+        <div class="use-case">
+          <div class="use-case-icon">🏢</div>
+          <h3 class="use-case-title">Company Events</h3>
+          <p class="use-case-description">Fair employee giveaways and contests</p>
+        </div>
+
+        <div class="use-case">
+          <div class="use-case-icon">🎓</div>
+          <h3 class="use-case-title">Schools & Nonprofits</h3>
+          <p class="use-case-description">Fundraising events and activities</p>
+        </div>
+
+        <div class="use-case">
+          <div class="use-case-icon">🌐</div>
+          <h3 class="use-case-title">Online Events</h3>
+          <p class="use-case-description">Virtual conferences and webinar prizes</p>
+        </div>
+
+        <div class="use-case">
+          <div class="use-case-icon">🏘️</div>
+          <h3 class="use-case-title">Community Organizations</h3>
+          <p class="use-case-description">Local raffles and door prizes</p>
+        </div>
+
+        <div class="use-case">
+          <div class="use-case-icon">�</div>
+          <h3 class="use-case-title">Social Media Contests</h3>
+          <p class="use-case-description">Fair selection from engagement</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="final-cta-section">
+      <div class="final-cta-content">
+        <h2 class="final-cta-title">Ready to Run Your Raffle?</h2>
+        <p class="final-cta-subtitle">
+          Join thousands of organizers running fair, transparent raffles
+        </p>
+        <button class="cta-button cta-button-large" on:click={loginWithRedirect}>
+          <span class="cta-icon">🚀</span>
+          <span>Get Started Now - Sign In</span>
+        </button>
+        <p class="cta-subtext">No credit card required • Free to use</p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="marketing-footer">
+      <p class="footer-text">
+        Made with ❤️ for fair and transparent raffles
+      </p>
+    </footer>
   </div>
 {:else}
   <!-- Main Application -->
@@ -235,105 +441,373 @@ George Washington,george_washington@email.com,Principal for the Day,5`;
 {/if}
 
 <style>
-  /* Sign In Screen Styles */
-  .sign-in-container {
+  /* Marketing Page Styles */
+  .marketing-page {
     min-height: 100vh;
+    background: #f8fafc;
+  }
+
+  /* Hero Section */
+  .hero-section {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-  }
-
-  .sign-in-panel {
-    background: linear-gradient(145deg, #ffffff, #f8fafc);
-    border: 1px solid #e1e5e9;
-    border-radius: 1.5rem;
-    box-shadow: 
-      0 20px 60px rgba(0, 0, 0, 0.15),
-      0 8px 20px rgba(0, 0, 0, 0.1);
-    padding: 3rem 2rem;
-    max-width: 28rem;
-    width: 100%;
+    padding: 6rem 2rem;
     text-align: center;
+    color: white;
   }
 
-  .sign-in-header {
-    margin-bottom: 2rem;
+  .hero-content {
+    max-width: 56rem;
+    margin: 0 auto;
   }
 
-  .app-logo {
-    width: 4rem;
-    height: 4rem;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    margin: 0 auto 1.5rem;
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+  .hero-icon {
+    font-size: 5rem;
+    margin-bottom: 1.5rem;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
   }
 
-  .app-name {
-    font-size: 2rem;
+  .hero-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin: 0 0 1.5rem 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .hero-subtitle {
+    font-size: 1.25rem;
+    line-height: 1.8;
+    margin: 0 0 2.5rem 0;
+    opacity: 0.95;
+    max-width: 48rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cta-button {
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 1.25rem 3rem;
+    border-radius: 0.75rem;
+    font-size: 1.125rem;
     font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .cta-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+  }
+
+  .cta-button-large {
+    padding: 1.5rem 3.5rem;
+    font-size: 1.25rem;
+  }
+
+  .cta-icon {
+    font-size: 1.5rem;
+  }
+
+  .cta-subtext {
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    opacity: 0.9;
+  }
+
+  /* Features Section */
+  .features-section {
+    padding: 5rem 2rem;
+    max-width: 80rem;
+    margin: 0 auto;
+  }
+
+  .section-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
     color: #1e293b;
     margin: 0 0 1rem 0;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  .app-description {
+  .section-subtitle {
+    font-size: 1.125rem;
+    text-align: center;
     color: #64748b;
-    font-size: 1rem;
+    margin: 0 0 3rem 0;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .feature-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    border: 1px solid #e2e8f0;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  }
+
+  .feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .feature-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 0.75rem 0;
+  }
+
+  .feature-description {
+    color: #64748b;
     line-height: 1.6;
     margin: 0;
   }
 
-  .sign-in-content {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+  /* How It Works Section */
+  .how-it-works-section {
+    padding: 5rem 2rem;
+    background: white;
   }
 
-  .sign-in-button {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+  .steps-container {
+    max-width: 60rem;
+    margin: 0 auto;
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .step-number {
+    width: 3.5rem;
+    height: 3.5rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
-    border: none;
-    padding: 1rem 2rem;
-    border-radius: 0.75rem;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    flex-shrink: 0;
   }
 
-  .sign-in-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+  .step-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
   }
 
-  .sign-in-icon {
+  .step-description {
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Trust Section */
+  .trust-section {
+    padding: 5rem 2rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  }
+
+  .trust-grid {
+    max-width: 80rem;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+  }
+
+  .trust-item {
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .trust-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .trust-title {
     font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 0.75rem 0;
   }
 
+  .trust-description {
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Use Cases Section */
+  .use-cases-section {
+    padding: 5rem 2rem;
+    max-width: 80rem;
+    margin: 0 auto;
+  }
+
+  .use-cases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .use-case {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+  }
+
+  .use-case:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .use-case-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .use-case-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .use-case-description {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+
+  /* Final CTA Section */
+  .final-cta-section {
+    padding: 6rem 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    text-align: center;
+    color: white;
+  }
+
+  .final-cta-content {
+    max-width: 48rem;
+    margin: 0 auto;
+  }
+
+  .final-cta-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+  }
+
+  .final-cta-subtitle {
+    font-size: 1.25rem;
+    margin: 0 0 2.5rem 0;
+    opacity: 0.95;
+  }
+
+  /* Footer */
+  .marketing-footer {
+    background: #1e293b;
+    color: white;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .footer-text {
+    margin: 0;
+    opacity: 0.8;
+  }
+
+  /* Marketing Responsive Design */
   @media (max-width: 768px) {
-    .sign-in-panel {
-      padding: 2rem 1.5rem;
-      margin: 0 1rem;
+    .hero-section {
+      padding: 4rem 1.5rem;
     }
-    
-    .app-name {
-      font-size: 1.75rem;
+
+    .hero-icon {
+      font-size: 3.5rem;
     }
-    
-    .app-description {
-      font-size: 0.9375rem;
+
+    .hero-title {
+      font-size: 2.5rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1rem;
+    }
+
+    .cta-button {
+      padding: 1rem 2rem;
+      font-size: 1rem;
+    }
+
+    .cta-button-large {
+      padding: 1.25rem 2.5rem;
+      font-size: 1.125rem;
+    }
+
+    .section-title {
+      font-size: 2rem;
+    }
+
+    .section-subtitle {
+      font-size: 1rem;
+    }
+
+    .features-section,
+    .how-it-works-section,
+    .trust-section,
+    .use-cases-section {
+      padding: 3rem 1.5rem;
+    }
+
+    .step {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .step-number {
+      margin: 0 auto;
+    }
+
+    .final-cta-section {
+      padding: 4rem 1.5rem;
+    }
+
+    .final-cta-title {
+      font-size: 2rem;
+    }
+
+    .final-cta-subtitle {
+      font-size: 1rem;
     }
   }
 

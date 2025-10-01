@@ -1,4 +1,12 @@
-# 🎰 Raffle Winner Picker
+# 🎰 Raffl### 🎯 Key Features
+
+- **📤 Easy Upload** - Drop your CSV file with participant names, emails, and ticket quantities
+- **🎪 Live Animation** - Animated terminal-style visualization displays each participant during selection
+- **📊 Smart Prizes** - Support multiple prizes with different winner counts per prize
+- **🔒 Secure & Private** - Your data is protected with enterprise-grade authentication
+- **📋 Instant Results** - Download winner lists and share public links to your raffle results
+- **📱 Mobile Friendly** - Works perfectly on phones, tablets, and computers
+- **🔄 Complete History** - Access all your past raffles anytimePicker
 
 A modern, transparent raffle application that makes conducting fair drawings simple and fun. Upload your participant list, watch the animated selection process, and share your results with confidence.
 
