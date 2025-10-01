@@ -294,7 +294,7 @@ George Washington,george_washington@email.com,Principal for the Day,5`;
         </div>
 
         <div class="use-case">
-          <div class="use-case-icon">�</div>
+          <div class="use-case-icon">🏆</div>
           <h3 class="use-case-title">Social Media Contests</h3>
           <p class="use-case-description">Fair selection from engagement</p>
         </div>
