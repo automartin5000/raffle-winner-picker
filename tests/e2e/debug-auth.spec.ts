@@ -39,7 +39,7 @@ test.describe('Auth Debug Tests', () => {
     
     // Try to find and click the sign-in button
     console.log('Looking for sign-in button...');
-    const signInButton = page.getByRole('button', { name: /sign in to continue/i });
+    const signInButton = page.getByRole('button', { name: /get started.*sign in/i });
     await expect(signInButton).toBeVisible();
     
     console.log('Clicking sign-in button...');

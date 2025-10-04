@@ -10,19 +10,19 @@ test.describe('Raffle Winner Picker E2E Tests', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('should load the homepage and display sign-in screen', async ({ page }) => {
+  test('should load the homepage and display marketing page', async ({ page }) => {
     await expect(page).toHaveTitle(/Raffle Winner Picker/i);
     
     await expect(page.getByRole('heading', { name: /raffle winner picker/i })).toBeVisible();
     
-    // Since we're not authenticated, we should see the sign-in button
-    await expect(page.getByRole('button', { name: /sign in to continue/i })).toBeVisible();
+    // Since we're not authenticated, we should see the Get Started button
+    await expect(page.getByRole('button', { name: /get started.*sign in/i })).toBeVisible();
   });
 
-  test('should show sign-in screen when not authenticated', async ({ page }) => {
-    // For unauthenticated users, we should see the sign-in screen
-    await expect(page.getByRole('button', { name: /sign in to continue/i })).toBeVisible();
-    await expect(page.getByText(/create fair, transparent raffles/i)).toBeVisible();
+  test('should show marketing page when not authenticated', async ({ page }) => {
+    // For unauthenticated users, we should see the marketing page
+    await expect(page.getByRole('button', { name: /get started.*sign in/i })).toBeVisible();
+    await expect(page.getByText(/make conducting fair drawings simple and fun/i)).toBeVisible();
   });
 
   test.skip('should upload CSV file and configure raffle', async ({ page }) => {
