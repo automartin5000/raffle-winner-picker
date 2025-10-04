@@ -10,13 +10,13 @@ Raffle Winner Picker takes the guesswork out of conducting fair raffles. Whether
 
 ### 🎯 Key Features
 
-- **� Easy Upload** - Drop your CSV file with participant names, emails, and ticket quantities
-- **� Live Animation** - Watch the exciting spinning wheel select winners in real-time
+- **📤 Easy Upload** - Drop your CSV file with participant names, emails, and ticket quantities
+- **🎪 Live Animation** - Animated terminal-style visualization displays each participant during selection
 - **📊 Smart Prizes** - Support multiple prizes with different winner counts per prize
 - **🔒 Secure & Private** - Your data is protected with enterprise-grade authentication
 - **📋 Instant Results** - Download winner lists and share public links to your raffle results
 - **📱 Mobile Friendly** - Works perfectly on phones, tablets, and computers
-- **� Complete History** - Access all your past raffles anytime
+- **🔄 Complete History** - Access all your past raffles anytime
 
 ## 🚀 Getting Started
 

@@ -59,7 +59,7 @@ test.describe('Auth0 Configuration Debug', () => {
     await page.waitForLoadState('networkidle');
     
     // Try to trigger the sign-in button to see what Auth0 configuration is used
-    const signInButton = page.getByRole('button', { name: /sign in to continue/i });
+    const signInButton = page.getByRole('button', { name: /get started.*sign in/i });
     if (await signInButton.isVisible()) {
       // Don't actually click - just having the page load should trigger Auth0 init logging
       await page.waitForTimeout(1000);

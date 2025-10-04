@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 const DEPLOYED_APP_URL = process.env.BASE_URL || 'https://local.dev.rafflewinnerpicker.com';
 
 test.describe('Basic Application Flow Tests', () => {
-  test('should load the application and display sign-in screen', async ({ page }) => {
+  test('should load the application and display marketing page', async ({ page }) => {
     await page.goto(DEPLOYED_APP_URL);
     await page.waitForLoadState('networkidle');
     
@@ -11,9 +11,11 @@ test.describe('Basic Application Flow Tests', () => {
     
     await expect(page.getByRole('heading', { name: /raffle winner picker/i })).toBeVisible();
     
-    await expect(page.getByText(/create fair, transparent raffles/i)).toBeVisible();
+    // Check for marketing page content
+    await expect(page.getByText(/make conducting fair drawings simple and fun/i)).toBeVisible();
     
-    await expect(page.getByRole('button', { name: /sign in to continue/i })).toBeVisible();
+    // Check for the Get Started button
+    await expect(page.getByRole('button', { name: /get started.*sign in/i })).toBeVisible();
   });
 
   test('should have responsive design on mobile', async ({ page }) => {
@@ -23,23 +25,26 @@ test.describe('Basic Application Flow Tests', () => {
     await page.waitForLoadState('networkidle');
     
     await expect(page.getByRole('heading', { name: /raffle winner picker/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /sign in to continue/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /get started.*sign in/i })).toBeVisible();
   });
 
   test('should display app information correctly', async ({ page }) => {
     await page.goto(DEPLOYED_APP_URL);
     await page.waitForLoadState('networkidle');
     
-    // When not authenticated, should show sign-in screen with app logo
-    await expect(page.locator('.app-logo')).toBeVisible();
-    await expect(page.getByText(/create fair, transparent raffles/i)).toBeVisible();
+    // Check for marketing page elements
+    await expect(page.locator('.hero-icon')).toBeVisible();
+    await expect(page.getByText(/make conducting fair drawings simple and fun/i)).toBeVisible();
+    
+    // Check for features section
+    await expect(page.getByText(/why choose raffle winner picker/i)).toBeVisible();
   });
 
   test('should have working sign-in button (redirects to auth)', async ({ page }) => {
     await page.goto(DEPLOYED_APP_URL);
     await page.waitForLoadState('networkidle');
     
-    const signInButton = page.getByRole('button', { name: /sign in to continue/i });
+    const signInButton = page.getByRole('button', { name: /get started.*sign in/i });
     await expect(signInButton).toBeVisible();
     
     // Test that the sign-in button triggers auth redirect flow
