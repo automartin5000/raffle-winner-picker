@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { raffleStore, setEntries } from '../../lib/stores/raffle';
-  import { mapCSVData, createEntryPool, extractPrizesFromEntries } from '../../utils/csv';
+  import { mapCSVData, createEntryPool, extractPrizesFromEntries, validatePrizeData } from '../../utils/csv';
   import { isAuthenticated, user, logout } from '../../lib/auth';
 
   let previewData: any[] = [];
@@ -11,6 +11,7 @@
   let extractedPrizes: string[] = [];
   let prizeWinnerCounts: Record<string, number> = {};
   let showPrizeConfig = false;
+  let validationError: string = '';
 
   $: if ($raffleStore.csvData && $raffleStore.columnMapping) {
     updatePreview();
@@ -44,6 +45,16 @@
 
   function confirmMapping() {
     if (!$raffleStore.csvData) return;
+    
+    // Validate prize data before proceeding
+    const validation = validatePrizeData($raffleStore.csvData.data, $raffleStore.columnMapping);
+    if (!validation.valid) {
+      validationError = validation.error || 'Validation failed';
+      return;
+    }
+    
+    // Clear any previous validation errors
+    validationError = '';
     
     mappedEntries = mapCSVData($raffleStore.csvData.data, $raffleStore.columnMapping);
     extractedPrizes = extractPrizesFromEntries(mappedEntries);
@@ -252,6 +263,16 @@
                 </div>
               </div>
             </div>
+            
+            {#if validationError}
+              <div class="validation-error">
+                <div class="error-icon">⚠️</div>
+                <div class="error-content">
+                  <div class="error-title">Validation Error</div>
+                  <div class="error-message">{validationError}</div>
+                </div>
+              </div>
+            {/if}
             
             <div class="mapping-actions">
               <button class="btn-cancel" on:click={goBack}>
@@ -812,6 +833,40 @@
     text-align: center;
     font-weight: 600;
     color: #1e293b;
+  }
+
+  /* Validation Error Styles */
+  .validation-error {
+    background: linear-gradient(145deg, #fef2f2, #fee2e2);
+    border: 2px solid #ef4444;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    box-shadow: 0 4px 6px rgba(239, 68, 68, 0.1);
+  }
+
+  .error-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .error-content {
+    flex: 1;
+  }
+
+  .error-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #991b1b;
+    margin-bottom: 0.25rem;
+  }
+
+  .error-message {
+    font-size: 0.875rem;
+    color: #7f1d1d;
+    line-height: 1.5;
   }
 
   @media (max-width: 768px) {

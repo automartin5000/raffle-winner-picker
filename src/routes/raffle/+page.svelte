@@ -12,6 +12,28 @@
   let winnerWheelComponent: WinnerWheel;
   let prizes: string[] = [];
 
+  // Compute the eligible pool for the current prize
+  $: eligiblePoolForDisplay = (() => {
+    if (!$raffleStore.currentPrize) return $raffleStore.entryPool;
+    
+    // Filter entries that are eligible for the current prize
+    // All entries MUST have a prize field (validated at upload)
+    const eligibleEntries = $raffleStore.entries.filter(entry => {
+      return entry.prize === $raffleStore.currentPrize;
+    });
+    
+    // Create pool from eligible entries (respecting ticket counts)
+    const pool: string[] = [];
+    eligibleEntries.forEach(entry => {
+      const tickets = entry.tickets || 1;
+      for (let i = 0; i < tickets; i++) {
+        pool.push(entry.name);
+      }
+    });
+    
+    return pool;
+  })();
+
   onMount(() => {
     // Redirect if no entries
     if ($raffleStore.entries.length === 0) {
@@ -51,8 +73,23 @@
     
     const currentPrize = prizes[$raffleStore.currentPrizeIndex];
     
-    // Select winner from pool
-    const availableEntries = $raffleStore.entryPool.filter(name => 
+    // Filter entries that are eligible for this prize
+    // All entries MUST have a prize field (validated at upload)
+    const eligibleEntries = $raffleStore.entries.filter(entry => {
+      return entry.prize === currentPrize;
+    });
+    
+    // Create pool from eligible entries (respecting ticket counts)
+    const eligiblePool: string[] = [];
+    eligibleEntries.forEach(entry => {
+      const tickets = entry.tickets || 1;
+      for (let i = 0; i < tickets; i++) {
+        eligiblePool.push(entry.name);
+      }
+    });
+    
+    // Filter out previous winners for this prize
+    const availableEntries = eligiblePool.filter(name => 
       !$raffleStore.winners.some(w => w.name === name && w.prize === currentPrize)
     );
     
@@ -245,7 +282,7 @@
             <div class="app-content terminal-content">
               <WinnerWheel 
                 bind:this={winnerWheelComponent}
-                names={$raffleStore.entryPool}
+                names={eligiblePoolForDisplay}
                 winner={$raffleStore.currentWinner}
                 prizeName={$raffleStore.currentPrize}
                 spinDuration={$raffleStore.spinDuration}
