@@ -1,6 +1,7 @@
 <script lang="ts">
   export let names: string[] = [];
   export let winner: string = '';
+  export let prizeName: string = ''; // Prize being selected
   export let spinDuration = 3000; // Default 3 seconds, configurable
   
   const MIN_CYCLE_DELAY_MS = 50; // Minimum delay between participants in rapid cycling phase
@@ -139,6 +140,16 @@
               <div class="typing-effect">PARTICIPANTS LOADED: {names.length}</div>
               <div class="border-b border-green-700 my-2"></div>
             </div>
+            
+            <!-- Prize Name Display -->
+            {#if prizeName}
+              <div class="prize-banner">
+                <div class="prize-banner-content">
+                  <div class="prize-label">SELECTING FOR:</div>
+                  <div class="prize-name">{prizeName.toUpperCase()}</div>
+                </div>
+              </div>
+            {/if}
           </div>
           
           <!-- Terminal Output Window -->
@@ -297,6 +308,59 @@
     border-bottom: 1px solid #003300;
     padding-bottom: 0.25rem;
     margin-bottom: 0.5rem;
+  }
+  
+  /* Prize Banner - Prominent Display */
+  .prize-banner {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, rgba(0, 255, 0, 0.15) 0%, rgba(0, 255, 0, 0.08) 100%);
+    border: 2px solid #00ff00;
+    border-radius: 4px;
+    box-shadow: 
+      0 0 10px rgba(0, 255, 0, 0.4),
+      inset 0 0 10px rgba(0, 255, 0, 0.1);
+    animation: prizePulse 2s ease-in-out infinite;
+  }
+  
+  .prize-banner-content {
+    text-align: center;
+  }
+  
+  .prize-label {
+    font-size: 0.625rem;
+    color: #00ff00;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.25rem;
+    opacity: 0.8;
+  }
+  
+  .prize-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #00ff00;
+    letter-spacing: 0.05em;
+    text-shadow: 
+      0 0 5px #00ff00,
+      0 0 10px #00ff00,
+      0 0 15px #00ff00;
+    line-height: 1.2;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  @keyframes prizePulse {
+    0%, 100% {
+      box-shadow: 
+        0 0 10px rgba(0, 255, 0, 0.4),
+        inset 0 0 10px rgba(0, 255, 0, 0.1);
+    }
+    50% {
+      box-shadow: 
+        0 0 20px rgba(0, 255, 0, 0.6),
+        inset 0 0 15px rgba(0, 255, 0, 0.2);
+    }
   }
   
   /* Terminal Output */
