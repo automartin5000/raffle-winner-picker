@@ -265,7 +265,7 @@
             </div>
             
             {#if validationError}
-              <div class="validation-error">
+              <div class="validation-error" role="alert" aria-live="assertive">
                 <div class="error-icon">⚠️</div>
                 <div class="error-content">
                   <div class="error-title">Validation Error</div>

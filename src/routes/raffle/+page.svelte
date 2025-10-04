@@ -12,6 +12,18 @@
   let winnerWheelComponent: WinnerWheel;
   let prizes: string[] = [];
 
+  // Helper function to build ticket-weighted pool from eligible entries
+  function buildWeightedNamePool(entries: Array<{ name: string; tickets?: number }>): string[] {
+    const pool: string[] = [];
+    entries.forEach(entry => {
+      const tickets = entry.tickets ?? 1;
+      for (let i = 0; i < tickets; i++) {
+        pool.push(entry.name);
+      }
+    });
+    return pool;
+  }
+
   // Compute the eligible pool for the current prize
   $: eligiblePoolForDisplay = (() => {
     if (!$raffleStore.currentPrize) return $raffleStore.entryPool;
@@ -22,16 +34,7 @@
       return entry.prize === $raffleStore.currentPrize;
     });
     
-    // Create pool from eligible entries (respecting ticket counts)
-    const pool: string[] = [];
-    eligibleEntries.forEach(entry => {
-      const tickets = entry.tickets ?? 1;
-      for (let i = 0; i < tickets; i++) {
-        pool.push(entry.name);
-      }
-    });
-    
-    return pool;
+    return buildWeightedNamePool(eligibleEntries);
   })();
 
   onMount(() => {
@@ -80,13 +83,7 @@
     });
     
     // Create pool from eligible entries (respecting ticket counts)
-    const eligiblePool: string[] = [];
-    eligibleEntries.forEach(entry => {
-      const tickets = entry.tickets || 1;
-      for (let i = 0; i < tickets; i++) {
-        eligiblePool.push(entry.name);
-      }
-    });
+    const eligiblePool = buildWeightedNamePool(eligibleEntries);
     
     // Filter out previous winners for this prize
     const availableEntries = eligiblePool.filter(name => 
