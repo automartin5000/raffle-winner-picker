@@ -25,7 +25,7 @@
     // Create pool from eligible entries (respecting ticket counts)
     const pool: string[] = [];
     eligibleEntries.forEach(entry => {
-      const tickets = entry.tickets || 1;
+      const tickets = entry.tickets ?? 1;
       for (let i = 0; i < tickets; i++) {
         pool.push(entry.name);
       }
