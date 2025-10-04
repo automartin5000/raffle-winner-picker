@@ -247,6 +247,7 @@
                 bind:this={winnerWheelComponent}
                 names={$raffleStore.entryPool}
                 winner={$raffleStore.currentWinner}
+                prizeName={$raffleStore.currentPrize}
                 spinDuration={$raffleStore.spinDuration}
               />
               
