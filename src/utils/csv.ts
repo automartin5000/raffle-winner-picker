@@ -93,7 +93,7 @@ export function validatePrizeData(
   
   data.forEach((row, index) => {
     const prizeValue = row[prizeColumn];
-    if (!prizeValue || !prizeValue.toString().trim()) {
+    if (prizeValue == null || prizeValue.toString().trim() === '') {
       missingPrizeRows.push(index + 2); // +2 because: +1 for 0-index, +1 for header row
     }
   });
