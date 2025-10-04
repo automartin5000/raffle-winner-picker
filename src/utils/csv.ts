@@ -77,3 +77,36 @@ export function extractPrizesFromEntries(entries: Array<{ name: string; prize?: 
   });
   return Array.from(prizes).sort();
 }
+
+export function validatePrizeData(
+  data: Record<string, any>[],
+  mapping: ColumnMapping,
+): { valid: boolean; error?: string; missingPrizeRows?: number[] } {
+  // If no prize column is mapped, validation passes
+  if (!mapping.prize) {
+    return { valid: true };
+  }
+
+  // If prize column is mapped, ALL entries must have a prize value
+  const missingPrizeRows: number[] = [];
+  const prizeColumn = mapping.prize;
+  
+  data.forEach((row, index) => {
+    const prizeValue = row[prizeColumn];
+    if (prizeValue == null || prizeValue.toString().trim() === '') {
+      missingPrizeRows.push(index + 2); // +2 because: +1 for 0-index, +1 for header row
+    }
+  });
+
+  if (missingPrizeRows.length > 0) {
+    const rowsList = missingPrizeRows.slice(0, 5).join(', ');
+    const moreRows = missingPrizeRows.length > 5 ? ` and ${missingPrizeRows.length - 5} more` : '';
+    return {
+      valid: false,
+      error: `Prize column is mapped, but ${missingPrizeRows.length} row(s) are missing prize values. Rows: ${rowsList}${moreRows}. All entries must specify a prize when using the Prize column.`,
+      missingPrizeRows,
+    };
+  }
+
+  return { valid: true };
+}
